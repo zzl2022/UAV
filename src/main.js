@@ -4,6 +4,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {createModel} from './model.js';
 import './style.css';
+import {mountLandmarks} from './landmarks.js';
 import {mountSensorUI} from './sensors/ui.js';
 
 const app=document.querySelector('#app');
@@ -107,7 +108,8 @@ try {
   });
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);};
   new ResizeObserver(resize).observe(viewport);resize();
-  renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+  const landmarks=mountLandmarks({city,scene,camera,controls,viewport});
+  renderer.setAnimationLoop(()=>{controls.update();landmarks.update();renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   mountSensorUI({app,scene,camera,controls,renderer,model,city});
   document.documentElement.dataset.ready='true';

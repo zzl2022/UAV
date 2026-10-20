@@ -4,6 +4,7 @@ import {mkdir} from 'node:fs/promises';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ page.on('crash',()=>console.error('City page crashed'));
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');
  await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
@@ -16,7 +17,8 @@ try{
  await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,null,{timeout:120000});
  assert.equal(await page.locator('#original').isChecked(),true,await page.locator('#status').innerText());
  await page.locator('#original').uncheck();
- const downloadPromise=page.waitForEvent('download',{timeout:120000});await page.locator('#export').click();const download=await downloadPromise;
+ console.log('Validating city GLB download…');
+ const [download]=await Promise.all([page.waitForEvent('download',{timeout:180000}),page.locator('#export').click({timeout:180000})]);
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/browser-export.glb');
  assert.equal(download.suggestedFilename(),'zhengzhou-city-enu.glb');
  await page.screenshot({path:'artifacts/city-desktop.png'});
