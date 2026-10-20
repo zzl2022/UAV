@@ -1,16 +1,22 @@
 import * as THREE from 'three';
+import {terrainSampler} from './terrain-query.js';
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 
-export function createSceneQuery(model){
+export function createSceneQuery(model,{fastGround=true}={}){
  for(const mesh of [model.buildings,model.ground]){
   // Keep original triangle ordering: feature picking relies on face-index ranges.
   mesh.geometry.boundsTree??=new MeshBVH(mesh.geometry,{indirect:true});
   mesh.raycast=acceleratedRaycast;mesh.updateMatrixWorld(true);
  }
  const raycaster=new THREE.Raycaster();
- function groundAt(x,z){
+ const sampleGround=fastGround?terrainSampler(model.ground.geometry):null;
+ function groundAt(x,z){return sampleGround?sampleGround(x,z):groundAtRaycast(x,z);}
+ function groundAtRaycast(x,z){
   raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;
   return raycaster.intersectObject(model.ground)[0]?.point.y??null;
+ }
+ function surfaceAt(x,z){
+  raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;return raycaster.intersectObjects([model.buildings,model.ground])[0]?.point.y??null;
  }
  function featureAt(faceIndex){
   let lo=0,hi=model.ranges.length-1;
@@ -42,5 +48,5 @@ export function createSceneQuery(model){
   }
   return result;
  }
- return {trace,groundAt,featureAt};
+ return {trace,groundAt,groundAtRaycast,surfaceAt,featureAt};
 }

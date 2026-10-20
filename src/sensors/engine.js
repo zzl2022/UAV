@@ -133,7 +133,7 @@ export function evaluate(device,target,environment,context={}){
  return {modelVersion:MODEL_VERSION,id:device.id,type:device.type,name:device.name,eligible,status:!eligible?'outside-model':context.known!==true?'uncertain':'within-model',reasons,warnings,geometry:{...direction,blocked,buildingCount,known:context.known??false},marginDb,snrDb,losses,equivalentRangeMeters:clamp(effectiveRange,0,p.maxRange),score,scoreMeaning:'未标定的模型裕量评分，不是探测/识别概率',errors,extras};
 }
 export function validateScenario(value,origin){
- if(!value||value.modelVersion!==MODEL_VERSION||!Array.isArray(value.devices)||value.devices.length>16)throw Error('需要当前版本的装备方案，含 0–16 个设备');
+ if(!value||value.modelVersion!==MODEL_VERSION||!Array.isArray(value.devices)||value.devices.length>64)throw Error('需要当前版本的装备方案，含 0–64 个设备');
  if(!Array.isArray(value.origin)||value.origin.length!==3||value.origin.some((x,i)=>!Number.isFinite(x)||Math.abs(x-origin[i])>1e-7))throw Error('方案坐标原点与当前城市不一致');
  const ids=new Set();for(const device of value.devices){validateDevice(device);if(ids.has(device.id))throw Error('装备 ID 重复');ids.add(device.id);}
  validateTarget(value.target);validateEnvironment(value.environment);

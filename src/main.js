@@ -5,6 +5,7 @@ import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {createModel} from './model.js';
 import './style.css';
 import {mountLandmarks} from './landmarks.js';
+import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
 
 const app=document.querySelector('#app');
@@ -108,10 +109,12 @@ try {
   });
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);};
   new ResizeObserver(resize).observe(viewport);resize();
+  let planning;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport});
-  renderer.setAnimationLoop(()=>{controls.update();landmarks.update();renderer.render(scene,camera);});
+  renderer.setAnimationLoop(stamp=>{controls.update();landmarks.update();planning?.update(stamp);renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
-  mountSensorUI({app,scene,camera,controls,renderer,model,city});
+  const sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
+  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};
