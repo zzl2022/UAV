@@ -114,7 +114,7 @@ try {
   renderer.setAnimationLoop(stamp=>{controls.update();landmarks.update();planning?.update(stamp);renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   const sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
-  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors});
+  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};
