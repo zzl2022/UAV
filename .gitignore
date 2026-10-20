@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.venv/
+public/data/
+artifacts/
+
+__pycache__/
+*.pyc

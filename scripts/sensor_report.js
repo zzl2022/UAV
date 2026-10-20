@@ -1,0 +1,18 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {createModel} from '../src/model.js';
+import {createSceneQuery} from '../src/sensors/scene.js';
+import {evaluate} from '../src/sensors/engine.js';
+import {defaultScenario} from '../src/sensors/scenario.js';
+import {EQUIPMENT_SOURCE} from '../src/sensors/presets.js';
+const root=new URL('../',import.meta.url);
+const city=JSON.parse(await readFile(new URL('public/data/city.json',root)));
+const terrain=JSON.parse(await readFile(new URL('public/data/terrain.json',root)));
+const query=createSceneQuery(createModel(city,terrain)),scenario=defaultScenario(city);
+const contexts=Object.fromEntries(scenario.devices.map(d=>[d.id,query.trace(d.position,scenario.target.position)]));
+const variations={baseline:{},rain:{environment:{rainMmH:30,rainNoiseDb:55}},fog:{environment:{visibilityKm:0.2}},night:{environment:{illuminanceLux:0}},radioSilent:{target:{emitting:false}},noisyStreet:{environment:{trafficDb:80,constructionDb:70}},emInterference:{environment:{emNoiseDb:10,cochannelDb:10,crosstalkDb:5}}};
+const cases=Object.fromEntries(Object.entries(variations).map(([key,change])=>[key,scenario.devices.map(device=>evaluate(device,{...scenario.target,...change.target},{...scenario.environment,...change.environment},contexts[device.id]))]));
+const report={...scenario,sourceHashes:city.metadata.sources,equipmentSource:EQUIPMENT_SOURCE,equipmentSha256:createHash('sha256').update(await readFile(new URL(EQUIPMENT_SOURCE,root))).digest('hex'),contexts,cases,limitations:'Uncalibrated engineering approximations, not measured detection probabilities. Reference network localization is not a TDOA solution. No deployment optimization is performed.'};
+await mkdir(new URL('artifacts/',root),{recursive:true});
+await writeFile(new URL('artifacts/sensor-model-report.json',root),JSON.stringify(report,null,2));
+console.log(`Wrote 7 conditions × 4 device models using ${city.buildings.length} repository buildings to artifacts/sensor-model-report.json`);

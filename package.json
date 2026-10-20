@@ -1,0 +1,32 @@
+{
+  "name": "uav-city-modeler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.js",
+    "prepare:data": ".venv/bin/python scripts/prepare_data.py",
+    "export:model": "node scripts/export_model.js",
+    "test:browser": "node scripts/browser_smoke.js",
+    "test:imagery": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
+    "report:sensors": "node scripts/sensor_report.js",
+    "test:sensors:browser": "node scripts/sensor_browser_smoke.js",
+    "plan:build": "node scripts/deployment_report.js",
+    "plan:example": "node scripts/deployment_report.js --example",
+    "test:planning:browser": "node scripts/planning_browser_smoke.js"
+  },
+  "dependencies": {
+    "three": "0.186.1",
+    "three-mesh-bvh": "0.9.16"
+  },
+  "devDependencies": {
+    "playwright-core": "1.61.1",
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
