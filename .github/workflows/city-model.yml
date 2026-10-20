@@ -26,6 +26,7 @@ jobs:
       - run: npm run test:imagery
       - run: npm run build
       - run: npm run export:model
+      - run: npm run report:sensors
       - uses: actions/upload-artifact@v4
         with:
           name: zhengzhou-city-model
@@ -33,3 +34,4 @@ jobs:
             dist/
             artifacts/zhengzhou-city-enu.glb
             public/data/report.json
+            artifacts/sensor-model-report.json

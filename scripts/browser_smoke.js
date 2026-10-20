@@ -6,14 +6,14 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');
- await page.waitForFunction(()=>document.documentElement.dataset.ready,{timeout:120000});
+ await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true',await page.locator('#status').innerText());
  const diagnostics=await page.evaluate(()=>window.cityDiagnostics);
  assert.equal(diagnostics.features,15889);assert.equal(diagnostics.imagery,true);
  await page.locator('#imagery').uncheck();await page.locator('#imagery').check();assert.ok(diagnostics.buildingTriangles>100000);
  await page.locator('#top').click();await page.locator('#wire').check();await page.locator('#wire').uncheck();
  await page.locator('#terrain').uncheck();await page.locator('#terrain').check();await page.locator('#reset').click();
- await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,{timeout:120000});
+ await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,null,{timeout:120000});
  assert.equal(await page.locator('#original').isChecked(),true,await page.locator('#status').innerText());
  await page.locator('#original').uncheck();
  const downloadPromise=page.waitForEvent('download',{timeout:120000});await page.locator('#export').click();const download=await downloadPromise;

@@ -11,10 +11,13 @@
     "prepare:data": ".venv/bin/python scripts/prepare_data.py",
     "export:model": "node scripts/export_model.js",
     "test:browser": "node scripts/browser_smoke.js",
-    "test:imagery": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'"
+    "test:imagery": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
+    "report:sensors": "node scripts/sensor_report.js",
+    "test:sensors:browser": "node scripts/sensor_browser_smoke.js"
   },
   "dependencies": {
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "three-mesh-bvh": "0.9.16"
   },
   "devDependencies": {
     "playwright-core": "1.61.1",

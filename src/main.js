@@ -4,6 +4,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {createModel} from './model.js';
 import './style.css';
+import {mountSensorUI} from './sensors/ui.js';
 
 const app=document.querySelector('#app');
 app.innerHTML=`<aside>
@@ -108,6 +109,7 @@ try {
   new ResizeObserver(resize).observe(viewport);resize();
   renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
+  mountSensorUI({app,scene,camera,controls,renderer,model,city});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};
