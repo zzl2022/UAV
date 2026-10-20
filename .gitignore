@@ -4,3 +4,6 @@ dist/
 .venv/
 public/data/
 artifacts/
+
+__pycache__/
+*.pyc

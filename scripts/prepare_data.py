@@ -9,6 +9,7 @@ import rasterio
 import numpy as np
 from pyproj import CRS, Transformer
 from shapely import geometry, make_valid
+from imagery import prepare_imagery
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / '创意二文件/创意二数据集/区域数据'
@@ -22,6 +23,7 @@ def build():
     shp = SOURCE / 'building/zheng_apart.shp'
     dem = SOURCE / 'dem/dem.tif'
     tiles = SOURCE / '白模/zhengzhou1/tileset.json'
+    image = SOURCE / '影像/raster.tif'
     tile_data = json.loads(tiles.read_text())
     matrix = np.array(tile_data['root']['transform']).reshape((4, 4), order='F')
     rotation, translation = matrix[:3, :3], matrix[:3, 3]
@@ -90,7 +92,8 @@ def build():
                 buildings.append({'id': str(props.get('ID') or index) + f'-{index}-{part}', 'name': props.get('NAME') or f'建筑 {index+1}', 'height': height, 'ground': base, 'foundation': foundation, 'rings': local_rings, 'foundationDepth': base-foundation})
                 geo_polygons.append(rings)
             features.append({'type':'Feature','properties':{'source_index':index,'name':props.get('NAME') or '', 'height':height,'height_source':'DBF.high','base_elevation':min(b['ground'] for b in buildings[-len(polygons):]),'vertical_datum':'DEM source; unspecified'},'geometry':{'type':'MultiPolygon','coordinates':geo_polygons}})
-        positions, indices = [], []
+        imagery = prepare_imagery(image, OUT/'terrain-imagery.png', raster)
+        positions, indices, uvs = [], [], []
         vertex_ids = {}
         for row in range(raster.height):
             for col in range(raster.width):
@@ -99,13 +102,16 @@ def build():
                 x, y = raster.xy(row, col)
                 lon, lat = raster_geo.transform(x, y)
                 positions.extend(local(lon, lat, float(heights[row, col])))
+                if imagery:
+                    west, south, east, north = imagery['bounds']
+                    uvs.extend([(lon-west)/(east-west), (lat-south)/(north-south)])
         for row in range(raster.height-1):
             for col in range(raster.width-1):
                 a = row*raster.width+col; b=a+1; c=a+raster.width; d=c+1
                 if all(i in vertex_ids for i in [a,b,c,d]):
                     indices.extend(vertex_ids[i] for i in [a,c,b,b,c,d])
-        terrain = {'positions':positions,'indices':indices,'rows':raster.height,'cols':raster.width,'min':float(heights.min()),'max':float(heights.max()),'crs':str(raster.crs),'resolution':list(raster.res),'bounds':list(raster.bounds)}
-    metadata = {'name':'郑州 · 河南博物院片区','origin':list(origin),'coordinateSystem':'Local ENU mapped to Three.js [east, up, -north], meters','ecefTransform':tile_data['root']['transform'],'buildingCRS':shp_crs.to_string(),'sourceFeatures':len(reader),'buildingParts':len(buildings),'repairedFeatures':repaired,'excludedFeatures':excluded,'missingDEMSamples':missing_dem,'nearestDEMSamples':interpolated_dem,'maxNearestDEMDistanceMeters':max_sample_distance,'terrainNodataCells':int(mask.sum()),'heightField':'high','minHeight':min(b['height'] for b in buildings),'maxHeight':max(b['height'] for b in buildings),'terrain':{k:v for k,v in terrain.items() if k not in ['positions','indices']},'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [shp,shp.with_suffix('.dbf'),shp.with_suffix('.prj'),dem,tiles]},'limitations':['DEM vertical datum is not specified in source; elevations are used as supplied, without geoid correction.','Footprint roof base uses maximum DEM sample at vertices; walls extend to minimum sample for foundations.','DEM nodata cells are omitted from the terrain. Building vertices on small gaps use nearest valid samples within 100 m, counted in this report.','No imagery is present in the current repository. No road centerlines are supplied.','Original white-model vertical semantics are not documented; it is a separate comparison layer.']}
+        terrain = {'positions':positions,'indices':indices,'uvs':uvs,'imagery':imagery,'rows':raster.height,'cols':raster.width,'min':float(heights.min()),'max':float(heights.max()),'crs':str(raster.crs),'resolution':list(raster.res),'bounds':list(raster.bounds)}
+    metadata = {'name':'郑州 · 河南博物院片区','origin':list(origin),'coordinateSystem':'Local ENU mapped to Three.js [east, up, -north], meters','ecefTransform':tile_data['root']['transform'],'buildingCRS':shp_crs.to_string(),'sourceFeatures':len(reader),'buildingParts':len(buildings),'repairedFeatures':repaired,'excludedFeatures':excluded,'missingDEMSamples':missing_dem,'nearestDEMSamples':interpolated_dem,'maxNearestDEMDistanceMeters':max_sample_distance,'terrainNodataCells':int(mask.sum()),'heightField':'high','minHeight':min(b['height'] for b in buildings),'maxHeight':max(b['height'] for b in buildings),'terrain':{k:v for k,v in terrain.items() if k not in ['positions','indices','uvs']},'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [shp,shp.with_suffix('.dbf'),shp.with_suffix('.prj'),dem,tiles]+([image] if image.exists() else [])},'limitations':['DEM vertical datum is not specified in source; elevations are used as supplied, without geoid correction.','Footprint roof base uses maximum DEM sample at vertices; walls extend to minimum sample for foundations.','DEM nodata cells are omitted from the terrain. Building vertices on small gaps use nearest valid samples within 100 m, counted in this report.','Imagery is optional and is a ground texture, not a source of new building geometry. No road centerlines are supplied.','Original white-model vertical semantics are not documented; it is a separate comparison layer.']}
     dump(OUT/'city.json', {'metadata':metadata,'buildings':buildings})
     dump(OUT/'terrain.json', terrain)
     dump(OUT/'buildings.geojson', {'type':'FeatureCollection','features':features})

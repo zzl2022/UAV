@@ -40,6 +40,7 @@ export function buildCityGeometry(buildings) {
 export function buildTerrainGeometry(data) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
+  if (data.uvs?.length) geometry.setAttribute('uv',new THREE.Float32BufferAttribute(data.uvs,2));
   geometry.setIndex(data.indices); geometry.computeVertexNormals(); geometry.computeBoundingBox();
   return geometry;
 }

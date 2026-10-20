@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run prepare:data
       - run: npm test
+      - run: npm run test:imagery
       - run: npm run build
       - run: npm run export:model
       - uses: actions/upload-artifact@v4

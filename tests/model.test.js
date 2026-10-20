@@ -40,3 +40,14 @@ test('terrain excludes nodata and has upward normals and valid triangle indices'
  for(let i=1;i<g.attributes.normal.array.length;i+=3)assert.ok(g.attributes.normal.array[i]>=0);
  assert.ok(terrain.indices.length>100000);g.dispose();
 });
+test('imagery UVs preserve georeferencing and north-up orientation',()=>{
+ if(!terrain.imagery)return;
+ const g=buildTerrainGeometry(terrain);const uv=g.getAttribute('uv');
+ assert.equal(uv.count,g.attributes.position.count);
+ for(let i=0;i<uv.count;i++){assert.ok(uv.getX(i)>=0&&uv.getX(i)<=1);assert.ok(uv.getY(i)>=0&&uv.getY(i)<=1);}
+ // Terrain vertices are emitted north-to-south, west-to-east.
+ assert.ok(uv.getY(0)>uv.getY(uv.count-1));
+ assert.equal(terrain.imagery.sourceWidth,5259);assert.equal(terrain.imagery.sourceHeight,2416);
+ assert.equal(terrain.imagery.textureWidth,4096);
+ g.dispose();
+});

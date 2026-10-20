@@ -9,7 +9,8 @@ try{
  await page.waitForFunction(()=>document.documentElement.dataset.ready,{timeout:120000});
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true',await page.locator('#status').innerText());
  const diagnostics=await page.evaluate(()=>window.cityDiagnostics);
- assert.equal(diagnostics.features,15889);assert.ok(diagnostics.buildingTriangles>100000);
+ assert.equal(diagnostics.features,15889);assert.equal(diagnostics.imagery,true);
+ await page.locator('#imagery').uncheck();await page.locator('#imagery').check();assert.ok(diagnostics.buildingTriangles>100000);
  await page.locator('#top').click();await page.locator('#wire').check();await page.locator('#wire').uncheck();
  await page.locator('#terrain').uncheck();await page.locator('#terrain').check();await page.locator('#reset').click();
  await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,{timeout:120000});
@@ -19,6 +20,7 @@ try{
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/browser-export.glb');
  assert.equal(download.suggestedFilename(),'zhengzhou-city-enu.glb');
  await page.screenshot({path:'artifacts/city-desktop.png'});
+ await page.screenshot({path:'artifacts/city-imagery.png'});
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'artifacts/city-mobile.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('Browser smoke passed:',diagnostics);
 }finally{await browser.close();}

@@ -15,6 +15,7 @@ app.innerHTML=`<aside>
   <section><h2>场景图层 <span>LAYERS</span></h2>
   <label><input type="checkbox" id="buildings" checked>建筑重建 <small>SHP / high</small></label>
   <label><input type="checkbox" id="terrain" checked>真实地形 <small>DEM / 30 m 级</small></label>
+  <label><input type="checkbox" id="imagery" checked>影像底图 <small>GeoTIFF / RGB</small></label>
   <label><input type="checkbox" id="wire">建筑线框 <small>WIREFRAME</small></label>
   <label><input type="checkbox" id="original">原始白模对比 <small>GLB</small></label>
   <p class="hint">启用原始白模时隐藏重建建筑，避免重复叠加。原始白模的垂直基准未注明。</p></section>
@@ -22,15 +23,15 @@ app.innerHTML=`<aside>
   <button id="export" class="primary" disabled>导出三维模型 · GLB ↓</button>
   <a class="download" href="./data/buildings.geojson" download>下载建筑 GeoJSON ↗</a></section>
   <section id="selection"><h2>建筑属性 <span>INSPECT</span></h2><p class="hint" id="details">点击建筑查看名称、真实高度与地面海拔。</p></section>
-  <footer>坐标：WGS84 → 局部 ENU / 米<br>高程按源 DEM 使用，垂直基准未标注。<br>仓库未含影像底图或道路中心线。</footer>
+  <footer>坐标：WGS84 → 局部 ENU / 米<br>高程按源 DEM 使用，垂直基准未标注。<br>影像按坐标贴合地形，不改变建筑高度。</footer>
 </aside><main><header><div><span class="live"></span> 郑州城市数字底座 <span class="tag">REPOSITORY DATA</span></div><a href="./data/report.json" target="_blank" rel="noopener">数据报告 ↗</a></header>
 <div id="viewport" aria-label="可旋转的三维城市场景"></div><div class="north">N<br>↑</div><div id="status" role="status">正在读取仓库数据…</div><div class="navigation">左键旋转 · 右键平移 · 滚轮缩放</div><div id="location">LOCAL ENU · METERS</div></main>`;
 const el=id=>document.getElementById(id);
 let renderer,model,city,terrain,controls,original;
-let scene,camera;
+let scene,camera,imageryTexture;
 const viewport=el('viewport');
 const status=text=>{el('status').textContent=text;};
-const disableControls=value=>{for (const id of ['buildings','terrain','wire','original','reset','top']) el(id).disabled=value;};
+const disableControls=value=>{for (const id of ['buildings','terrain','imagery','wire','original','reset','top']) el(id).disabled=value;};
 disableControls(true);
 function download(data,name,type){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function fetchJSON(path){const response=await fetch(path);if(!response.ok)throw Error(`${path}: HTTP ${response.status}`);return response.json();}
@@ -47,6 +48,15 @@ try {
   status('正在生成建筑与地形网格…');
   await new Promise(resolve=>requestAnimationFrame(resolve));
   model=createModel(city,terrain);scene.add(model.group);
+  let imageryError;
+  if(terrain.imagery){
+    try {
+      imageryTexture=await new THREE.TextureLoader().loadAsync(`./data/${terrain.imagery.texture}`);
+      imageryTexture.colorSpace=THREE.SRGBColorSpace;
+      imageryTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+      model.ground.material=new THREE.MeshBasicMaterial({map:imageryTexture,side:THREE.DoubleSide});
+    }catch(error){imageryError=error;console.warn('影像加载失败',error);}
+  }
   const box=new THREE.Box3().setFromObject(model.group),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
   const span=Math.max(size.x,size.z);
   function fit(top=false){controls.target.copy(center);camera.up.set(0,1,0);camera.position.copy(center).add(new THREE.Vector3(top?0:span*.7,top?span*1.55:span*.9,top?.001:span*.95));controls.update();}
@@ -54,9 +64,16 @@ try {
   const grid=new THREE.GridHelper(Math.ceil(span/1000)*1000,Math.ceil(span/1000)*2,0x33515b,0x20333b);grid.position.y=box.min.y-1;scene.add(grid);
   el('count').textContent=city.metadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=city.metadata.maxHeight;
   el('location').textContent=`${city.metadata.origin[0].toFixed(5)}° E / ${city.metadata.origin[1].toFixed(5)}° N · ENU`;
-  const ready=()=>status(`已建模 ${city.metadata.sourceFeatures.toLocaleString('zh-CN')} 栋建筑 · 地形 ${terrain.cols} × ${terrain.rows} · 米制坐标`);
+  const ready=()=>status(`已建模 ${city.metadata.sourceFeatures.toLocaleString('zh-CN')} 栋建筑 · 地形 ${terrain.cols} × ${terrain.rows} · ${imageryTexture?'影像已对齐':'米制坐标'}${imageryError?'（影像加载失败，可重新准备数据后刷新）':''}`);
   el('buildings').onchange=()=>{model.buildings.visible=el('buildings').checked&&!el('original').checked;};
   el('terrain').onchange=()=>{model.ground.visible=el('terrain').checked;};
+  el('imagery').onchange=()=>{
+    const old=model.ground.material;
+    model.ground.material=el('imagery').checked
+      ?new THREE.MeshBasicMaterial({map:imageryTexture,side:THREE.DoubleSide})
+      :new THREE.MeshStandardMaterial({color:0x243d46,roughness:1,side:THREE.DoubleSide});
+    old.dispose();
+  };
   el('wire').onchange=()=>{model.buildings.material.wireframe=el('wire').checked;};
   el('original').onchange=async()=>{
     const checked=el('original').checked;model.buildings.visible=!checked&&el('buildings').checked;
@@ -90,8 +107,8 @@ try {
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);};
   new ResizeObserver(resize).observe(viewport);resize();
   renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
-  disableControls(false);el('export').disabled=false;ready();
+  disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
-  window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3};
+  window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};
 }catch(error){status(`无法建立场景：${error.message}。请先执行数据准备，并使用支持 WebGL 的浏览器。`);document.documentElement.dataset.ready='error';console.error(error);}
