@@ -1,3 +1,4 @@
+import {PHYSICS_FIELDS,facadeLoss,C,requiredSnr,detectionProbability,radarSnr,radioBudget} from './physics.js';
 import {PRESETS,fieldsFor,ENV_FIELDS,TARGET_FIELDS} from './presets.js';
 export const MODEL_VERSION='sensors-1.0';
 const DEG=Math.PI/180;
@@ -13,13 +14,14 @@ export function validateDevice(device){
  if(typeof device.name!=='string'||!device.name.length||device.name.length>120)throw Error('装备名称无效');
  if(typeof device.id!=='string'||!device.id.length||device.id.length>64)throw Error('装备 ID 无效');
  validateFields(device.parameters,fieldsFor(device.type));validatePosition(device.position);
+ if(device.physics){if(!PHYSICS_FIELDS[device.type])throw Error('Physics parameters are unsupported for this device');validateFields(device.physics,PHYSICS_FIELDS[device.type]);if(device.type==='radar'&&!Number.isInteger(device.physics.pulses))throw Error('Invalid physics pulses or FHSS flag');}
  const p=device.parameters;
  if(p.minRange>=p.maxRange||p.elevationMin>=p.elevationMax)throw Error('距离上下限或俯仰上下限顺序无效');
  if(device.type==='radio'&&p.bandMinGHz>=p.bandMaxGHz)throw Error('无线电频段上下限顺序无效');
  if(device.type==='acoustic'&&p.minSoundDb>=p.maxSoundDb)throw Error('输入声压上下限顺序无效');
  if(device.type==='optical'&&p.narrowHfov>p.wideHfov)throw Error('窄视场不能大于宽视场');
 }
-export function validateTarget(target){validatePosition(target?.position);validateFields(target,TARGET_FIELDS);if(typeof target.emitting!=='boolean'||!['wide','narrow','thermal'].includes(target.opticalMode))throw Error('目标发射状态或光电模式无效');validateNumber(target.acousticFrequencyHz,{min:20,max:20000,unit:'Hz'},'目标声频');}
+export function validateTarget(target){if(target?.fhss!==undefined&&typeof target.fhss!=='boolean')throw Error('Invalid physics pulses or FHSS flag');validatePosition(target?.position);validateFields(target,TARGET_FIELDS);if(typeof target.emitting!=='boolean'||!['wide','narrow','thermal'].includes(target.opticalMode))throw Error('目标发射状态或光电模式无效');validateNumber(target.acousticFrequencyHz,{min:20,max:20000,unit:'Hz'},'目标声频');}
 export function validateEnvironment(env){validateFields(env,ENV_FIELDS);}
 export function angles(from,to){const [x,y,z]=to.map((v,i)=>v-from[i]);return {distance:Math.hypot(x,y,z),horizontal:Math.hypot(x,z),azimuth:(Math.atan2(x,-z)/DEG+360)%360,elevation:Math.atan2(y,Math.hypot(x,z))/DEG};}
 export function angularDifference(a,b){return ((a-b+540)%360)-180;}
@@ -49,7 +51,8 @@ export function evaluate(device,target,environment,context={}){
  const h=fov?.horizontal??p.azimuthFov;
  const elevation=direction.elevation-p.pitch;
  const reasons=[],warnings=[];
- if(direction.distance<p.minRange)reasons.push('近距盲区');
+ const physicalMin=device.type==='radar'&&device.physics?C*(device.physics.pulseWidthUs+device.physics.switchTimeUs)*1e-6/2:0;
+ if(direction.distance<Math.max(p.minRange,physicalMin))reasons.push('近距盲区');
  if(direction.distance>p.maxRange)reasons.push('超出标称距离');
  if(Math.abs(angularDifference(direction.azimuth,p.heading))>h/2+1e-9)reasons.push('超出方位视场');
  if(fov?Math.abs(elevation)>fov.vertical/2+1e-9:elevation<p.elevationMin-1e-9||elevation>p.elevationMax+1e-9)reasons.push('超出俯仰视场');
@@ -65,10 +68,13 @@ export function evaluate(device,target,environment,context={}){
   losses.rain=2*km*p.rainCoefficient*e.rainMmH**p.rainExponent;
   losses.cloudFog=2*km*e.cloudDbKm;
   losses.multipath=sceneMultipath(device,t,e,context,direction,p.frequencyGHz*1e9,299792458,true);
-  losses.clutter=p.clutterDb;losses.noise=e.emNoiseDb;losses.cochannel=e.cochannelDb;losses.crosstalk=e.crosstalkDb;
+  losses.facadeReflection=facadeLoss(context.facadePaths,d,p.frequencyGHz*1e9,p.reflection,true);
+  losses.clutter=p.clutterDb;
+  losses.noise=e.emNoiseDb;losses.cochannel=e.cochannelDb;losses.crosstalk=e.crosstalkDb;
   const total=Object.values(losses).reduce((a,b)=>a+b,0);
   marginDb=40*log(p.maxRange/d)+10*log(t.rcs/p.referenceRcs)-total+p.referenceSnrDb-p.thresholdDb;snrDb=p.thresholdDb+marginDb;
   effectiveRange=p.maxRange*(t.rcs/p.referenceRcs)**0.25*10**((p.referenceSnrDb-p.thresholdDb-total)/40);
+  if(device.physics){const q=device.physics;snrDb=radarSnr(q,p.frequencyGHz,d,t.rcs)-total;marginDb=snrDb-requiredSnr(q.pdRequired,q.pfa);effectiveRange=d*10**(marginDb/40);extras={backend:'radar/core/radar_snr.m (JS)',modelPd:detectionProbability(snrDb,q.pfa),requiredSnrDb:requiredSnr(q.pdRequired,q.pfa),pulseBlindRangeMeters:physicalMin};}
   const degradation=10**(clamp(-marginDb,0,40)/20);
   errors={rangeMeters:p.rangeAccuracy*degradation,azimuthDegrees:p.azimuthAccuracy*degradation,elevationDegrees:p.elevationAccuracy*degradation};
   extras.ghostRiskIndex=clamp((Math.abs(losses.multipath)+p.clutterDb+e.cochannelDb)/40,0,1);
@@ -87,9 +93,15 @@ export function evaluate(device,target,environment,context={}){
   if(t.opticalMode!=='thermal'&&e.illuminanceLux<p.minLux)reasons.push('低于可见光最低照度');
   const pixels=fov.width*t.size/(2*d*Math.tan(fov.horizontal*DEG/2));
   const contrast=light*10**(-(losses.visibility+losses.rain)/20);
-  extras={mode:t.opticalMode,angularPixels:pixels,effectivePixels:pixels*contrast,horizontalFov:fov.horizontal,verticalFov:fov.vertical,contrastFactor:contrast};
+  extras={recognitionRangeMeters:Math.min(p.maxRange,fov.width*t.size*contrast/(2*Math.tan(fov.horizontal*DEG/2)*p.requiredPixels)),recognitionThresholdPixels:p.requiredPixels,mode:t.opticalMode,angularPixels:pixels,effectivePixels:pixels*contrast,horizontalFov:fov.horizontal,verticalFov:fov.vertical,contrastFactor:contrast};
   marginDb=20*log(extras.effectivePixels/p.requiredPixels);
-  effectiveRange=Math.min(p.maxRange,d*10**(marginDb/20));
+  // Solve the range-dependent extinction rather than freezing transmission at d.
+  const pixelScale=fov.width*t.size*light/(2*Math.tan(fov.horizontal*DEG/2)*p.requiredPixels);
+  const attenuation=3.912/e.visibilityKm/1000+Math.LN10*losses.rain/(20*d);
+  let lo=0,hi=p.maxRange;
+  for(let i=0;i<32;i++){const mid=(lo+hi)/2;if(pixelScale*Math.exp(-attenuation*mid)>=mid)lo=mid;else hi=mid;}
+  effectiveRange=blocked||(t.opticalMode!=='thermal'&&e.illuminanceLux<p.minLux)?0:lo;
+  extras.recognitionRangeMeters=effectiveRange;
   errors={angularPixelDegrees:fov.horizontal/fov.width};
  }else if(device.type==='radio'){
   rangeExponent=10*p.pathExponent;
@@ -99,10 +111,12 @@ export function evaluate(device,target,environment,context={}){
   if(!band||!channel)reasons.push('目标信号不在接收频段');
   losses.penetration=buildingCount*p.wallLossDb;losses.diffraction=diffraction(t.frequencyGHz*1e9);
   losses.multipath=sceneMultipath(device,t,e,context,direction,t.frequencyGHz*1e9,299792458,false);
+  losses.facadeReflection=facadeLoss(context.facadePaths,d,t.frequencyGHz*1e9,p.reflection);
   losses.noise=e.emNoiseDb;losses.cochannel=e.cochannelDb;losses.crosstalk=e.crosstalkDb;
   const total=Object.values(losses).reduce((a,b)=>a+b,0);
   marginDb=rangeExponent*log(p.maxRange/d)+t.eirpDbm-p.referenceEirpDbm-total+p.referenceSnrDb-p.thresholdDb;snrDb=p.thresholdDb+marginDb;
   effectiveRange=p.maxRange*10**((t.eirpDbm-p.referenceEirpDbm-total+p.referenceSnrDb-p.thresholdDb)/rangeExponent);
+  if(device.physics){const q=device.physics,budget=radioBudget(q,p.maxRange,t.frequencyGHz,t.eirpDbm,d);rangeExponent=20;snrDb=budget.snrDb-total;marginDb=snrDb-requiredSnr(q.pdRequired,q.pfa);effectiveRange=d*10**(marginDb/20);const capture=t.fhss===true?-Math.expm1(-q.observationSeconds/q.hopSeconds):1;extras={backend:'rf/core + sensitivity_solve.m (JS)',noiseDbm:budget.noiseDbm,processingGainDb:budget.processingGainDb,receivedPowerDbm:budget.receivedPowerDbm-total,requiredSnrDb:requiredSnr(q.pdRequired,q.pfa),captureProbability:capture,modelPd:detectionProbability(snrDb,q.pfa)*capture,tdoaBiasMeters:blocked?0.02*d:0,tdoaBiasSeconds:blocked?0.02*d/C:0};if(extras.modelPd<q.pdRequired&&marginDb>=0)reasons.push('FHSS observation window insufficient');}
   const degradation=10**(clamp(-marginDb,0,40)/20),risk=clamp(Math.abs(losses.multipath)/20+buildingCount*0.1,0,1);
   extras.multipathDopplerSpreadHz=t.frequencyGHz*1e9*t.speed/299792458*risk;
   errors={azimuthDegrees:p.bearingAccuracy*degradation,multipathBiasDegrees:risk*p.bearingAccuracy*2,networkLocalizationMeters:e.rfStations>=4?p.networkAccuracy*e.gdop*degradation*(1+risk):null};
@@ -114,6 +128,7 @@ export function evaluate(device,target,environment,context={}){
   losses.spreading=20*log(d);losses.air=p.absorptionDbKm*km;losses.penetration=buildingCount*p.wallLossDb;
   losses.diffraction=diffraction(t.acousticFrequencyHz,soundSpeed);
   losses.multipath=sceneMultipath(device,t,e,context,direction,t.acousticFrequencyHz,soundSpeed,false);losses.refraction=e.refractionDb;
+  if(context.facadePaths?.length){const path=context.facadePaths[0],delay=(path.distance-d)/soundSpeed;losses.facadeReflection=-10*log(1+p.reflection**2*(d/path.distance)**2);extras.reflectionDelaySeconds=delay;}
   const total=Object.values(losses).reduce((a,b)=>a+b,0);
   const received=t.sourceDb-total;
   if(received<p.minSoundDb)reasons.push('低于设备输入声压下限');
@@ -123,14 +138,15 @@ export function evaluate(device,target,environment,context={}){
   effectiveRange=d*10**(marginDb/20);
   const degradation=10**(clamp(-marginDb,0,40)/20),reflectionRisk=clamp((Math.abs(losses.multipath)+losses.diffraction)/40,0,1);
   errors={azimuthDegrees:p.bearingAccuracy*degradation*(1+reflectionRisk),elevationDegrees:p.elevationAccuracy*degradation*(1+reflectionRisk),multipathBiasDegrees:reflectionRisk*p.bearingAccuracy*2};
-  extras={receivedSoundDb:received,noiseDb:noise,soundSpeed,propagationSeconds:d/soundSpeed,temporalDriftMeters:t.speed*(p.updateSeconds+d/soundSpeed),mixingRiskIndex:reflectionRisk};
+  extras={rangeBiasMeters:soundSpeed*(extras.reflectionDelaySeconds??0),reflectionDelaySeconds:extras.reflectionDelaySeconds??0,receivedSoundDb:received,noiseDb:noise,soundSpeed,propagationSeconds:d/soundSpeed,temporalDriftMeters:t.speed*(p.updateSeconds+d/soundSpeed),mixingRiskIndex:reflectionRisk};
  }
  if(marginDb<0)reasons.push(device.type==='optical'?'有效像素/对比不足':'信噪比低于模型阈值');
  if(blocked&&(device.type==='radar'||device.type==='optical'))effectiveRange=0;
  if(device.type==='radio'&&(!t.emitting||reasons.includes('目标信号不在接收频段'))){effectiveRange=0;snrDb=null;marginDb=null;}
+ if('modelPd' in extras){extras.signalPd=extras.modelPd;extras.modelPd=reasons.length?0:context.known===true?extras.signalPd:null;extras.probabilityMeaning='假设统计模型输出，非实测概率；几何失效置零，覆盖数据不足为空';if(device.type==='radio'&&(!t.emitting||reasons.includes('目标信号不在接收频段')))extras.receivedPowerDbm=null;}
  const eligible=reasons.length===0;
  const score=eligible?clamp(0.5+marginDb/40,0,1):0;
- return {modelVersion:MODEL_VERSION,id:device.id,type:device.type,name:device.name,eligible,status:!eligible?'outside-model':context.known!==true?'uncertain':'within-model',reasons,warnings,geometry:{...direction,blocked,buildingCount,known:context.known??false},marginDb,snrDb,losses,equivalentRangeMeters:clamp(effectiveRange,0,p.maxRange),score,scoreMeaning:'未标定的模型裕量评分，不是探测/识别概率',errors,extras};
+ return {modelVersion:MODEL_VERSION,id:device.id,type:device.type,name:device.name,eligible,status:!eligible?'outside-model':context.known!==true?'uncertain':'within-model',reasons,warnings,geometry:{...direction,blocked,buildingCount,known:context.known??false},marginDb,snrDb,losses,equivalentRangeMeters:clamp(effectiveRange,0,p.maxRange),score,scoreMeaning:'未标定的模型裕量评分，不是探测/识别概率',errors,extras:{...extras,facadePathCount:context.facadePaths?.length??0}};
 }
 export function validateScenario(value,origin){
  if(!value||value.modelVersion!==MODEL_VERSION||!Array.isArray(value.devices)||value.devices.length>64)throw Error('需要当前版本的装备方案，含 0–64 个设备');

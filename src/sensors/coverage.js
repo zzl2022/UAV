@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import {opticalFov} from './engine.js';
+import {C} from './physics.js';
 // Closed spherical annular sector: true slant range, blind zone and instantaneous FOV.
 export function nominalCoverage(device,target){
- const p=device.parameters,fov=device.type==='optical'?opticalFov(p,target.opticalMode):null;
+ const p={...device.parameters},fov=device.type==='optical'?opticalFov(p,target.opticalMode):null;
+ if(device.type==='radar'&&device.physics)p.minRange=Math.min(p.maxRange,Math.max(p.minRange,C*(device.physics.pulseWidthUs+device.physics.switchTimeUs)*1e-6/2));
  const horizontal=fov?.horizontal??p.azimuthFov;
  const low=Math.min(90,Math.max(-90,p.pitch+(fov?-fov.vertical/2:p.elevationMin)));
  const high=Math.max(-90,Math.min(90,p.pitch+(fov?fov.vertical/2:p.elevationMax)));

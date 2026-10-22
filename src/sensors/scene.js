@@ -1,8 +1,9 @@
+import {facadeIndex} from './reflections.js';
 import * as THREE from 'three';
 import {terrainSampler} from './terrain-query.js';
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 
-export function createSceneQuery(model,{fastGround=true}={}){
+export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
  for(const mesh of [model.buildings,model.ground]){
   // Keep original triangle ordering: feature picking relies on face-index ranges.
   mesh.geometry.boundsTree??=new MeshBVH(mesh.geometry,{indirect:true});
@@ -23,6 +24,8 @@ export function createSceneQuery(model,{fastGround=true}={}){
   while(lo<=hi){const m=(lo+hi)>>1,r=model.ranges[m];if(faceIndex<r.start)hi=m-1;else if(faceIndex>=r.end)lo=m+1;else return r.building;}
   return null;
  }
+ const reflectedPaths=reflections?facadeIndex(model.ranges.map(r=>r.building)):null;
+ function visible(a,b){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),length=start.distanceTo(end);raycaster.set(start,end.sub(start).normalize());raycaster.near=0.05;raycaster.far=length-0.05;raycaster.firstHitOnly=true;return !raycaster.intersectObjects([model.buildings,model.ground]).length;}
  function trace(from,to){
   const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),distance=a.distanceTo(b);
   const result={blocked:false,buildingCount:0,clearance:0,obstacleDistance:null,sensorGround:groundAt(from[0],from[2]),targetGround:groundAt(to[0],to[2]),known:true,coverageSamples:0,coverageSampleSpacingMeters:0};
@@ -36,6 +39,7 @@ export function createSceneQuery(model,{fastGround=true}={}){
    if(hit.object===model.buildings){const building=featureAt(hit.faceIndex);if(building){seen.add(building.id);const clearance=building.rings[0][0][1]+building.height-hit.point.y;if(clearance>result.clearance){result.clearance=clearance;result.obstacleDistance=hit.distance;}}}
   }
   result.buildingCount=seen.size;
+  if(reflectedPaths)result.facadePaths=reflectedPaths(from,to,visible);
   const horizontal=Math.hypot(to[0]-from[0],to[2]-from[2]);
   const samples=Math.max(1,Math.min(1024,Math.ceil(horizontal/15)));
   result.coverageSampleSpacingMeters=horizontal/samples;

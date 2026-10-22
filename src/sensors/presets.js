@@ -1,3 +1,4 @@
+import {physicsDefaults} from './physics.js';
 // Equipment values transcribed from 创意二文件/创意二数据集/装备参数.doc.
 // All fields absent from that document remain explicitly marked modeling assumptions.
 export const EQUIPMENT_SOURCE='创意二文件/创意二数据集/装备参数.doc';
@@ -34,8 +35,8 @@ function preset(id,type,name,overrides,documentFields,notes){
  return {id,type,name,parameters,provenance,notes,source:EQUIPMENT_SOURCE};
 }
 export const PRESETS=[
- preset('radar-02c','radar','02C 三坐标雷达',{},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km，模型保守取 8 km；X 波段的具体频率、参考 RCS、盲区和传播系数为假设。'),
- preset('radar-03d','radar','03D 三坐标雷达',{frequencyGHz:16,elevationMax:60,updateSeconds:2,rangeAccuracy:6,azimuthAccuracy:0.3,elevationAccuracy:0.3},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km；Ku 波段具体频率及噪声、雨衰参数需标定。'),
+ preset('radar-02c','radar','02C 三坐标雷达',{frequencyGHz:9.4},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km，模型保守取 8 km；新建设备接入 MATLAB 能量方程，脉冲盲区约 450 m，功率与收发参数为假设。'),
+ preset('radar-03d','radar','03D 三坐标雷达',{frequencyGHz:15,elevationMax:60,updateSeconds:2,rangeAccuracy:6,azimuthAccuracy:0.3,elevationAccuracy:0.3},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km；Ku 波段具体频率及噪声、雨衰参数需标定。'),
  preset('radio-tdoa','radio','TDOA-X1B',{maxRange:4000,minRange:0,elevationMin:-90,elevationMax:90,capacity:35,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 2–6 km，默认取中值 4 km；并发 >35，保守取 35。定位误差 <20 m 属于 TDOA 网络，单站不输出三维定位误差。'),
  preset('radio-mini','radio','OA-X1Bmini',{maxRange:1250,minRange:0,elevationMin:-90,elevationMax:90,capacity:30,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 0.5–2 km，默认取中值 1.25 km；并发 >30，保守取 30。'),
  preset('radio-x1c','radio','X1C 侦测设备',{maxRange:3500,minRange:0,elevationMin:-90,elevationMax:90,capacity:15,updateSeconds:1,bandMinGHz:0.9,bandMaxGHz:5.8,networkAccuracy:10},['networkAccuracy'],'文档城市半径 2–5 km，默认取中值 3.5 km。仅接收列出的 0.9/1.2/2.4/5.2/5.8 GHz，带宽容差为模型假设。'),
@@ -46,5 +47,5 @@ export const DEFAULT_ENV=values(ENV_FIELDS);
 export const DEFAULT_TARGET={position:[0,150,-200],emitting:true,opticalMode:'wide',acousticFrequencyHz:2000,...values(TARGET_FIELDS)};
 export function createDevice(presetId,id,position=[0,110,0]){
  const p=PRESETS.find(p=>p.id===presetId);if(!p)throw Error('未知装备预设');
- return {id,presetId,type:p.type,name:p.name,parameters:{...p.parameters},position:[...position]};
+ return {id,presetId,type:p.type,name:p.name,parameters:{...p.parameters},...(physicsDefaults(presetId,p.type)?{physics:physicsDefaults(presetId,p.type)}:{}),position:[...position]};
 }

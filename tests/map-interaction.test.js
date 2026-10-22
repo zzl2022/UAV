@@ -16,7 +16,7 @@ test('nominal shading respects slant range, blind zone, heading and FOV',()=>{
  const device=createDevice('radar-02c','test');Object.assign(device.parameters,{minRange:50,maxRange:500,azimuthFov:30,heading:90,pitch:0,elevationMin:0,elevationMax:40});
  const geometry=nominalCoverage(device,DEFAULT_TARGET),p=geometry.attributes.position;
  let maxRadius=0,minRadius=Infinity;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),r=Math.hypot(x,y,z);minRadius=Math.min(r,minRadius);maxRadius=Math.max(r,maxRadius);assert.ok(x>0);assert.ok(y>=0);assert.ok(Math.abs(Math.atan2(-z,x))<=15*Math.PI/180+1e-6);}
- assert.ok(Math.abs(minRadius-50)<0.001);assert.ok(Math.abs(maxRadius-500)<0.001);geometry.dispose();
+ assert.ok(Math.abs(minRadius-449.688687)<0.001);assert.ok(Math.abs(maxRadius-500)<0.001);geometry.dispose();
  device.parameters.maxRange=900;const next=nominalCoverage(device,DEFAULT_TARGET);assert.equal(next.userData.maxRange,900);assert.ok(next.boundingBox.max.x>850);next.dispose();
 });
 test('optical shading changes with wide/narrow modes and respects pole limits',()=>{

@@ -1,3 +1,4 @@
+import {PHYSICS_FIELDS} from './physics.js';
 import * as THREE from 'three';
 import {PRESETS,TYPES,fieldsFor,ENV_FIELDS,TARGET_FIELDS,createDevice,EQUIPMENT_SOURCE} from './presets.js';
 import {MODEL_VERSION,evaluate,validateScenario,validateDevice,validateTarget,validateEnvironment,opticalFov} from './engine.js';
@@ -9,7 +10,7 @@ import {defaultScenario} from './scenario.js';
 const COLORS={radar:0x70d6ff,optical:0xffd783,radio:0xb89aff,acoustic:0x69e2bd};
 const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2)):'—';
 const TYPE_METRICS={rangeMeters:'距离误差 / m',azimuthDegrees:'方位误差 / °',elevationDegrees:'俯仰误差 / °',multipathBiasDegrees:'多径角偏差指标 / °',networkLocalizationMeters:'三维站网定位误差估计 / m',angularPixelDegrees:'单像素角度 / °'};
-const LOSS_NAMES={rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
+const LOSS_NAMES={facadeReflection:'Facade reflection',rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
 
 export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  const panel=document.createElement('aside');panel.id='equipment-panel';panel.hidden=true;
@@ -28,6 +29,9 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  <section class="sensor-io"><button id="equipment-export" class="primary">导出参数与计算报告 · JSON ↓</button><label class="sensor-import">导入参数方案<input id="equipment-import" type="file" accept=".json,application/json"></label><button id="equipment-defaults">载入四类示例设备</button></section>
  <footer>半透明阴影是标称范围/视场示意，随范围、盲区、方向与视场实时更新，未裁切遮挡，不能当作有效覆盖。实线显示当前设备至目标的路径。<br><a href="./sensors-modeling.md" target="_blank" rel="noopener">模型公式与参数来源 ↗</a></footer>`;
  app.insertBefore(panel,app.querySelector('main'));
+ const physicalSection=document.createElement('details');physicalSection.id='equipment-physics-section';physicalSection.innerHTML='<summary>雷达 / 无线电物理链路参数</summary><div id="equipment-physics" class="sensor-fields"></div>';
+ panel.querySelector('.sensor-io').before(physicalSection);
+ const hopping=document.createElement('label');hopping.innerHTML='跳频目标 <input id="equipment-fhss" type="checkbox">';panel.querySelector('#equipment-emitting').parentElement.after(hopping);
  const cityPanel=app.querySelector('aside');
  const toggle=document.createElement('button');toggle.id='toggle-sensors';toggle.textContent='装备建模 →';toggle.disabled=true;app.querySelector('header').appendChild(toggle);
  const $=id=>panel.querySelector('#'+id);
@@ -58,10 +62,13 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
   $('equipment-device').disabled=!device;
   if(!device)$('equipment-device').add(new Option('暂无设备，请选择型号并添加',''));
   $('equipment-note').textContent=preset?.notes??'设备已清空。选择型号后点击“添加”即可重新放置。';
+  $('equipment-physics-section').hidden=!device?.physics;
+  if(device?.physics)numericFields($('equipment-physics'),device.physics,PHYSICS_FIELDS[device.type],'physics');
+  $('equipment-fhss').checked=state.target.fhss===true;
   const provenance={...preset?.provenance};
   for(const key of Object.keys(device?.parameters??{}))if(device.parameters[key]!==preset.parameters[key])provenance[key]='用户调整';
   for(const key of ['maxRange','capacity'])if(device?.type==='radio'&&provenance[key]!=='用户调整')provenance[key]='文档派生';
-  if(device){numericFields($('equipment-position'),positionValues(device.position),positionFields,'device-position');numericFields($('equipment-parameters'),device.parameters,fieldsFor(device.type),'parameters',provenance);}
+  if(device){numericFields($('equipment-position'),positionValues(device.position),positionFields,'device-position');numericFields($('equipment-parameters'),device.parameters,Object.fromEntries(Object.entries(fieldsFor(device.type)).filter(([k])=>!device.physics||!['referenceSnrDb','thresholdDb','referenceRcs','pathExponent','referenceEirpDbm'].includes(k))),'parameters',provenance);}
   else{$('equipment-position').replaceChildren();$('equipment-parameters').replaceChildren();}
   $('equipment-pick-device').disabled=!device;$('equipment-focus').disabled=!device;
   numericFields($('equipment-target-position'),positionValues(state.target.position),positionFields,'target-position');
@@ -81,7 +88,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
    mark(device.position,COLORS[device.type],device.id===selectedId?10:6,{deviceId:device.id,kind:'device'});
   }
   mark(state.target.position,0xff7e85,10,{kind:'target'});
-  const device=selected();if(device){const result=results.find(r=>r.id===device.id);line([device.position,state.target.position],result?.eligible?0x69e2bd:0xff7e85);}
+  const device=selected();if(device){const result=results.find(r=>r.id===device.id);line([device.position,state.target.position],result?.eligible?0x69e2bd:0xff7e85);for(const path of lastContexts.get(device.id)?.facadePaths??[])line([device.position,path.point,state.target.position],0xffd783,true);}
   layer.updateMatrixWorld(true);
  }
  function metric(parent,label,value){const row=document.createElement('div');row.className='sensor-metric';const title=document.createElement('span'),number=document.createElement('strong');title.textContent=label;number.textContent=value;row.append(title,number);parent.append(row);}
@@ -96,7 +103,9 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
   if(r.reasons.length){const text=document.createElement('p');text.className='sensor-reasons';text.textContent=r.reasons.join('；');parent.append(text);}
   for(const [key,value] of Object.entries(r.losses))metric(parent,`${LOSS_NAMES[key]??key} / dB`,format(value));
   for(const [key,value] of Object.entries(r.errors))metric(parent,TYPE_METRICS[key]??key,format(value));
-  const extraLabels={ghostRiskIndex:'虚警风险指标（非概率）',angularPixels:'目标原始像素',effectivePixels:'目标有效像素',horizontalFov:'瞬时水平视场 / °',verticalFov:'瞬时垂直视场 / °',contrastFactor:'对比度系数',multipathDopplerSpreadHz:'多径频率展宽指标 / Hz',receivedSoundDb:'接收声压 / dB SPL',noiseDb:'合成背景声压 / dB SPL',soundSpeed:'沿路径声速 / m/s',propagationSeconds:'声传播时延 / s',temporalDriftMeters:'时延导致的位置滞后 / m',mixingRiskIndex:'声波混叠风险指标'};
+  if(r.extras.backend)metric(parent,'计算模型',r.extras.backend);
+  const extraLabels={modelPd:'Model Pd (uncalibrated)',requiredSnrDb:'Required SNR / dB',pulseBlindRangeMeters:'Pulse blind range / m',receivedPowerDbm:'Received power / dBm',noiseDbm:'Thermal noise / dBm',processingGainDb:'Processing gain / dB',captureProbability:'FHSS capture probability',tdoaBiasMeters:'NLOS bias / m',tdoaBiasSeconds:'NLOS bias / s',recognitionRangeMeters:'Recognition range / m',reflectionDelaySeconds:'Echo delay / s',rangeBiasMeters:'Echo range bias / m',facadePathCount:'Facade paths',ghostRiskIndex:'虚警风险指标（非概率）',angularPixels:'目标原始像素',effectivePixels:'目标有效像素',horizontalFov:'瞬时水平视场 / °',verticalFov:'瞬时垂直视场 / °',contrastFactor:'对比度系数',multipathDopplerSpreadHz:'多径频率展宽指标 / Hz',receivedSoundDb:'接收声压 / dB SPL',noiseDb:'合成背景声压 / dB SPL',soundSpeed:'沿路径声速 / m/s',propagationSeconds:'声传播时延 / s',temporalDriftMeters:'时延导致的位置滞后 / m',mixingRiskIndex:'声波混叠风险指标'};
+  Object.assign(extraLabels,{modelPd:'统计模型 Pd（非实测）',requiredSnrDb:'统计检出门限 / dB',pulseBlindRangeMeters:'脉冲近距盲区 / m',receivedPowerDbm:'链路接收功率估计 / dBm',noiseDbm:'接收机热噪声 / dBm',processingGainDb:'反推处理增益 / dB',captureProbability:'跳频捕获概率近似',tdoaBiasMeters:'NLOS 时差距离偏差 / m',tdoaBiasSeconds:'NLOS 时差偏差 / s',recognitionRangeMeters:'消光门限识别距离 / m',reflectionDelaySeconds:'立面回声超额时延 / s',rangeBiasMeters:'回声距离偏差 / m',facadePathCount:'有效一次立面反射路径数'});
   for(const [key,label] of Object.entries(extraLabels))if(key in r.extras)metric(parent,label,format(r.extras[key]));
   if(r.extras.ghostCandidate){metric(parent,'双径虚拟回波距离 / m',format(r.extras.ghostCandidate.apparentRangeMeters));metric(parent,'虚拟回波可分辨',r.extras.ghostCandidate.resolvable?'仅在近似模型中可分辨':'低于参考距离分辨能力');}
   for(const warning of r.warnings){const text=document.createElement('p');text.className='hint';text.textContent=warning;parent.append(text);}
@@ -114,7 +123,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  function focus(){if(!selected())return;const p=new THREE.Vector3(...selected().position),t=new THREE.Vector3(...state.target.position),center=p.clone().add(t).multiplyScalar(0.5),span=Math.max(200,p.distanceTo(t)*1.5);controls.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(span*.65,span*.65,span*.85));controls.update();updateMarkerScreens();}
  function show(){
   app.dispatchEvent(new CustomEvent('view-change',{detail:'sensors'}));
-  if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model);}
+  if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model,{reflections:true});}
   cityPanel.hidden=true;panel.hidden=false;app.classList.add('equipment-mode');layer.visible=true;compute();focus();
  }
  toggle.onclick=show;
@@ -132,9 +141,11 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
   const value=Number(input.value);
   if(scope==='device-position'||scope==='target-position'){const p=scope==='device-position'?selected().position:state.target.position;const index={east:0,up:1,north:2}[key];p[index]=key==='north'?-value:value;}
   else if(scope==='parameters'){selected().parameters[key]=value;input.closest('label').querySelector('small').textContent=`${fieldsFor(selected().type)[key].unit} · 用户调整`;}
+  else if(scope==='physics')selected().physics[key]=value;
   else state[scope][key]=value;
   compute();
  });
+ $('equipment-fhss').onchange=()=>{state.target.fhss=$('equipment-fhss').checked;compute();};
  $('equipment-emitting').onchange=()=>{state.target.emitting=$('equipment-emitting').checked;compute();};
  $('equipment-optical-mode').onchange=()=>{state.target.opticalMode=$('equipment-optical-mode').value;compute();};
  $('equipment-pick-device').onclick=()=>{pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');};
@@ -207,7 +218,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  renderer.domElement.addEventListener('lostpointercapture',()=>{if(drag){endDrag();renderForm();compute();}});
  renderer.domElement.addEventListener('pointerleave',()=>{if(!drag){hideProbe();renderer.domElement.style.cursor='';}});
  $('equipment-export').onclick=()=>{
-  const payload={...state,equipmentSource:EQUIPMENT_SOURCE,parameterProvenance:Object.fromEntries(state.devices.map(device=>[device.id,Object.fromEntries(Object.entries(PRESETS.find(p=>p.id===device.presetId).provenance).map(([key,source])=>[key,device.parameters[key]===PRESETS.find(p=>p.id===device.presetId).parameters[key]?source:'用户调整']))])),sourceHashes:city.metadata.sources,ecefTransform:city.metadata.ecefTransform,results,contexts:Object.fromEntries(lastContexts),modelNotes:'Approximate uncalibrated sensor models; scores are not detection probabilities.'};
+  const payload={...state,equipmentSource:EQUIPMENT_SOURCE,parameterProvenance:Object.fromEntries(state.devices.map(device=>[device.id,Object.fromEntries(Object.entries(PRESETS.find(p=>p.id===device.presetId).provenance).map(([key,source])=>[key,device.parameters[key]===PRESETS.find(p=>p.id===device.presetId).parameters[key]?source:'用户调整']))])),sourceHashes:city.metadata.sources,ecefTransform:city.metadata.ecefTransform,results,contexts:Object.fromEntries(lastContexts),physicsSources:['radar/core/radar_snr.m','radar/config/radar_02C.m','radar/config/radar_03D.m','rf/core/sensitivity_solve.m','rf/core/rx_power_dbm.m','rf/core/rx_noise_dbm.m'],modelNotes:'Approximate uncalibrated sensor models; scores are not detection probabilities.'};
   const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='zhengzhou-sensor-scenario.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  };
  $('equipment-import').onchange=async()=>{

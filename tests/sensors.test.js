@@ -5,7 +5,7 @@ import {MODEL_VERSION,evaluate,powerSumDb,knifeEdgeLoss,twoRayLoss,angles,valida
 const clear={known:true,blocked:false,buildingCount:0,sensorGround:0,targetGround:0};
 const target=()=>({...structuredClone(DEFAULT_TARGET),position:[0,10,-1000]});
 const environment=()=>({...DEFAULT_ENV});
-const device=(id='radar-02c')=>{const d=createDevice(id,'test',[0,10,0]);if('reflection' in d.parameters)d.parameters.reflection=0;if('clutterDb' in d.parameters)d.parameters.clutterDb=0;return d;};
+const device=(id='radar-02c')=>{const d=createDevice(id,'test',[0,10,0]);delete d.physics;if('reflection' in d.parameters)d.parameters.reflection=0;if('clutterDb' in d.parameters)d.parameters.clutterDb=0;return d;};
 const close=(a,b,tolerance=1e-8)=>assert.ok(Math.abs(a-b)<tolerance,`${a} ≠ ${b}`);
 test('all seven documented presets execute without non-finite results',()=>{
  for(const p of PRESETS){const r=evaluate(device(p.id),target(),environment(),clear);assert.equal(r.type,p.type);assert.ok(Number.isFinite(r.marginDb));assert.ok(r.equivalentRangeMeters>=0);assert.ok(!/NaN|Infinity/.test(JSON.stringify(r)));}

@@ -8,7 +8,7 @@ import {EQUIPMENT_SOURCE} from '../src/sensors/presets.js';
 const root=new URL('../',import.meta.url);
 const city=JSON.parse(await readFile(new URL('public/data/city.json',root)));
 const terrain=JSON.parse(await readFile(new URL('public/data/terrain.json',root)));
-const query=createSceneQuery(createModel(city,terrain)),scenario=defaultScenario(city);
+const query=createSceneQuery(createModel(city,terrain),{reflections:true}),scenario=defaultScenario(city);
 const contexts=Object.fromEntries(scenario.devices.map(d=>[d.id,query.trace(d.position,scenario.target.position)]));
 const variations={baseline:{},rain:{environment:{rainMmH:30,rainNoiseDb:55}},fog:{environment:{visibilityKm:0.2}},night:{environment:{illuminanceLux:0}},radioSilent:{target:{emitting:false}},noisyStreet:{environment:{trafficDb:80,constructionDb:70}},emInterference:{environment:{emNoiseDb:10,cochannelDb:10,crosstalkDb:5}}};
 const cases=Object.fromEntries(Object.entries(variations).map(([key,change])=>[key,scenario.devices.map(device=>evaluate(device,{...scenario.target,...change.target},{...scenario.environment,...change.environment},contexts[device.id]))]));
