@@ -1,0 +1,41 @@
+import {chromium} from 'playwright-core';
+import assert from 'node:assert/strict';
+import {mkdir,readFile} from 'node:fs/promises';
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{
+ await mkdir('artifacts',{recursive:true});
+ const page=await browser.newPage({viewport:{width:1200,height:800}}),errors=[];
+ page.on('pageerror',error=>errors.push(error.message));page.on('console',msg=>{if(msg.type()==='error'&&!msg.text().startsWith('Failed to load resource:'))errors.push(msg.text());});
+ page.on('response',response=>{if(response.status()>=400&&!response.url().endsWith('/favicon.ico'))errors.push(`${response.status()} ${response.url()}`);});
+ await page.goto(process.env.APP_URL||'http://127.0.0.1:5175');
+ await page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:120000});
+ await page.locator('#toggle-sensors').click();
+ await page.locator('#detection-reflections').uncheck();await page.locator('#detection-spacing').selectOption('100');await page.locator('#detection-height').selectOption('600');
+ const ready=async()=>{await page.waitForFunction(()=>['ready','error'].includes(window.detectionDiagnostics?.status),null,{timeout:180000});const d=await page.evaluate(()=>window.detectionDiagnostics);assert.equal(d.status,'ready',d.error);return d;};
+ let d=await ready();assert.ok(d.grid.dimensions.every(x=>x>2));assert.equal(d.rendering,'gpu-raymarch-3d-texture');assert.equal(d.scalarPrecision,'float32');assert.ok(d.counts.hard>0);assert.ok(d.counts.detected>0);assert.ok(d.grid.total>2000);
+ await page.locator('#detection-oblique').click();await page.mouse.move(5,5);await page.waitForTimeout(500);await page.screenshot({path:'artifacts/detection-volume-radar.png',timeout:90000});console.log('3D radar field rendered',d.grid.dimensions,d.counts);
+ assert.deepEqual(errors,[]);
+ await page.locator('#detection-style').selectOption('surface');await page.screenshot({path:'artifacts/detection-volume-isosurface.png',timeout:90000});assert.equal(await page.evaluate(()=>window.detectionDiagnostics.style),'surface');
+ await page.locator('#detection-spacing').selectOption('50');d=await ready();assert.ok(d.grid.step[0]<=50);assert.ok(d.grid.step[1]<=20);assert.ok(d.grid.total>100000);
+ await page.screenshot({path:'artifacts/detection-volume-fine.png',timeout:90000});console.log('Fine volume sampled',d.grid.dimensions,d.grid.step);
+ await page.locator('#detection-spacing').selectOption('100');d=await ready();
+ await page.locator('#detection-style').selectOption('volume');
+ const viewport=await page.locator('#viewport').boundingBox();let hovered=false;
+ for(const [x,y] of [[.7,.4],[.65,.45],[.7,.55],[.6,.5],[.8,.6],[.5,.6],[.6,.65],[.8,.4]]){await page.mouse.move(viewport.x+viewport.width*x,viewport.y+viewport.height*y);await page.waitForTimeout(160);if(await page.evaluate(()=>window.sensorDiagnostics?.probe?.source==='detection-volume')){hovered=true;break;}}
+ assert.ok(hovered,'probe must inspect a position inside the 3D field');
+ const total=d.grid.total;await page.locator('#detection-metric').selectOption('pd');d=await ready();assert.equal(d.metric,'pd');assert.equal(d.grid.total,total);assert.match(await page.locator('#detection-scale-title').innerText(),/Pd/);
+ await page.locator('#detection-clip').fill('0.8');await page.locator('#detection-clip').dispatchEvent('input');assert.equal(await page.evaluate(()=>window.detectionDiagnostics.clip),.8);
+ await page.screenshot({path:'artifacts/detection-volume-pd-cutaway.png',timeout:90000});
+ await page.locator('#detection-mode').selectOption('radio');await ready();
+ await page.locator('#equipment-panel summary').filter({hasText:'目标与工作模式'}).click();await page.locator('#equipment-emitting').uncheck();d=await ready();assert.equal(d.counts.signal,0);assert.equal(d.counts.detected,0);console.log('RF silence masked the whole volume');
+ await page.locator('#detection-mode').selectOption('combined');d=await ready();assert.ok(d.counts.detected>0);
+ await page.locator('#detection-height').selectOption('600');await page.locator('#detection-height').selectOption('300');d=await ready();assert.equal(d.height,300);
+ const downloadPromise=page.waitForEvent('download');await page.locator('#detection-export').click();const download=await downloadPromise;await download.saveAs('artifacts/detection-volume-browser.json');
+ const json=JSON.parse(await readFile('artifacts/detection-volume-browser.json','utf8'));assert.equal(json.values.length,d.grid.total*4);assert.equal(json.winners.length,d.grid.total*3);assert.equal(json.origin.length,3);
+ const observed=new Set(json.values.filter((_,i)=>i%4===0).map(v=>v.toFixed(2)));assert.ok(observed.size>100,'continuous scalar field must retain more than three levels');
+ await page.locator('#detection-metric').selectOption('snr');assert.equal(await page.evaluate(()=>window.detectionDiagnostics.metric),'snr');
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'artifacts/detection-volume-mobile.png',fullPage:true,timeout:90000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.locator('#equipment-reset').click();await page.waitForFunction(()=>window.detectionDiagnostics?.status==='empty');assert.ok(await page.locator('#detection-export').isDisabled());
+ await page.locator('#equipment-back').click();assert.ok(await page.locator('#detection-legend').isHidden());assert.deepEqual(errors,[]);
+ console.log('3D volume passed: GPU shader, float scalar field, continuous Pd/SNR/margin, clipping, RF silence, union, cancellation, export, mobile and cleanup.');
+}finally{await browser.close();}

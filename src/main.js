@@ -109,11 +109,11 @@ try {
   });
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);};
   new ResizeObserver(resize).observe(viewport);resize();
-  let planning;
+  let planning,sensors;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport});
-  renderer.setAnimationLoop(stamp=>{controls.update();landmarks.update();planning?.update(stamp);renderer.render(scene,camera);});
+  renderer.setAnimationLoop(stamp=>{controls.update();landmarks.update();planning?.update(stamp);if(!sensors?.render())renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
-  const sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
+  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
   planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.

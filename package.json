@@ -14,6 +14,7 @@
     "test:imagery": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
     "report:sensors": "node scripts/sensor_report.js",
     "test:sensors:browser": "node scripts/sensor_browser_smoke.js",
+    "test:detection:browser": "node scripts/detection_browser_smoke.js",
     "plan:build": "node scripts/deployment_report.js",
     "plan:example": "node scripts/deployment_report.js --example",
     "test:planning:browser": "node scripts/planning_browser_smoke.js"

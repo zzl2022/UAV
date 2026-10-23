@@ -12,6 +12,8 @@ try{
  assert.equal(await page.locator('#museum-label').innerText(),'⌖ 河南博物院');
  await page.screenshot({path:'artifacts/henan-museum.png'});
  await page.locator('#toggle-sensors').click();await page.waitForFunction(()=>window.sensorDiagnostics?.results?.length===4,null,{timeout:120000});
+ // Surface-probe regression; the slice probe has its own detection browser suite.
+ await page.locator('#detection-enabled').uncheck();
  assert.deepEqual((await page.evaluate(()=>window.sensorDiagnostics.types)).sort(),['acoustic','optical','radar','radio']);
  await page.locator('#equipment-device').selectOption('sensor-3');
  await page.locator('#equipment-panel summary').filter({hasText:'目标与工作模式'}).click();
