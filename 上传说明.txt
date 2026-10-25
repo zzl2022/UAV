@@ -1,0 +1,30 @@
+﻿给上传同学的说明
+
+本包已经按老师UAV仓库的根目录结构整理，包含本次新增／修改的68个源码、配置、测试和说明文件。
+不是完整平台；请上传到老师现有的UAV仓库，不要创建空仓库后只上传本包。
+
+直接用GitHub网页上传：
+1. 解压本ZIP，打开解压目录，确认能看到src、backend、equipment_models、package.json等。
+2. 在老师的UAV仓库新建分支，例如 integrate-optical-acoustic。
+3. 在仓库根目录点击 Add file → Upload files。
+4. 把本包内的文件及文件夹拖进去，保持目录结构。不要拖解压目录的外层文件夹，也不要只上传ZIP。
+5. 检查变更后提交，创建Pull Request给老师合并。
+“上传说明.txt”可以一起上传，也可不上传，不影响功能。
+
+本包基于main的6097a2fbdaa71cd4c803396f7209e89ade755e5b制作。
+如老师之后修改了同名文件，请保留其新修改再合入；不要直接覆盖新代码。
+不需要上传node_modules、.venv、.git、生成的public/data或dist。本包已排除这些内容。
+两个原模型报告测试用的demo JSON是必要测试样例，已保留在equipment_models的outputs下。
+
+上传后运行方式：
+python -m venv .venv
+Windows：.venv\Scripts\python.exe -m pip install -r requirements-integration.txt
+Windows：.venv\Scripts\python.exe scripts/prepare_data.py
+npm ci
+Windows：.venv\Scripts\python.exe scripts/start_integrated.py
+
+macOS/Linux将上面的.venv\Scripts\python.exe改为.venv/bin/python。
+浏览器打开http://127.0.0.1:5173/，点击顶部“我的光电／声学”。
+必须同时运行Python服务和前端。只上传静态网页不会执行Python模型。
+详细说明在docs/student-capabilities-integration.md，验证记录在docs/integration_validation.md。
+本包没有真实探测概率或识别精度保证；缺失设备信息保持未知。

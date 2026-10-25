@@ -1,0 +1,43 @@
+# 所有位置、声源声级、频带、噪声、风雨均为合成输入，不是现场测量。
+# NoiseComponent 的 level_db 是传感器处接收到的声压级，不是噪声源发射声级。
+# 单一共同频带、Z计权、参考声压20微帕、共同平均时段；不支持混加dBA。
+schema_version: 1
+sensor:
+  position: [0, 0, 5]
+  status: assumed
+  source: 合成传感器位置
+target:
+  position: [0, 200, 5]
+  reference_level_db: 100
+  reference_distance_m: 1
+  band_hz: [500, 2000]
+  status: assumed
+  source: 合成单频带声源在1m处100dB_SPL，不代表真实无人机
+conditions:
+  noise:
+    - {name: background, level_db: 40, band_hz: [500, 2000], status: assumed, source: 合成接收端背景噪声}
+  wind_speed_m_s: 0
+  rain_mm_h: 0
+  temperature_c: 20
+  status: assumed
+  source: 合成场景气象
+scenarios:
+  - {name: quiet_clear, scene: empty}
+  - {name: farther_clear, scene: empty, target: {position: [0, 400, 5]}}
+  - name: traffic
+    scene: empty
+    conditions:
+      noise:
+        - {name: traffic, level_db: 60, band_hz: [500, 2000], status: assumed, source: 合成接收端交通噪声}
+  - name: mixed_city_noise
+    scene: empty
+    conditions:
+      noise:
+        - {name: traffic, level_db: 60, band_hz: [500, 2000], status: assumed, source: 合成交通}
+        - {name: construction, level_db: 60, band_hz: [500, 2000], status: assumed, source: 合成施工}
+        - {name: speech, level_db: 55, band_hz: [500, 2000], status: assumed, source: 合成人声}
+  - {name: wind_rain, scene: empty, conditions: {wind_speed_m_s: 5, rain_mm_h: 10}}
+  - {name: building_screen, scene: blocked}
+  - {name: narrow_corridor, scene: corridor}
+  - {name: missing_building_height, scene: unknown_height}
+  - {name: missing_source_level, scene: empty, target: {reference_level_db: null}}

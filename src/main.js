@@ -7,6 +7,7 @@ import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
+import {mountStudentCapabilities} from './student-capabilities/ui.js';
 
 const app=document.querySelector('#app');
 app.innerHTML=`<aside>
@@ -115,6 +116,7 @@ try {
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
   planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
+  mountStudentCapabilities({app,city,scene,camera,controls,renderer,model});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};

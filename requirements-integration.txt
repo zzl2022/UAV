@@ -1,0 +1,3 @@
+-r requirements.txt
+-e ./equipment_models/optical[test]
+-e ./equipment_models/acoustic[test]
