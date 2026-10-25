@@ -1,4 +1,4 @@
-# Checklist
+﻿# Checklist
 
 - [x] `docs/task3/model-selection.md` 覆盖各环节 ≥3 个开源候选，含许可/优劣/部署成本，推荐组合已给出（用户确认事项已在文内标注）
 - [x] 新增代码全部位于 `src/task3/` 等独立目录；未删除/重命名任何现有文件；`src/main.js` 仅追加入口行（git diff 证实 +2 行）
@@ -14,4 +14,4 @@
 - [x] 多轮仿真过程数据完整保存于 `artifacts/task3/runs/`（6 轮 runId 齐全，schema task3-run/1.0 可校验）
 - [x] 每阶段回归：`npm test` 84/84、`report:sensors`、`plan:build`、`build`、browser/sensor/detection 冒烟均通过；`test:planning:browser` 存在**仓库既有**失败（已 stash 验证 main 分支原样复现：committed example 基线覆盖率 97.76% vs 断言 100%，与本次改动无关，按约束未改动基本盘文件）
 - [x] 交付文档五份（模型选型/方案对比/威胁验证/EMC/布设规则）+ 使用说明齐全（docs/task3/）
-- [ ] 新分支提交、commit 信息规范、PR 已提交且未直推 main；大体积数据文件未入库 —— 分支 `feat/task3-optimization-pipeline` + commit 5fbd867 已就绪、未推 main、数据文件未入库；**push/PR 受本机网络与凭据限制未完成**（github.com:443 连接被重置、无 gh CLI），待用户本机执行 push 后提 PR
+- [x] 新分支提交、commit 信息规范、未直推 main、大体积数据文件未入库；分支已推送 fork（a7b7091），PR 创建链接已交用户（浏览器确认即成 PR）
