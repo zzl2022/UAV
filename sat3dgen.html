@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UAV · 天地图 / 城市重建</title>
+</head>
+<body>
+<div id="sat-app">
+  <aside id="sat-panel">
+    <div class="sat-brand"><span class="mark">◈</span> 天地图 · 城市重建 <small>CNBH / SAT3DGEN</small></div>
+    <a class="sat-back" href="./index.html">← 返回城市建模</a>
+    <p class="sat-note">天地图负责底图与选址；CNBH-10m 提供 10 m 建筑高度并覆盖原白模范围，Sat3DGen 提供重点区精细网格。源码位于 <code>third_party/Sat3DGen</code>（MIT）。</p>
+
+    <label>天地图浏览器端 tk
+      <input id="tdt-tk" type="password" autocomplete="off" spellcheck="false" placeholder="在天地图控制台申请后填写"/>
+    </label>
+    <div class="sat-buttons">
+      <button id="tdt-load" class="primary">加载天地图</button>
+      <button id="tdt-locate">定位重建区域</button>
+    </div>
+    <label>底图
+      <select id="tdt-layer">
+        <option value="vec">矢量</option>
+        <option value="sat">影像</option>
+        <option value="terrain">地形</option>
+      </select>
+    </label>
+    <div id="tdt-center">113.666136° E / 34.789409° N</div>
+
+    <section>
+      <h2>重建任务 <span>SAT3DGEN</span></h2>
+      <p id="sat-meta">正在读取 Sat3DGen 结果…</p>
+      <label id="model-variant-row">重建范围
+        <select id="model-variant">
+          <option value="detail">重点区 Sat3DGen</option>
+          <option value="cnbh">全域 CNBH-10m 重建</option>
+          <option value="gba">全域 GBA 白模</option>
+          <option value="full">全域 Sat3DGen 概览（低精度）</option>
+        </select>
+      </label>
+      <img id="sat-input" alt="Sat3DGen 输入卫星影像"/>
+      <button id="refresh-results">刷新重建结果</button>
+      <p class="hint">运行 <code>scripts/run_sat3dgen.py</code> 后点击刷新。需要 CUDA GPU、Python 3.10 和约 1.5 GB 权重；首次运行会下载模型。街景/全景是 Sat3DGen 生成结果，不是天地图实景。</p>
+    </section>
+
+    <section>
+      <h2>视图 <span>VIEW</span></h2>
+      <div class="sat-tabs">
+        <button data-view="map" class="active">天地图</button>
+        <button data-view="model">3D 模型</button>
+        <button data-view="street">街景 / 全景</button>
+      </div>
+    </section>
+
+    <footer>
+      底图：天地图（需浏览器端 tk）<br>
+      重建：CNBH-10m · CC BY 4.0 / Sat3DGen · MIT<br>
+      输出为研究/演示模型，不是测绘成果。
+    </footer>
+  </aside>
+
+  <main id="sat-main">
+    <div id="sat-topbar">
+      <span id="tdt-status">请填写天地图 tk 后加载底图。</span>
+      <span id="model-status"></span>
+    </div>
+
+    <section id="view-map" class="sat-view">
+      <div id="tdt-map"></div>
+      <div id="map-hint">天地图底图需要浏览器端 tk。<br>填写后点击“加载天地图”。</div>
+    </section>
+
+    <section id="view-model" class="sat-view" hidden>
+      <canvas id="model-canvas"></canvas>
+      <div id="model-caption" class="sat-caption">Sat3DGen 3D 网格；未生成时显示当前 GBA 白模参照。</div>
+    </section>
+
+    <section id="view-street" class="sat-view" hidden>
+      <div class="media-grid">
+        <div class="media-card">
+          <h3>街景 · 4 视角</h3>
+          <video id="street-video" controls playsinline hidden></video>
+          <img id="street-image" alt="Sat3DGen 街景渲染" hidden/>
+          <p id="street-pending">街景/全景视频为可选输出，当前未生成；可先在“3D 模型”中查看 Sat3DGen 网格。</p>
+        </div>
+        <div class="media-card">
+          <h3>全景</h3>
+          <video id="panorama-video" controls playsinline hidden></video>
+          <p class="media-hint">沿轨迹生成的 360° 全景视频。</p>
+        </div>
+        <div class="media-card">
+          <h3>模型环绕</h3>
+          <video id="orbit-video" controls playsinline hidden></video>
+          <p class="media-hint">Sat3DGen 网格的环绕视图。</p>
+        </div>
+      </div>
+      <p id="street-caption"></p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/src/sat3dgen.js"></script>
+</body>
+</html>

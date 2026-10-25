@@ -22,6 +22,10 @@ jobs:
       - run: .venv/bin/python -m pip install -r requirements.txt
       - run: npm ci
       - run: npm run prepare:data
+      # Optional: the public GBA WFS can be unavailable/rate-limited.
+      # The open-model test skips when these files are absent.
+      - run: npm run prepare:open-model
+        continue-on-error: true
       - run: npm test
       - run: npm run test:imagery
       - run: npm run plan:build

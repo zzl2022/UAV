@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UAV · 北京故宫 5 km · GBA / 天地图</title>
+</head>
+<body>
+<div id="sat-app">
+  <aside id="sat-panel">
+    <div class="sat-brand"><span class="mark">◈</span> 北京故宫 5 km <small>GBA / 天地图</small></div>
+    <a class="sat-back" href="./index.html">← 返回城市建模</a>
+    <p class="sat-note">以天地图影像为底图；默认用 GBA LoD1 逐栋轮廓/高度重建故宫周边 5 km 范围，可切换 OSM + CNBH 逐栋与 CNBH-10m 20 m 体块对照。模型为平面基底，不含 DEM。</p>
+
+    <label>天地图浏览器端 tk
+      <input id="tdt-tk" type="password" autocomplete="off" spellcheck="false" placeholder="在天地图控制台申请后填写"/>
+    </label>
+    <div class="sat-buttons">
+      <button id="tdt-load" class="primary">加载天地图</button>
+      <button id="tdt-locate">定位故宫</button>
+    </div>
+    <label>底图
+      <select id="tdt-layer">
+        <option value="sat">影像</option>
+        <option value="vec">矢量</option>
+        <option value="terrain">地形</option>
+      </select>
+    </label>
+    <div id="tdt-center">116.397200° E / 39.916300° N</div>
+
+    <section>
+      <h2>重建范围 <span>5 KM</span></h2>
+      <label>模型<select id="bj-variant">
+        <option value="gba" selected>GBA LoD1 逐栋（推荐 · 非商业）</option>
+        <option value="osm">OSM 逐栋 + CNBH 高度</option>
+        <option value="cnbh">CNBH-10m 20 m 体块</option>
+      </select></label>
+      <p id="bj-meta">正在读取 GBA 建筑…</p>
+      <img id="sat-input" src="./data/beijing/beijing-imagery.jpg" alt="故宫周边 5 km 天地图影像"/>
+      <p class="hint">GBA LoD1 提供逐栋轮廓与高度（CC BY-NC 4.0，非商业）；OSM 轮廓（ODbL）+ CNBH 10 m 高度与 CNBH 20 m 体块作对照。平面基底；3D 地面使用天地图影像。</p>
+    </section>
+
+    <section>
+      <h2>视图 <span>VIEW</span></h2>
+      <div class="sat-tabs">
+        <button data-view="map" class="active">天地图</button>
+        <button data-view="model">3D 模型</button>
+      </div>
+    </section>
+
+    <footer>
+      底图：天地图 WMTS 影像（需浏览器端 tk）<br>
+      轮廓/高度：GBA LoD1 · CC BY-NC 4.0（非商业）<br>
+      署名：GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors<br>
+      对照：OSM · ODbL / CNBH-10m · CC BY 4.0<br>
+      模型为工程近似，不是逐栋测绘成果。
+    </footer>
+  </aside>
+
+  <main id="sat-main">
+    <div id="sat-topbar">
+      <span id="tdt-status">请填写天地图 tk 后加载底图。</span>
+      <span id="model-status"></span>
+    </div>
+
+    <section id="view-map" class="sat-view">
+      <div id="tdt-map"></div>
+      <div id="map-hint">天地图底图需要浏览器端 tk。<br>填写后点击“加载天地图”。</div>
+    </section>
+
+    <section id="view-model" class="sat-view" hidden>
+      <canvas id="model-canvas"></canvas>
+      <div class="bj-view-buttons"><button id="focus-center">聚焦故宫</button><button id="fit-all">全域</button></div>
+      <div id="model-caption" class="sat-caption">北京故宫 5 km · GBA 逐栋 LoD1 + 天地图影像底图</div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/src/beijing.js"></script>
+</body>
+</html>

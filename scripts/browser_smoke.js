@@ -14,9 +14,23 @@ try{
  await page.locator('#imagery').uncheck();await page.locator('#imagery').check();assert.ok(diagnostics.buildingTriangles>100000);
  await page.locator('#top').click();await page.locator('#wire').check();await page.locator('#wire').uncheck();
  await page.locator('#terrain').uncheck();await page.locator('#terrain').check();await page.locator('#reset').click();
- await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,null,{timeout:120000});
- assert.equal(await page.locator('#original').isChecked(),true,await page.locator('#status').innerText());
- await page.locator('#original').uncheck();
+ await page.locator('#sidebar-toggle').click();
+ assert.equal(await page.evaluate(()=>document.querySelector('#app').classList.contains('sidebar-collapsed')),true);
+ assert.equal(await page.evaluate(()=>window.cityDiagnostics.sidebarCollapsed),true);
+ await page.locator('#sidebar-toggle').click();
+ assert.equal(await page.evaluate(()=>window.cityDiagnostics.sidebarCollapsed),false);
+ await page.selectOption('#model-select','white');
+ await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='white'&&window.cityDiagnostics.models?.white?.loaded===true,null,{timeout:180000});
+ assert.ok(await page.evaluate(()=>window.cityDiagnostics.models.white.featureCount)>1000);
+ await page.screenshot({path:'artifacts/city-original-model.png'});
+ await page.selectOption('#model-select','beijing');
+ await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='beijing'&&window.cityDiagnostics.models?.beijing?.loaded===true,null,{timeout:300000});
+ assert.equal(await page.evaluate(()=>window.cityDiagnostics.models.beijing.buildingCount),74083);
+ await page.screenshot({path:'artifacts/city-beijing-model.png'});
+ await page.selectOption('#model-select','recon');
+ await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='recon',null,{timeout:60000});
+ assert.equal(await page.evaluate(()=>document.querySelector('#layers-section').hidden),false);
+ await page.waitForFunction(()=>!document.querySelector('#export').disabled,null,{timeout:30000});
  console.log('Validating city GLB download…');
  const [download]=await Promise.all([page.waitForEvent('download',{timeout:180000}),page.locator('#export').click({timeout:180000})]);
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/browser-export.glb');
@@ -24,5 +38,5 @@ try{
  await page.screenshot({path:'artifacts/city-desktop.png'});
  await page.screenshot({path:'artifacts/city-imagery.png'});
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'artifacts/city-mobile.png',fullPage:true});
- assert.deepEqual(errors,[]);console.log('Browser smoke passed:',diagnostics);
+ assert.deepEqual(errors,[]);console.log('Browser smoke passed:',await page.evaluate(()=>window.cityDiagnostics));
 }finally{await browser.close();}

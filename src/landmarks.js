@@ -7,7 +7,7 @@ export function museumLandmark(city){
  return {name:'河南博物院',buildingIds:buildings.map(b=>b.id),position:[(Math.min(...xs)+Math.max(...xs))/2,points[0][1]+main.height,(Math.min(...zs)+Math.max(...zs))/2],source:'建筑 DBF.NAME 精确匹配；主楼取最高建筑'};
 }
 export function mountLandmarks({city,scene,camera,controls,viewport}){
- const landmark=museumLandmark(city);if(!landmark)return {update(){}};
+ const landmark=museumLandmark(city);if(!landmark)return {update(){},setActive(){}};
  const group=new THREE.Group();group.name='Henan_Museum_Landmark';
  for(const b of city.buildings.filter(b=>landmark.buildingIds.includes(b.id))){
   const points=b.rings[0].map(p=>new THREE.Vector3(p[0],p[1]+b.height+0.4,p[2]));
@@ -19,6 +19,8 @@ export function mountLandmarks({city,scene,camera,controls,viewport}){
  function locate(){const p=new THREE.Vector3(...landmark.position);controls.target.copy(p);camera.position.copy(p).add(new THREE.Vector3(450,500,650));controls.update();}
  label.onclick=locate;focus.onclick=locate;
  const vector=new THREE.Vector3();
- function update(){camera.updateMatrixWorld();vector.fromArray(landmark.position);vector.y+=25;vector.project(camera);const visible=vector.z>=-1&&vector.z<=1&&Math.abs(vector.x)<0.95&&Math.abs(vector.y)<0.92;label.hidden=!visible;if(visible){label.style.left=`${(vector.x+1)/2*viewport.clientWidth}px`;label.style.top=`${(1-vector.y)/2*viewport.clientHeight}px`;}}
- return {update,landmark};
+ let active=true;
+ function setActive(value){active=value;group.visible=value;label.hidden=!value;focus.hidden=!value;}
+ function update(){if(!active){label.hidden=true;return;}camera.updateMatrixWorld();vector.fromArray(landmark.position);vector.y+=25;vector.project(camera);const visible=vector.z>=-1&&vector.z<=1&&Math.abs(vector.x)<0.95&&Math.abs(vector.y)<0.92;label.hidden=!visible;if(visible){label.style.left=`${(vector.x+1)/2*viewport.clientWidth}px`;label.style.top=`${(1-vector.y)/2*viewport.clientHeight}px`;}}
+ return {update,landmark,setActive};
 }
