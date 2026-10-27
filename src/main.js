@@ -7,6 +7,7 @@ import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
+import {mountStudentCapabilities} from './student-capabilities/ui.js';
 
 const app=document.querySelector('#app');
 app.innerHTML=`<aside>
@@ -115,6 +116,7 @@ try {
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
   planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
+  mountStudentCapabilities({app,city,scene,camera,controls,renderer,model});
   // 任务三入口挂载（仅追加，不改既有逻辑）：优化部署与仿真推演面板
   import('./task3/ui.js').then(({mountTask3UI})=>mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model})).catch(error=>console.warn('任务三面板挂载失败',error));
   document.documentElement.dataset.ready='true';

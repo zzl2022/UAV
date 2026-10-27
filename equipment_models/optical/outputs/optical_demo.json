@@ -1,0 +1,4220 @@
+{
+  "warning": "合成场景/假设环境系数；结果不是识别概率、实测精度或部署方案",
+  "assumed_optics_enabled": true,
+  "assumed_official_heights_enabled": false,
+  "scene_audit": {},
+  "scenarios": [
+    {
+      "scenario": "clear/day_clear",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "day",
+            "illuminance_lux": 1000,
+            "visibility_m": null,
+            "rain_mm_h": 0.0,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "clear",
+          "blocked": false,
+          "unit": "boolean",
+          "status": "derived",
+          "source": "explicit synthetic scene",
+          "blockers": [],
+          "unknown_height_candidates": [],
+          "checked_buildings": [],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.8,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.8,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    },
+    {
+      "scenario": "clear/night_clear",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "night",
+            "illuminance_lux": 1,
+            "visibility_m": null,
+            "rain_mm_h": 0.0,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "clear",
+          "blocked": false,
+          "unit": "boolean",
+          "status": "derived",
+          "source": "explicit synthetic scene",
+          "blockers": [],
+          "unknown_height_candidates": [],
+          "checked_buildings": [],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 0.1,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.1,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.8,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.08000000000000002,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    },
+    {
+      "scenario": "clear/day_fog_rain",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "day",
+            "illuminance_lux": 1000,
+            "visibility_m": 500,
+            "rain_mm_h": 10,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "clear",
+          "blocked": false,
+          "unit": "boolean",
+          "status": "derived",
+          "source": "explicit synthetic scene",
+          "blockers": [],
+          "unknown_height_candidates": [],
+          "checked_buildings": [],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 0.20912983495795665,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 0.9607894391523232,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.20092973683927307,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.16074378947141846,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.16074378947141846,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 0.5488116360940265,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 0.9801986733067553,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.5379444375946746,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.37656110631627215,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.3765611063162722,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "relative_only",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    },
+    {
+      "scenario": "blocked/day_clear",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "day",
+            "illuminance_lux": 1000,
+            "visibility_m": null,
+            "rain_mm_h": 0.0,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "blocked",
+          "blocked": true,
+          "unit": "boolean",
+          "status": "assumed",
+          "source": "explicit synthetic scene",
+          "blockers": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building",
+              "segment_fraction": [
+                0.4,
+                0.5
+              ]
+            }
+          ],
+          "unknown_height_candidates": [],
+          "checked_buildings": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building"
+            }
+          ],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.8,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    },
+    {
+      "scenario": "blocked/night_clear",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "night",
+            "illuminance_lux": 1,
+            "visibility_m": null,
+            "rain_mm_h": 0.0,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "blocked",
+          "blocked": true,
+          "unit": "boolean",
+          "status": "assumed",
+          "source": "explicit synthetic scene",
+          "blockers": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building",
+              "segment_fraction": [
+                0.4,
+                0.5
+              ]
+            }
+          ],
+          "unknown_height_candidates": [],
+          "checked_buildings": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building"
+            }
+          ],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 0.1,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.1,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.8,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 1.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.7,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    },
+    {
+      "scenario": "blocked/day_fog_rain",
+      "result": {
+        "device": "NVT-951",
+        "coordinate_frame": "local_m",
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "derived",
+          "source": "Euclidean in shared regional metric frame"
+        },
+        "inputs": {
+          "pose": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "yaw_deg": 0.0,
+            "pitch_deg": 0.0,
+            "roll_deg": 0.0,
+            "frame": "local_m"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "width_m": 0.35,
+            "height_m": 0.35,
+            "frame": "local_m",
+            "source": "synthetic example target, not measured UAV",
+            "status": "assumed"
+          },
+          "conditions": {
+            "period": "day",
+            "illuminance_lux": 1000,
+            "visibility_m": 500,
+            "rain_mm_h": 10,
+            "visible_contrast": 0.8,
+            "thermal_contrast": 0.7,
+            "temperature_c": 20,
+            "source": "caller supplied scenario conditions",
+            "status": "assumed"
+          }
+        },
+        "mechanical_orientation_valid": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "yaw_range": {
+              "value": [
+                0,
+                360
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台水平范围"
+            },
+            "pitch_range": {
+              "value": [
+                -90,
+                90
+              ],
+              "unit": "deg",
+              "status": "provided",
+              "source": "装备参数.doc 云台俯仰范围"
+            },
+            "temperature_range": {
+              "value": [
+                -35,
+                60
+              ],
+              "unit": "degC",
+              "status": "provided",
+              "source": "装备参数.doc 工作温度"
+            }
+          }
+        },
+        "temperature_within_working_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              -35,
+              60
+            ],
+            "unit": "degC",
+            "status": "provided",
+            "source": "装备参数.doc 工作温度"
+          }
+        },
+        "line_of_sight": {
+          "state": "blocked",
+          "blocked": true,
+          "unit": "boolean",
+          "status": "assumed",
+          "source": "explicit synthetic scene",
+          "blockers": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building",
+              "segment_fraction": [
+                0.4,
+                0.5
+              ]
+            }
+          ],
+          "unknown_height_candidates": [],
+          "checked_buildings": [
+            {
+              "id": "synthetic_blocker",
+              "status": "assumed",
+              "source": "synthetic test building"
+            }
+          ],
+          "vertical_datum": "scene caller-defined shared datum",
+          "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+        },
+        "channels": {
+          "visible": {
+            "fov": {
+              "value": [
+                7.323871151039606,
+                4.123515381517081
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 50.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                26.25,
+                26.249999999999996
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 12,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值无真实精度保证"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 0.20912983495795665,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 0.9607894391523232,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "illumination": {
+                "value": 1.0,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                }
+              },
+              "contrast": {
+                "value": 0.8,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.20092973683927307,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.16074378947141846,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "missing",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "原文未给出"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出有效识别距离",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          },
+          "thermal": {
+            "fov": {
+              "value": [
+                8.297177389014088,
+                6.641918225684128
+              ],
+              "unit": "deg",
+              "status": "assumed",
+              "source": [
+                {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                }
+              ],
+              "method": "pinhole",
+              "focal_mm": 75.0
+            },
+            "target_in_fov": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": "rectangular camera frame point test",
+              "reason": "target centre only"
+            },
+            "projected_target_size": {
+              "value": [
+                7.720588235294117,
+                7.720588235294117
+              ],
+              "unit": "px",
+              "status": "assumed",
+              "source": "pinhole apparent bounding size; assumes image-aligned front-facing target",
+              "reason": "requires target dimensions, FOV and positive camera depth"
+            },
+            "sampling_criterion_met": {
+              "value": true,
+              "unit": "boolean",
+              "status": "assumed",
+              "source": {
+                "value": 6,
+                "unit": "px",
+                "status": "assumed",
+                "source": "合成验证像素阈值"
+              },
+              "reason": "sampling criterion only; does not establish actual recognition"
+            },
+            "quality_factors": {
+              "fog": {
+                "value": 0.5488116360940265,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "interpretation": "null visibility explicitly disables fog term"
+              },
+              "rain": {
+                "value": 0.9801986733067553,
+                "unit": "1",
+                "status": "assumed",
+                "source": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "contrast": {
+                "value": 0.7,
+                "unit": "1",
+                "status": "assumed",
+                "source": "caller supplied scenario conditions",
+                "interpretation": "channel-specific normalized contrast; thermal uses thermal contrast, not visible illuminance"
+              }
+            },
+            "relative_image_quality": {
+              "value": 0.5379444375946746,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "example illumination (visible only) x fog x rain"
+            },
+            "relative_apparent_contrast": {
+              "value": 0.37656110631627215,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "input channel contrast x example fog x rain"
+            },
+            "below_minimum_illuminance": {
+              "value": null,
+              "unit": "boolean",
+              "status": "not_applicable",
+              "source": {
+                "value": null,
+                "unit": "lux",
+                "status": "missing",
+                "source": "热成像通道不采用可见光照度阈值"
+              }
+            },
+            "relative_recognition_index": {
+              "value": 0.0,
+              "unit": "1",
+              "status": "uncalibrated",
+              "source": "product of explicit example quality factors and optional sampling ratio",
+              "state": "unavailable_view",
+              "probability": false
+            },
+            "recognition_probability": {
+              "value": null,
+              "unit": "1",
+              "status": "missing",
+              "source": "no labelled calibration data or validated classifier"
+            },
+            "effective_recognition_distance": {
+              "value": null,
+              "unit": "m",
+              "status": "missing",
+              "source": "原文未给出",
+              "reason": "configured reference only; no inferred range under current weather"
+            }
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "NVT-951",
+            "source_document": "装备参数.doc / 三、光电 / NVT-951",
+            "mechanical": {
+              "yaw_range": {
+                "value": [
+                  0,
+                  360
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台水平范围"
+              },
+              "pitch_range": {
+                "value": [
+                  -90,
+                  90
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "装备参数.doc 云台俯仰范围"
+              },
+              "temperature_range": {
+                "value": [
+                  -35,
+                  60
+                ],
+                "unit": "degC",
+                "status": "provided",
+                "source": "装备参数.doc 工作温度"
+              }
+            },
+            "channels": {
+              "visible": {
+                "resolution": {
+                  "value": [
+                    1920,
+                    1080
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "focal_range": {
+                  "value": [
+                    6.5,
+                    312
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 可见光"
+                },
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出光学水平与垂直视场角"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出有效识别距离"
+                }
+              },
+              "thermal": {
+                "resolution": {
+                  "value": [
+                    640,
+                    512
+                  ],
+                  "unit": "px",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像"
+                },
+                "focal_range": {
+                  "value": [
+                    75,
+                    75
+                  ],
+                  "unit": "mm",
+                  "status": "provided",
+                  "source": "装备参数.doc 热成像定焦"
+                },
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "direct_fov": {
+                  "value": null,
+                  "unit": "deg",
+                  "status": "missing",
+                  "source": "原文未给出"
+                },
+                "minimum_illuminance": {
+                  "value": null,
+                  "unit": "lux",
+                  "status": "missing",
+                  "source": "热成像通道不采用可见光照度阈值"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                },
+                "effective_range": {
+                  "value": null,
+                  "unit": "m",
+                  "status": "missing",
+                  "source": "原文未给出"
+                }
+              }
+            },
+            "reported_claims": {
+              "optical_zoom": {
+                "value": 48,
+                "unit": "ratio",
+                "status": "provided",
+                "source": "装备参数.doc 可见光"
+              },
+              "tracking_distance": {
+                "value": 50,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 系统跟踪的测试条件不是最大识别距离"
+              },
+              "tracking_tangential_speed": {
+                "value": 15,
+                "unit": "m/s",
+                "status": "provided",
+                "source": "装备参数.doc 50m距离下的跟踪条件"
+              },
+              "recognizable_uav_min_size": {
+                "value": 0.35,
+                "unit": "m",
+                "status": "provided",
+                "source": "装备参数.doc 可识别≥35cm无人机但未提供距离及环境"
+              },
+              "maximum_power": {
+                "value": 60,
+                "unit": "W",
+                "status": "provided",
+                "source": "装备参数.doc ≤60W"
+              },
+              "maximum_mass": {
+                "value": 8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "装备参数.doc ≤8kg"
+              },
+              "dimensions_wdh": {
+                "value": [
+                  345,
+                  190,
+                  245
+                ],
+                "unit": "mm",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_ac": {
+                "value": 220,
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "supply_dc_range": {
+                "value": [
+                  24,
+                  36
+                ],
+                "unit": "V",
+                "status": "provided",
+                "source": "装备参数.doc"
+              },
+              "thermal_type": "非制冷热成像",
+              "protection": "IP66",
+              "guidance_inputs": [
+                "5G-A",
+                "雷达",
+                "TDOA",
+                "RID"
+              ],
+              "classification_claim": "无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）",
+              "standard_features": [
+                "角度偏转",
+                "内舱温湿度/压力监测",
+                "温控",
+                "雨刷"
+              ]
+            },
+            "demo_overrides": {
+              "visible": {
+                "sensor_size": {
+                  "value": [
+                    6.4,
+                    3.6
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 12,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值无真实精度保证"
+                }
+              },
+              "thermal": {
+                "sensor_size": {
+                  "value": [
+                    10.88,
+                    8.704
+                  ],
+                  "unit": "mm",
+                  "status": "assumed",
+                  "source": "合成验证示例值不是设备实测"
+                },
+                "recognition_pixels": {
+                  "value": 6,
+                  "unit": "px",
+                  "status": "assumed",
+                  "source": "合成验证像素阈值"
+                }
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "channels": {
+              "visible": {
+                "illumination_reference": {
+                  "value": 100,
+                  "unit": "lux",
+                  "status": "assumed",
+                  "source": "演示归一化照度不是最低照度"
+                },
+                "fog_coefficient": {
+                  "value": 3.912,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "经验可见度形式的示例系数未对设备标定"
+                },
+                "rain_coefficient": {
+                  "value": 0.02,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              },
+              "thermal": {
+                "fog_coefficient": {
+                  "value": 1.5,
+                  "unit": "1",
+                  "status": "assumed",
+                  "source": "演示假设不代表热红外真实传播模型"
+                },
+                "rain_coefficient": {
+                  "value": 0.01,
+                  "unit": "h/mm/km",
+                  "status": "assumed",
+                  "source": "演示经验系数"
+                }
+              }
+            }
+          }
+        },
+        "scope": "point target FOV, pinhole projected extent and relative uncalibrated quality; no recognition probability, no deployment optimization"
+      }
+    }
+  ]
+}
