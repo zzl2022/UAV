@@ -117,6 +117,8 @@ try {
   sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
   planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
   mountStudentCapabilities({app,city,scene,camera,controls,renderer,model});
+  // 任务三入口挂载（仅追加，不改既有逻辑）：优化部署与仿真推演面板
+  import('./task3/ui.js').then(({mountTask3UI})=>mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model})).catch(error=>console.warn('任务三面板挂载失败',error));
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};

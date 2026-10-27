@@ -10,3 +10,7 @@ __pycache__/
 
 .npm-cache/
 .python-deps/
+
+# IDE / 本地配置
+.trae/
+.trae-html-share-packages/
