@@ -8,7 +8,8 @@ try{
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true');
- await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
+ await page.locator('#open-city-model').click();await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
+ await page.locator('#city-window-close').click();
  assert.equal(await page.locator('#museum-label').innerText(),'⌖ 河南博物院');
  await page.screenshot({path:'artifacts/henan-museum.png'});
  await page.locator('#toggle-sensors').click();await page.waitForFunction(()=>window.sensorDiagnostics?.results?.length===4,null,{timeout:120000});
@@ -54,6 +55,7 @@ try{
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),0);
  await page.locator('#equipment-add').click();assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),1);
  await page.locator('#equipment-remove').click();assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),0);
+ await page.locator('#equipment-panel summary').filter({hasText:'示例方案'}).click();
  await page.locator('#equipment-defaults').click();
  await page.locator('#equipment-focus').click();
  // Hover uses the actual city surface and reports values at an explicit height.
@@ -63,7 +65,9 @@ try{
  assert.equal(await page.locator('#signal-probe').isVisible(),true);
  assert.ok((await page.locator('#signal-value').innerText()).length>0);
  await page.screenshot({path:'artifacts/signal-hover.png'});
+ await page.locator('#equipment-window-minimize').click();
  const probeHeight=page.locator('#equipment-probe-height');await probeHeight.fill('100');
+ await page.locator('#equipment-window-minimize').click();
  await page.mouse.move(view.x+view.width/2,view.y+view.height/2);
  await page.waitForFunction(()=>window.sensorDiagnostics.probe?.heightAboveSurface===100);
  const firstProbe=await page.evaluate(()=>window.sensorDiagnostics.probe.position);
@@ -77,18 +81,21 @@ try{
  await page.mouse.move(marker.x+65,marker.y-20,{steps:5});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.devicePositions.find(d=>d.id==='sensor-1').position)!==JSON.stringify(p),before);
  const targetBefore=await page.evaluate(()=>window.sensorDiagnostics.targetPosition);
+ await page.locator('#equipment-window-minimize').click();
  const targetMarker=await page.evaluate(()=>window.sensorDiagnostics.markerScreens.find(m=>m.kind==='target'));
  await page.mouse.move(targetMarker.x,targetMarker.y);await page.mouse.down();await page.mouse.move(targetMarker.x-45,targetMarker.y+15,{steps:4});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.targetPosition)!==JSON.stringify(p),targetBefore);
  // Cancellation must release camera controls and allow a subsequent map interaction.
  const cancelMarker=await page.evaluate(()=>window.sensorDiagnostics.markerScreens.find(m=>m.deviceId==='sensor-1'));
+ await page.locator('#equipment-window-minimize').click();
  await page.mouse.move(cancelMarker.x,cancelMarker.y);await page.mouse.down();
  await page.locator('canvas').dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.cameraControlsEnabled),true);
  const oldCamera=await page.evaluate(()=>window.sensorDiagnostics.cameraPosition);
  await page.mouse.move(view.x+view.width*.5,view.y+view.height*.15);await page.mouse.down();await page.mouse.move(view.x+view.width*.5+40,view.y+view.height*.15+15,{steps:3});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.cameraPosition)!==JSON.stringify(p),oldCamera);
- await page.locator('#equipment-focus').click();
+ await page.locator('#equipment-window-minimize').click();
+ await page.locator('#equipment-focus').click();await page.locator('#equipment-window-minimize').click();
 
  await page.locator('#equipment-panel details').evaluateAll(nodes=>nodes.forEach(node=>node.open=false));
  await page.locator('#equipment-panel').evaluate(node=>node.scrollTop=0);

@@ -11,13 +11,16 @@ try{
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true',await page.locator('#status').innerText());
  const diagnostics=await page.evaluate(()=>window.cityDiagnostics);
  assert.equal(diagnostics.features,15889);assert.equal(diagnostics.imagery,true);
+ await page.locator('#open-city-model').click();
  await page.locator('#imagery').uncheck();await page.locator('#imagery').check();assert.ok(diagnostics.buildingTriangles>100000);
+ await page.locator('summary').filter({hasText:'高级图层'}).click();
  await page.locator('#top').click();await page.locator('#wire').check();await page.locator('#wire').uncheck();
  await page.locator('#terrain').uncheck();await page.locator('#terrain').check();await page.locator('#reset').click();
  await page.locator('#original').check();await page.waitForFunction(()=>!document.querySelector('#original').disabled,null,{timeout:120000});
  assert.equal(await page.locator('#original').isChecked(),true,await page.locator('#status').innerText());
  await page.locator('#original').uncheck();
  console.log('Validating city GLB download…');
+ await page.locator('summary').filter({hasText:'场景数据与导出'}).click();
  const [download]=await Promise.all([page.waitForEvent('download',{timeout:180000}),page.locator('#export').click({timeout:180000})]);
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/browser-export.glb');
  assert.equal(download.suggestedFilename(),'zhengzhou-city-enu.glb');

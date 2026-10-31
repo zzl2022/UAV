@@ -53,8 +53,9 @@ try{
  // 取消进行中推演
  await page.locator('#task3-run').click();await page.waitForFunction(()=>window.task3Diagnostics.busy);await page.locator('#task3-cancel').click();assert.equal(await page.evaluate(()=>window.task3Diagnostics.busy),false);
  // 回归：子任务一/二入口仍在且可切换
- await page.locator('#task3-back').click();assert.equal(await page.locator('#task3-panel').isVisible(),false);
- await page.locator('#toggle-planning').click();await page.waitForFunction(()=>window.planningDiagnostics?.ready,null,{timeout:120000});
+ await page.locator('#open-city-model').click();assert.equal(await page.locator('#city-window').isVisible(),true);
+ await page.locator('#city-window-close').click();
+ await page.locator('#toggle-planning').click();assert.equal(await page.locator('#task3-panel').isVisible(),false);await page.waitForFunction(()=>window.planningDiagnostics?.ready,null,{timeout:120000});
  assert.deepEqual(errors,[]);
  console.log('Task3 browser passed: pipeline ≥3 differentiated plans + auto recommendation, 4-category blindspots, 3 threat scenarios (swarm overflow honest), EMC verdict, playback/seek, exports, cancel, regression entry.');
 }finally{await browser.close();}

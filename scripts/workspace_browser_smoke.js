@@ -1,0 +1,71 @@
+import {chromium} from 'playwright-core';
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{
+ await mkdir('artifacts/workspace',{recursive:true});
+ const page=await browser.newPage({viewport:{width:1515,height:980}}),errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(process.env.APP_URL||'http://127.0.0.1:5191');
+ await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:120000});
+ const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const centered=async selector=>{
+  const box=await page.locator(selector).boundingBox(),size=page.viewportSize();
+  assert.ok(Math.abs(box.x+box.width/2-size.width/2)<2,selector+' centered horizontally');
+  assert.ok(Math.abs(box.y+box.height/2-size.height/2)<2,selector+' centered vertically');
+  assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=size.width+1&&box.y+box.height<=size.height+1,selector+' inside viewport');
+ };
+ assert.equal(await page.locator('main header').count(),0);
+ assert.equal(await page.locator('aside').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #toggle-task3').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #toggle-planning').count(),1);
+ assert.equal(await page.locator('#deployment-panels #task3-panel').isVisible(),true);
+ await frame();await page.screenshot({path:'artifacts/workspace/desktop.png'});
+ const mapBefore=await page.locator('#viewport').boundingBox();
+ await page.locator('#open-city-model').click();await centered('#city-window');
+ assert.equal(await page.locator('#city-window #buildings').count(),1);
+ assert.equal(await page.locator('#city-window #museum-focus').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #buildings').count(),0);
+ assert.deepEqual(await page.locator('#viewport').boundingBox(),mapBefore);
+ await page.locator('#buildings').uncheck();await page.locator('#buildings').check();
+ await page.screenshot({path:'artifacts/workspace/city-window.png'});
+ await page.locator('#city-inspect').click();
+ assert.ok(await page.locator('#city-window').evaluate(el=>el.classList.contains('is-minimized')));
+ await page.locator('#city-window-minimize').click();await centered('#city-window');
+ await page.keyboard.press('Escape');assert.equal(await page.locator('#city-window').isVisible(),false);
+ await page.locator('#toggle-task3').focus();await page.keyboard.press('ArrowRight');
+ assert.equal(await page.locator('#toggle-planning').getAttribute('aria-selected'),'true');
+ await page.waitForFunction(()=>window.planningDiagnostics?.ready,null,{timeout:120000});
+ const plan=await page.evaluate(()=>window.planningDiagnostics.planId);
+ assert.equal(await page.locator('#deployment-panels #planning-panel').isVisible(),true);
+ await page.locator('#toggle-sensors').click();
+ await page.waitForFunction(()=>window.equipmentCapabilityDiagnostics?.results?.length===2,null,{timeout:30000});
+ await centered('#equipment-window');
+ assert.equal(await page.locator('#equipment-window #equipment-panel').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #equipment-panel').count(),0);
+ assert.equal(await page.locator('#planning-panel').isVisible(),true);
+ assert.equal(await page.locator('#flight-hud').isVisible(),false);
+ await page.locator('#equipment-device').selectOption('sensor-2');
+ await page.waitForFunction(()=>window.equipmentCapabilityDiagnostics?.results?.length===2);
+ await page.screenshot({path:'artifacts/workspace/equipment-window.png'});
+ await page.locator('#equipment-window-minimize').click();
+ assert.ok(await page.locator('#equipment-window').evaluate(el=>el.classList.contains('is-minimized')));
+ await page.locator('#equipment-window-minimize').click();
+ await page.locator('#equipment-back').click();
+ assert.equal(await page.locator('#equipment-window').isVisible(),false);
+ assert.equal(await page.evaluate(()=>document.querySelector('#app').dataset.activeView),'planning');
+ assert.equal(await page.evaluate(()=>window.planningDiagnostics.planId),plan);
+ assert.equal(await page.locator('#flight-hud').isVisible(),true);
+ await page.locator('#toggle-task3').click();
+ await page.setViewportSize({width:390,height:844});await frame();
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.screenshot({path:'artifacts/workspace/mobile.png'});
+ for(const [button,dialog,close] of [['#open-city-model','#city-window','#city-window-close'],['#toggle-sensors','#equipment-window','#equipment-back']]){
+  await page.locator(button).click();await centered(dialog);
+  await page.screenshot({path:`artifacts/workspace/mobile-${dialog.slice(1)}.png`});
+  await page.locator(close).click();
+ }
+ assert.deepEqual(errors,[]);
+ console.log('PASS: persistent sidebar, no top entries, centered city/equipment windows, map size, layer controls, minimize/restore/Escape, preserved plan and mobile layout.');
+}finally{await browser.close();}

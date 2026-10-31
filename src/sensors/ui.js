@@ -15,28 +15,24 @@ const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2
 const TYPE_METRICS={rangeMeters:'距离误差 / m',azimuthDegrees:'方位误差 / °',elevationDegrees:'俯仰误差 / °',multipathBiasDegrees:'多径角偏差指标 / °',networkLocalizationMeters:'三维站网定位误差估计 / m',angularPixelDegrees:'单像素角度 / °'};
 const LOSS_NAMES={facadeReflection:'Facade reflection',rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
 
-export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
- const panel=document.createElement('aside');panel.id='equipment-panel';panel.hidden=true;
- panel.innerHTML=`<div class="brand"><span class="mark">◉</span> 感知装备 <small>SUBTASK 02</small></div>
- <button id="equipment-back" class="back-button">← 返回城市建模</button>
- <p class="sensor-disclaimer">设备资料与三维场景 · 参数可调<br>基础评估与假设仿真分项呈现，计算结果用于条件比较。</p>
- <section><h2>当前装备 <span>DEVICES</span></h2><select id="equipment-device" aria-label="当前装备"></select><div class="sensor-add"><select id="equipment-preset" aria-label="添加型号"></select><button id="equipment-add">＋ 添加</button></div><div class="buttons"><button id="equipment-remove">删除当前</button><button id="equipment-focus">聚焦点位</button></div><button id="equipment-reset" class="clear-devices">一键还原 · 清空所有设备</button><p id="equipment-note" class="hint"></p></section>
+export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace}){
+ const panel=document.createElement('div');panel.id='equipment-panel';panel.hidden=true;
+ panel.innerHTML=`
+ <section><h2>当前装备</h2><select id="equipment-device" aria-label="当前装备"></select><div class="sensor-add"><select id="equipment-preset" aria-label="添加型号"></select><button id="equipment-add">＋ 添加</button></div><div class="buttons"><button id="equipment-remove">删除当前</button><button id="equipment-focus">聚焦点位</button></div><button id="equipment-reset" class="clear-devices">清空设备</button></section>
  <label class="probe-setting">鼠标查询：表面上方 / m<input id="equipment-probe-height" type="number" min="0" max="2000" step="1" value="50"></label>
- <section><h2>单目标能力比较 <span>LIVE</span></h2><div id="equipment-results"></div></section>
- <section><h2>位置与姿态 <span>METERS / ENU</span></h2><div id="equipment-position" class="sensor-fields"></div><div class="buttons"><button id="equipment-pick-device">在地图选装备点</button><button id="equipment-pick-target">在地图选目标点</button></div><p class="hint">拖动彩色装备球或红色目标球可移动点位并保留相对表面高度；拖动空白处仍旋转地图。点选新增位置后装备在表面上方 2 m，目标在表面上方 50 m。上坐标为局部 ENU 高度，不是离地高度。</p></section>
- <details><summary>设备参数与来源</summary><div id="equipment-parameters" class="sensor-fields"></div></details>
+ <section><h2>单目标能力比较</h2><div id="equipment-results"></div></section>
+ <section><h2>位置与姿态</h2><div id="equipment-position" class="sensor-fields"></div><div class="buttons"><button id="equipment-pick-device">在地图选装备点</button><button id="equipment-pick-target">在地图选目标点</button></div><p class="hint">拖动设备或目标调整位置。</p></section>
+ <details><summary>设备参数与来源</summary><div id="equipment-parameters" class="sensor-fields"></div><p id="equipment-parameter-note" class="hint" hidden></p></details>
  <details><summary>目标与工作模式</summary><div id="equipment-target-position" class="sensor-fields"></div><label>目标发射无线电 <input id="equipment-emitting" type="checkbox" checked></label><label>光电工作模式<select id="equipment-optical-mode"><option value="wide">可见光 · 宽视场</option><option value="narrow">可见光 · 窄视场</option><option value="thermal">热成像</option></select></label><div id="equipment-target" class="sensor-fields"></div></details>
  <details><summary>环境与站网参数</summary><div id="equipment-environment" class="sensor-fields"></div></details>
- <section><h2>当前设备计算明细 <span>BREAKDOWN</span></h2><div id="equipment-breakdown"></div></section>
+ <section><h2>评估结果</h2><div id="equipment-breakdown"></div></section>
  <div id="equipment-message" role="status" class="sensor-message"></div>
- <section class="sensor-io"><button id="equipment-export" class="primary">导出参数与计算报告 · JSON ↓</button><label class="sensor-import">导入参数方案<input id="equipment-import" type="file" accept=".json,application/json"></label><button id="equipment-defaults">载入四类示例设备</button></section>
- <footer>半透明阴影是标称范围/视场示意，随范围、盲区、方向与视场实时更新，未裁切遮挡，不能当作有效覆盖。实线显示当前设备至目标的路径。<br><a href="./sensors-modeling.md" target="_blank" rel="noopener">模型公式与参数来源 ↗</a></footer>`;
- app.insertBefore(panel,app.querySelector('main'));
+ <section class="sensor-io"><button id="equipment-export" class="primary">导出参数与评估报告 · JSON ↓</button><label class="sensor-import">导入参数方案<input id="equipment-import" type="file" accept=".json,application/json"></label><details><summary>示例方案</summary><button id="equipment-defaults">载入四类示例设备</button></details></section>`;
+ workspace.mountWindow('equipment','反无设备',panel,{closeId:'equipment-back',onClose:()=>workspace.activateSidebar()});
  const physicalSection=document.createElement('details');physicalSection.id='equipment-physics-section';physicalSection.innerHTML='<summary>雷达 / 无线电物理链路参数</summary><div id="equipment-physics" class="sensor-fields"></div>';
  panel.querySelector('.sensor-io').before(physicalSection);
  const hopping=document.createElement('label');hopping.innerHTML='跳频目标 <input id="equipment-fhss" type="checkbox">';panel.querySelector('#equipment-emitting').parentElement.after(hopping);
- const cityPanel=app.querySelector('aside');
- const toggle=document.createElement('button');toggle.id='toggle-sensors';toggle.textContent='装备建模 →';toggle.disabled=true;app.querySelector('header').appendChild(toggle);
+ const toggle=app.querySelector('#toggle-sensors');
  const $=id=>panel.querySelector('#'+id);
  const layer=new THREE.Group();layer.name='Sensor_Modeling';layer.visible=false;scene.add(layer);
  let query,state,selectedId,pickMode=null,results=[],serial=4,lastContexts=new Map(),capabilities;
@@ -53,7 +49,8 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
    const label=document.createElement('label');label.className='sensor-field';
    const title=document.createElement('span');title.textContent=field.label;
    const input=document.createElement('input');input.type='number';input.min=field.min;input.max=field.max;input.step=field.step;input.value=values[key];input.dataset.scope=scope;input.dataset.field=key;input.setAttribute('aria-label',field.label);
-   const unit=document.createElement('small');unit.textContent=`${field.unit} · ${provenance[key]??'假设'}`;
+    const unit=document.createElement('small');unit.textContent=scope.endsWith('position')?field.unit:`${field.unit} · ${provenance[key]??field.source??'场景假设'}`;
+    if(scope.endsWith('position')&&key==='up')label.title='局部 ENU 上坐标，单位米；与离地高度及海拔不同';
    label.append(title,input,unit);container.append(label);
   }
  }
@@ -65,7 +62,8 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
   $('equipment-device').disabled=!device;
   if(!device)$('equipment-device').add(new Option('暂无设备，请选择型号并添加',''));
   const dataset=capabilities?.isDataset(device);
-  $('equipment-note').textContent=dataset?(device.type==='optical'?'NVT-951 · 双光谱成像与空间几何评估':'CRY8500 · 阵列规格、标称条件与空间路径评估'):(preset?.notes??'设备已清空。选择型号后点击“添加”即可重新放置。');
+  $('equipment-parameter-note').textContent=dataset?'':preset?.notes??'';
+  $('equipment-parameter-note').hidden=!$('equipment-parameter-note').textContent;
   $('equipment-physics-section').hidden=!device?.physics;
   if(device?.physics)numericFields($('equipment-physics'),device.physics,PHYSICS_FIELDS[device.type],'physics');
   $('equipment-fhss').checked=state.target.fhss===true;
@@ -130,24 +128,23 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
    for(const d of state.devices)validateDevice(d);validateTarget(state.target);validateEnvironment(state.environment);
    const contexts=new Map();lastContexts=new Map();
    results=state.devices.map(device=>{const key=JSON.stringify([device.position,state.target.position]);let context=contexts.get(key);if(!context){context=query.trace(device.position,state.target.position);contexts.set(key,context);}lastContexts.set(device.id,context);return evaluate(device,state.target,state.environment,context);});
-   valid=true;renderResults();draw();message(capabilities?.isDataset(selected())?'拖动设备或目标可重新评估；将鼠标移到地图上可查看距离与直达路径。':'拖动彩色点位可移动；将鼠标移到地图上查询信号。阴影仅表示标称范围。'+(state.devices.length>12?'大型方案只显示当前设备范围，所有点位保留。':''));$('equipment-export').disabled=false;
+   valid=true;renderResults();draw();message(state.devices.length>12?'仅显示当前设备的标称范围。':'');$('equipment-export').disabled=false;
    window.sensorDiagnostics={modelVersion:MODEL_VERSION,deviceCount:state.devices.length,types:state.devices.map(d=>d.type),results:structuredClone(results),selectedId,devicePositions:state.devices.map(d=>({id:d.id,position:[...d.position]})),targetPosition:[...state.target.position],coverage:layer.children.filter(o=>o.userData.kind==='nominal-range-shade').map(o=>({deviceId:o.userData.deviceId,...o.geometry.userData}))};
    updateMarkerScreens();refreshProbe();heat.schedule();capabilities?.refresh();
   }catch(error){capabilities?.invalidate();valid=false;hideProbe();heat.hide();message(`无法计算：${error.message}`);$('equipment-results').replaceChildren();$('equipment-breakdown').replaceChildren();$('equipment-export').disabled=true;window.sensorDiagnostics={error:error.message};}
  }
  function focus(){if(!selected())return;const p=new THREE.Vector3(...selected().position),t=new THREE.Vector3(...state.target.position),center=p.clone().add(t).multiplyScalar(0.5),span=Math.max(200,p.distanceTo(t)*1.5);controls.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(span*.65,span*.65,span*.85));controls.update();updateMarkerScreens();}
  function show(){
-  app.dispatchEvent(new CustomEvent('view-change',{detail:'sensors'}));
+  workspace.showWindow('equipment');workspace.activateView('sensors');
   if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model,{reflections:true});}
-  cityPanel.hidden=true;panel.hidden=false;app.classList.add('equipment-mode');layer.visible=true;renderForm();compute();focus();
+  layer.visible=true;renderForm();compute();focus();
  }
  toggle.onclick=show;
- $('equipment-back').onclick=()=>{capabilities.invalidate();panel.hidden=true;cityPanel.hidden=false;app.classList.remove('equipment-mode');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();};
  $('equipment-device').onchange=()=>{selectedId=$('equipment-device').value;renderForm();compute();};
  $('equipment-results').onclick=e=>{const id=e.target.closest('[data-select]')?.dataset.select;if(id){selectedId=id;renderForm();compute();}};
  $('equipment-add').onclick=()=>{if(state.devices.length>=64){message('最多添加 64 个设备。');return;}const device=createDevice($('equipment-preset').value,`sensor-${++serial}`,selected()?.position??spawnPosition);state.devices.push(device);selectedId=device.id;renderForm();compute();};
  $('equipment-remove').onclick=()=>{if(!selected())return;endDrag();state.devices=state.devices.filter(d=>d.id!==selectedId);selectedId=state.devices[0]?.id??null;renderForm();compute();};
- $('equipment-focus').onclick=focus;
+ $('equipment-focus').onclick=()=>{focus();workspace.minimizeWindow('equipment');};
  let editTimer;
  panel.addEventListener('input',event=>{if(event.target.dataset.scope){capabilities.invalidate();renderResults();$('equipment-export').disabled=true;clearTimeout(editTimer);editTimer=setTimeout(()=>event.target.dispatchEvent(new Event('change',{bubbles:true})),80);}});
  panel.addEventListener('change',event=>{clearTimeout(editTimer);
@@ -163,8 +160,8 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  $('equipment-fhss').onchange=()=>{state.target.fhss=$('equipment-fhss').checked;compute();};
  $('equipment-emitting').onchange=()=>{state.target.emitting=$('equipment-emitting').checked;compute();};
  $('equipment-optical-mode').onchange=()=>{state.target.opticalMode=$('equipment-optical-mode').value;compute();};
- $('equipment-pick-device').onclick=()=>{pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');};
- $('equipment-pick-target').onclick=()=>{pickMode='target';message('请点击城市地面或建筑表面设置目标位置。');};
+ $('equipment-pick-device').onclick=()=>{pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');workspace.minimizeWindow('equipment');};
+ $('equipment-pick-target').onclick=()=>{pickMode='target';message('请点击城市地面或建筑表面设置目标位置。');workspace.minimizeWindow('equipment');};
  const viewport=renderer.domElement.parentElement;
  const hud=document.createElement('div');hud.id='signal-probe';hud.hidden=true;hud.setAttribute('role','status');
  hud.innerHTML='<strong>鼠标位置 · 信号估计</strong><div id="signal-caption"></div><div id="signal-value"></div><div id="signal-state"></div><small id="signal-position"></small>';
@@ -244,11 +241,11 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
   clearTimeout(hoverTimer);hoverTimer=setTimeout(refreshProbe,80);
  },true);
  renderer.domElement.addEventListener('pointerup',event=>{
-  if(drag){event.stopImmediatePropagation();endDrag();renderForm();compute();return;}
+  if(drag){event.stopImmediatePropagation();endDrag();renderForm();compute();workspace.restoreWindow('equipment');return;}
   if(!pickMode||panel.hidden||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
   const hit=surfaceAt(event.clientX,event.clientY);if(!hit){message('未选中模型表面，请点击建筑或地形。');return;}
   const p=hit.point.toArray();p[1]+=pickMode==='device'?2:50;
-  if(pickMode==='device'&&selected())selected().position=p;else if(pickMode==='target')state.target.position=p;pickMode=null;renderForm();compute();
+  if(pickMode==='device'&&selected())selected().position=p;else if(pickMode==='target')state.target.position=p;pickMode=null;renderForm();compute();workspace.restoreWindow('equipment');
  },true);
  renderer.domElement.addEventListener('pointercancel',()=>{if(drag){endDrag();renderForm();compute();}});
  renderer.domElement.addEventListener('lostpointercapture',()=>{if(drag){endDrag();renderForm();compute();}});
@@ -269,6 +266,6 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city}){
  $('equipment-defaults').onclick=()=>{endDrag();hideProbe();state=defaultState();selectedId=state.devices[0].id;serial=4;renderForm();compute();focus();};
  capabilities=mountCapabilityAssessment({panel,city,getState:()=>state,getSelected:()=>selectedId,getQuery:()=>query,isVisible:()=>!panel.hidden,onChange:(reform=false)=>{if(reform)renderForm();compute();},onUpdate:()=>{renderResults();$('equipment-export').disabled=!valid||(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData());}});
  renderForm();toggle.disabled=false;
- app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();panel.hidden=true;layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
+ app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
  return {panel,render:()=>heat.render(renderer,scene,camera),getScenario:()=>structuredClone(state),applyScenario(value){state=validateScenario(value,city.metadata.origin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();show();}};
 }

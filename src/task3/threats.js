@@ -108,6 +108,6 @@ export async function simulateThreat({query,devices,routes,target,environment,co
 export function threatSummaryText(result){
  const s=result.summary,detected=result.perTarget.filter(p=>p.firstDetectionTime!==null).length;
  const mean=s.meanFirstDetectionTime===null?'—':`${s.meanFirstDetectionTime.toFixed(1)} s`;
- const base=`共推演 ${s.targetCount} 架入侵目标，${detected} 架被真实检出（平均首报 ${mean}，平均检出占比 ${(s.meanDetectedFraction*100).toFixed(1)}%，最低 ${(s.minDetectedFraction*100).toFixed(1)}%）`;
+ const base=`共推演 ${s.targetCount} 架入侵目标，${detected} 架仿真检出（平均首报 ${mean}，平均检出占比 ${(s.meanDetectedFraction*100).toFixed(1)}%，最低 ${(s.minDetectedFraction*100).toFixed(1)}%）`;
  return s.overflowEvents?base+`；设备容量溢出 ${s.overflowEvents} 架次，涉及 ${s.overflowedTargets} 架目标漏探。`:base+'；未发生容量溢出。';
 }

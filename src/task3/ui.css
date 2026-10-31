@@ -1,4 +1,4 @@
-#task3-panel{position:absolute;left:0;top:0;bottom:0;width:360px;overflow-y:auto;background:rgba(10,20,28,.92);backdrop-filter:blur(8px);padding:18px 18px 28px;z-index:6;color:#dcebf2;font-size:13px}
+#task3-panel{position:relative;width:360px;overflow-y:auto;background:rgba(10,20,28,.92);backdrop-filter:blur(8px);padding:18px 18px 28px;z-index:6;color:#dcebf2;font-size:13px}
 #task3-panel .brand{font-weight:700;font-size:15px;margin-bottom:10px}
 #task3-panel .brand small{color:#7fa3b5;margin-left:6px}
 #task3-panel section{margin:14px 0;border-top:1px solid #23404d;padding-top:10px}
@@ -35,3 +35,6 @@
 #task3-panel .task3-io button{display:block;width:100%;margin:4px 0}
 #task3-panel input[type=range]{width:100%}
 #toggle-task3{margin-left:8px}
+#task3-panel summary{cursor:pointer;color:#b9d2da;margin:8px 0}
+@media(max-width:850px){#task3-panel{width:310px}}
+@media(max-width:580px){#task3-panel{width:100%;height:65dvh;display:block}}

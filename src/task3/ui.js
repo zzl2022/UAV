@@ -9,38 +9,37 @@ const percent=x=>`${(x*100).toFixed(1)}%`;
 const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
 const VERDICT={pass:'通过',degraded:'降额',fail:'不通过'};
 
-export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model}){
- const panel=document.createElement('aside');panel.id='task3-panel';panel.hidden=true;
- panel.innerHTML=`<div class="brand"><span class="mark">◇</span> 任务三 · 优化部署推演 <small>${TASK3_VERSION}</small></div><button id="task3-back" class="back-button">← 返回城市建模</button>
- <p class="task3-note">核心防护目标：<strong>河南博物院</strong> · 推演范围：周边 2.4 × 2.4 km<br>候选生成 → 覆盖推演 → 多指标择优 → 威胁验证 → 电磁兼容校核，一键自动串联。</p>
- <section><h2>推演输入 <span>INPUT</span></h2>
-  <details open><summary>装备类型（按装备参数.doc 七款）</summary><div id="task3-equipment"></div></details>
+export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model,workspace}){
+ const panel=document.createElement('div');panel.id='task3-panel';panel.hidden=true;let active=false;
+ panel.innerHTML=`
+ <p class="task3-note">核心防护目标：<strong>河南博物院</strong> · 推演范围：周边 2.4 × 2.4 km</p>
+ <section><h2>推演输入</h2>
+  <details open><summary>可用装备</summary><div id="task3-equipment"></div></details>
   <div class="task3-inputs">
    <label>网格间距 / m<select id="task3-spacing"><option value="350">350（细）</option><option value="500" selected>500（标准）</option><option value="700">700（快）</option></select></label>
    <label>预算 / 相对单位<input id="task3-budget" type="number" min="100" max="1000" step="50" value="600"></label>
    <label>设备上限<input id="task3-max-devices" type="number" min="4" max="64" step="1" value="64"></label>
   </div>
-  <details><summary>四指标权重（和为 1）</summary><div class="task3-inputs" id="task3-weights">
-   <label>覆盖完整性<input type="number" data-weight="coverage" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.coverage}"></label>
+  <details><summary>评分权重（合计 1）</summary><div class="task3-inputs" id="task3-weights">
+   <label>覆盖评分<input type="number" data-weight="coverage" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.coverage}"></label>
    <label>盲区占比<input type="number" data-weight="blind" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.blind}"></label>
    <label>成本<input type="number" data-weight="cost" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.cost}"></label>
    <label>施工可行性<input type="number" data-weight="feasibility" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.feasibility}"></label>
-  </div><p class="hint">成本为相对成本单位，<strong>非人民币报价</strong>（装备参数.doc 未提供价格）。</p></details>
+  </div></details>
   <div class="buttons"><button id="task3-run" class="primary">▶ 开始推演</button><button id="task3-cancel" disabled>取消</button></div>
-  <progress id="task3-progress" max="1" value="0"></progress><div id="task3-status" role="status">待命</div></section>
- <section><h2>流水线 <span>PIPELINE</span></h2><ol id="task3-pipeline" class="task3-pipeline">${PIPELINE_STAGES.map(s=>`<li data-stage="${s}">${STAGE_NAMES[s]}</li>`).join('')}</ol></section>
- <section><h2>方案对比 <span>PLANS</span></h2><div id="task3-plans-table"></div><label>当前方案<select id="task3-plan"></select></label><div id="task3-plan-detail"></div></section>
- <section><h2>盲区分布 <span>BLIND SPOTS</span></h2><label>覆盖工况<select id="task3-condition"></select></label>
+  <progress id="task3-progress" max="1" value="0"></progress><div id="task3-status" role="status">待命</div><details class="task3-stages"><summary>计算进度</summary><ol id="task3-pipeline" class="task3-pipeline">${PIPELINE_STAGES.map(s=>`<li data-stage="${s}">${STAGE_NAMES[s]}</li>`).join('')}</ol></details></section>
+ <section><h2>方案对比</h2><div id="task3-plans-table"></div><label>当前方案<select id="task3-plan"></select></label><div id="task3-plan-detail"></div></section>
+ <section><h2>盲区分布</h2><label>覆盖工况<select id="task3-condition"></select></label>
   <div id="task3-blind-legend" class="task3-legend">${Object.entries(BLIND_CATEGORIES).map(([key,name])=>`<label><input type="checkbox" data-category="${key}" checked><i style="background:#${BLIND_COLORS[key].toString(16).padStart(6,'0')}"></i>${name}<b data-count="${key}"></b></label>`).join('')}</div>
   <div id="task3-blind-list"></div></section>
- <section><h2>威胁推演 <span>THREATS</span></h2><label>威胁场景<select id="task3-threat"></select></label>
+ <section><h2>威胁推演</h2><label>威胁场景<select id="task3-threat"></select></label>
   <div id="task3-threat-summary"></div><div class="buttons"><button id="task3-threat-play" class="primary" disabled>▶ 播放推演</button><button id="task3-threat-reset" disabled>↺</button></div>
   <input id="task3-threat-seek" type="range" min="0" max="1000" value="0" aria-label="推演进度"><div id="task3-threat-clock">00:00 / 00:00</div><div id="task3-threat-list"></div></section>
- <section><h2>电磁兼容 <span>EMC</span></h2><div id="task3-emc"></div></section>
+ <section><h2 title="工程规则校核，非频谱合规认证">电磁兼容校核</h2><div id="task3-emc"></div></section>
  <section class="task3-io"><button id="task3-export">导出推演报告 JSON ↓</button><button id="task3-export-run">导出过程数据（规则依据）↓</button></section>`;
- app.insertBefore(panel,app.querySelector('main'));
- const cityPanel=app.querySelector('aside'),$=id=>panel.querySelector('#'+id);
- const button=document.createElement('button');button.id='toggle-task3';button.textContent='任务三推演 →';app.querySelector('header').append(button);
+ workspace.mountSidebarPanel(panel,'task3');
+ const $=id=>panel.querySelector('#'+id);
+ const button=app.querySelector('#toggle-task3');
  const layer=new THREE.Group();layer.name='Task3_Pipeline';layer.visible=false;scene.add(layer);
  const setStatus=text=>{$('task3-status').textContent=text;};
  // 装备勾选
@@ -70,20 +69,20 @@ export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,se
  function renderBlindList(row){
   const counts=row?.stats.byCategory??{};for(const [key] of Object.entries(BLIND_CATEGORIES)){const el=panel.querySelector(`b[data-count="${key}"]`);if(el)el.textContent=counts[key]?` ${counts[key]}`:' 0';}
   const list=$('task3-blind-list');list.replaceChildren();
-  if(!row?.points?.length){list.innerHTML='<p class="hint">当前工况采样点全部覆盖，无盲区。</p>';return;}
+  if(!row?.points?.length){list.innerHTML='<p class="hint">当前工况未发现未覆盖采样点。</p>';return;}
   for(const p of row.points){const b=document.createElement('button');b.className='task3-blind-item';b.style.borderLeftColor=`#${BLIND_COLORS[p.category].toString(16).padStart(6,'0')}`;
    const cause=p.category==='gap'?`缝宽 ${p.cause.gapWidthM.toFixed(0)} m`:p.category==='shadow'?`遮挡距 ${p.cause.blockerDistanceM.toFixed(0)} m`:p.category==='lowFacade'?`贴楼 ${p.cause.distanceToFacadeM.toFixed(1)} m · 离地 ${p.agl} m`:p.category==='corner'?`距角部 ${p.cause.cornerDistanceM.toFixed(1)} m`:'不满足四类几何特征';
    b.textContent=`${BLIND_CATEGORIES[p.category]} · ${cause}`;b.onclick=()=>focus(p.position,500);list.append(b);}
  }
  function renderPlans(){
   const t=report.comparison,table=document.createElement('table');table.className='task3-table';
-  table.innerHTML=`<thead><tr><th>排名</th><th>方案</th><th>设备</th><th>覆盖完整性</th><th>盲区占比</th><th>成本*</th><th>可行性</th><th>EMC</th><th>得分</th></tr></thead>`;
+  table.innerHTML=`<thead><tr><th>排名</th><th>方案</th><th>设备</th><th title="最弱工况覆盖率与核心区二重覆盖率的综合评分">覆盖评分</th><th>盲区占比</th><th>相对成本</th><th>可行性</th><th>EMC</th><th>得分</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   for(const r of t.rows){const tr=document.createElement('tr');if(r.id===report.recommendedId)tr.className='recommended';
    tr.innerHTML=`<td>${r.rank}</td><td>${r.name}${r.id===report.recommendedId?' ★':''}</td><td>${r.deviceCount}</td><td>${percent(r.coverage)}</td><td>${percent(r.blindRatio)}</td><td>${r.cost.toFixed(1)}</td><td>${r.feasibility.toFixed(2)}</td><td>${VERDICT[report.emc[r.id].verdict]}</td><td>${r.score.toFixed(3)}</td>`;
    tbody.append(tr);}
   table.append(tbody);$('task3-plans-table').replaceChildren(table);
-  $('task3-plans-table').insertAdjacentHTML('beforeend','<p class="hint">* 相对成本单位，非人民币报价。覆盖完整性 = 最弱工况覆盖率 + 0.15×核心区二重覆盖率（封顶 1）。EMC 冲突方案得分已降权。</p>');
+  $('task3-plans-table').insertAdjacentHTML('beforeend','<details><summary>评分依据</summary><p class="hint">覆盖评分 = 最弱工况覆盖率 + 0.15×核心区二重覆盖率（最高 1）。EMC 冲突方案降权；成本按相对单位比较。</p></details>');
   $('task3-plan').replaceChildren(...report.plans.map(p=>new Option(`${p.name} · ${p.devices.length} 台`,p.id,false,p.id===plan.id)));
   const s=report.scoring.plans.find(r=>r.id===plan.id),m=plan.metrics[conditionIndex()];
   $('task3-plan-detail').innerHTML='';const rows=[['当前工况采样覆盖',`${m.covered}/${m.total} · ${percent(m.coverageRate)}`],['采样盲区占比',percent(m.blindRate)],['核心区覆盖 / 二重覆盖',`${percent(m.coreCoverageRate)} / ${percent(m.coreRedundantRate)}`],['施工可行性代理',s.indicators.feasibility.toFixed(3)],['EMC 结论',`${VERDICT[report.emc[plan.id].verdict]}（严重 ${report.emc[plan.id].counts.fail} · 提示 ${report.emc[plan.id].counts.warning}）`]];
@@ -95,13 +94,11 @@ export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,se
   if(e.conflicts.length){const t=document.createElement('table');t.className='task3-table';t.innerHTML='<thead><tr><th>设备对</th><th>类型</th><th>严重度</th><th>距离/m</th><th>建议</th></tr></thead>';const tb=document.createElement('tbody');
    for(const c of e.conflicts.slice(0,50)){const tr=document.createElement('tr');tr.innerHTML=`<td>${c.a} ↔ ${c.b}</td><td>${c.kind}</td><td>${c.severity}</td><td>${c.distanceM.toFixed(0)}</td><td>${c.recommendation}</td>`;tb.append(tr);}t.append(tb);box.append(t);
    if(e.conflicts.length>50)box.insertAdjacentHTML('beforeend',`<p class="hint">仅列前 50 条，共 ${e.conflicts.length} 条，完整清单见导出 JSON。</p>`);}
-  box.insertAdjacentHTML('beforeend',`<p class="hint">${e.notes.join('；')||''} 工程代理规则，非频谱合规认证。</p>`);
  }
  function renderThreatSummary(){
   const key=$('task3-threat').value,th=report.threats[key],s=th.summary;
   $('task3-threat-summary').innerHTML='';
-  for(const [k,v] of [['推演目标',`${s.targetCount} 架`],['被真实检出',`${th.perTarget.filter(p=>p.firstDetectionTime!==null).length} 架`],['平均首报',s.meanFirstDetectionTime===null?'—':`${s.meanFirstDetectionTime.toFixed(1)} s`],['平均检出占比',percent(s.meanDetectedFraction)],['容量溢出架次',`${s.overflowEvents}`]]){const d=document.createElement('div');d.className='sensor-metric';d.innerHTML=`<span>${k}</span><strong>${v}</strong>`;$('task3-threat-summary').append(d);}
-  $('task3-threat-summary').insertAdjacentHTML('beforeend',`<p class="hint">${th.text}</p>`);
+  for(const [k,v] of [['推演目标',`${s.targetCount} 架`],['仿真检出目标',`${th.perTarget.filter(p=>p.firstDetectionTime!==null).length} 架`],['平均首报',s.meanFirstDetectionTime===null?'—':`${s.meanFirstDetectionTime.toFixed(1)} s`],['平均检出占比',percent(s.meanDetectedFraction)],['最低检出占比',percent(s.minDetectedFraction)],['溢出涉及目标',`${s.overflowedTargets} 架`],['容量溢出架次',`${s.overflowEvents}`]]){const d=document.createElement('div');d.className='sensor-metric';d.innerHTML=`<span>${k}</span><strong>${v}</strong>`;$('task3-threat-summary').append(d);}
   $('task3-threat-list').replaceChildren(...th.perTarget.map(p=>{const b=document.createElement('button');b.className='task3-blind-item';b.textContent=`${p.id} · 首报 ${p.firstDetectionTime===null?'未检出':clock(p.firstDetectionTime)} · 检出 ${percent(p.detectedFraction)}`;return b;}));
  }
  function installThreatFrame(){
@@ -138,14 +135,14 @@ export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,se
  function fail(text){worker?.terminate();worker=null;busy=false;resetStages();setStatus(`推演失败：${text}`);controlsEnabled();updateDiagnostics();}
  function renderAll(){renderPlans();renderEmc();renderThreatSummary();drawCommon();updateDiagnostics();}
  // 事件
- button.onclick=()=>{app.dispatchEvent(new CustomEvent('view-change',{detail:'task3'}));cityPanel.hidden=true;panel.hidden=false;app.classList.add('equipment-mode');layer.visible=true;};
- app.addEventListener('view-change',event=>{if(event.detail!=='task3'){panel.hidden=true;layer.visible=false;stopPlayback();}});
- $('task3-back').onclick=()=>{app.dispatchEvent(new CustomEvent('view-change',{detail:'city'}));panel.hidden=true;cityPanel.hidden=false;app.classList.remove('equipment-mode');};
+ button.onclick=()=>{workspace.activateView('task3');active=true;layer.visible=true;};
+ app.addEventListener('view-change',event=>{if(event.detail!=='task3'){active=false;layer.visible=false;stopPlayback();}});
+ for(const type of ['pointerdown','focusin'])panel.addEventListener(type,()=>{if(!active)button.click();},true);
  $('task3-run').onclick=()=>{if(busy)return;const presetIds=[...panel.querySelectorAll('#task3-equipment input:checked')].map(c=>c.value);
   const weights={};for(const input of panel.querySelectorAll('#task3-weights input'))weights[input.dataset.weight]=Number(input.value);
   const current=sensors.getScenario();
   const settings={scope:'core',spacing:Number($('task3-spacing').value),heights:[30,60,100],siteSpacing:500,maxSites:192,maxDevices:Number($('task3-max-devices').value),budget:Number($('task3-budget').value),costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3};
-  busy=true;resetStages();destroyLayer();report=null;controlsEnabled();updateDiagnostics();setStatus('后台计算中，地图仍可操作。');
+  busy=true;resetStages();destroyLayer();report=null;controlsEnabled();updateDiagnostics();setStatus('正在计算…');
   getWorker().postMessage({type:'pipeline',baseURL:new URL('./',location.href).href,settings,weights,presetIds,environment:current.environment,target:current.target});};
  $('task3-cancel').onclick=()=>{worker?.terminate();worker=null;busy=false;resetStages();setStatus('已取消。');controlsEnabled();updateDiagnostics();};
  $('task3-plan').onchange=()=>{plan=report.plans.find(p=>p.id===$('task3-plan').value);stopPlayback();frameIndex=0;frameTime=0;renderAll();};

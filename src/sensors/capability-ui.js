@@ -5,10 +5,10 @@ import {supported,ensureSettings,requestForScenario,availableMetrics,parameterRo
 // Shares equipment, target, coordinate frame and scene query with mountSensorUI.
 export function mountCapabilityAssessment({panel,city,getState,getSelected,getQuery,isVisible,onChange,onUpdate}){
  const workspace=document.createElement('section');workspace.id='capability-workspace';
- workspace.innerHTML=`<h2>光电／声学评估</h2><label>评估方式<select id="capability-mode"><option value="dataset">比赛资料 · 基础评估</option><option value="simulation">假设参数 · 环境仿真</option></select></label><p class="hint" id="capability-mode-note"></p><label id="capability-nominal-row" hidden><input id="capability-nominal" type="checkbox">显示假设范围示意</label><div id="capability-settings"></div><div class="buttons"><button id="capability-reload">刷新设备资料</button><button id="capability-aim">朝向当前目标</button></div><p id="capability-message" role="status" class="hint"></p>`;
+ workspace.innerHTML=`<h2>评估设置</h2><label>评估方式<select id="capability-mode" title="资料基础评估核对设备参数与场景几何；假设仿真用于环境条件比较。"><option value="dataset">资料基础评估</option><option value="simulation">假设环境仿真</option></select></label><label id="capability-nominal-row" hidden><input id="capability-nominal" type="checkbox">显示标称范围示意（假设）</label><div id="capability-settings"></div><div class="buttons"><button id="capability-reload">刷新设备资料</button><button id="capability-aim">朝向当前目标</button></div><p id="capability-message" role="status" class="hint"></p>`;
  panel.querySelector('details').before(workspace);
  const compare=document.createElement('section');compare.id='capability-comparison';
- compare.innerHTML=`<h2>光电／声学场景对比</h2><label>场景名称<input id="capability-scene-name" maxlength="80" value="场景1"></label><button id="capability-save" disabled>保存当前场景</button><div id="capability-table" class="capability-table" tabindex="0" aria-label="可横向滚动的场景对比表"></div><div class="buttons"><button id="capability-export-html" disabled>导出中文报告</button><button id="capability-export-json" disabled>导出对比数据</button></div><button id="capability-clear">清空对比记录</button><p class="hint">表格可横向滚动，完整对比见中文报告。记录保留在本次页面会话，刷新前请导出。</p>`;
+ compare.innerHTML=`<h2>光电／声学场景对比</h2><label>场景名称<input id="capability-scene-name" maxlength="80" value="场景1"></label><button id="capability-save" disabled>保存当前场景</button><div id="capability-table" class="capability-table" tabindex="0" aria-label="可横向滚动的场景对比表"></div><div class="buttons"><button id="capability-export-html" disabled>导出中文报告</button><button id="capability-export-json" disabled>导出对比数据</button></div><button id="capability-clear">清空对比记录</button><p id="capability-session-note" class="hint" hidden>临时记录，刷新前请导出。</p>`;
  panel.querySelector('.sensor-io').before(compare);
  const $=id=>panel.querySelector('#'+id);
  let mode='dataset',catalog=null,payload=null,sequence=0,controller=null,snapshots=[],loading=null;
@@ -33,7 +33,6 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
   $('capability-nominal-row').hidden=mode!=='simulation';$('capability-nominal').checked=$('detection-nominal').checked;
   $('capability-save').hidden=mode!=='dataset';$('capability-scene-name').parentElement.hidden=mode!=='dataset';
   $('capability-mode').value=mode;
-  $('capability-mode-note').textContent=mode==='dataset'?'共用地图点位与目标，按设备资料核对基础条件。':'使用可调整的假设系数进行环境仿真，结果用于趋势分析。';
   $('capability-reload').hidden=mode!=='dataset';$('capability-aim').hidden=d?.type!=='optical';
   if(!supported(d)||mode!=='dataset')return;
   const s=d.capability,t=getState().target.capability;
@@ -50,7 +49,7 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
    checkbox(box,'capability-custom-fov','启用自定义视场试算（场景假设）',s.use_custom_fov,v=>s.use_custom_fov=v);
    if(s.use_custom_fov){number(box,'水平视场 / °',s.custom_fov_deg[0],.001,179.999,.001,v=>s.custom_fov_deg[0]=v);
     number(box,'垂直视场 / °',s.custom_fov_deg[1],.001,179.999,.001,v=>s.custom_fov_deg[1]=v);
-    const hint=document.createElement('p');hint.className='hint';hint.textContent='固定视场由本场景设定，焦距调整不改变该固定角度。';box.append(hint);}
+    const hint=document.createElement('p');hint.className='hint';hint.textContent='固定视场（场景假设），不随焦距变化。';box.append(hint);}
   }else{
    const label=document.createElement('label');label.textContent='阵列规格';const select=document.createElement('select');select.id='capability-array';
    for(const value of [.3,.7,1.1])select.add(new Option(`${Math.round(value*100)} cm`,value));select.value=s.array_diameter_m;
@@ -78,7 +77,7 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request),signal:controller.signal});
    if(ticket!==sequence||!isVisible())return;
    const names=new Map(getState().devices.map(d=>[d.id,d.name]));for(const r of value.results)r.name=names.get(r.id);
-   payload=value;$('capability-save').disabled=false;$('capability-message').textContent='评估已更新 · 与当前地图点位一致';diagnostics();onUpdate();
+   payload=value;$('capability-save').disabled=false;$('capability-message').textContent='评估已更新';diagnostics();onUpdate();
   }catch(error){if(error.name==='AbortError'||ticket!==sequence)return;
    $('capability-message').textContent='本次评估未完成。'+error.message;diagnostics();onUpdate();}
  }
@@ -91,7 +90,7 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
  }
  function renderParameters(parent){parent.replaceChildren();const r=payload?.results.find(r=>r.id===getSelected());
   for(const m of parameterRows(r)){const node=document.createElement('div');node.className='sensor-metric';const label=document.createElement('span'),value=document.createElement('strong');label.textContent=m.label;value.textContent=`${displayValue(m.value,m.label)} ${displayUnit(m.unit)} · ${displayStatus(m.status)}`;node.append(label,value);parent.append(node);}}
- function comparisons(){$('capability-table').innerHTML=snapshots.length?comparisonHTML(snapshots):'';for(const id of ['capability-export-html','capability-export-json','capability-clear'])$(id).disabled=!snapshots.length;diagnostics();}
+ function comparisons(){$('capability-table').innerHTML=snapshots.length?comparisonHTML(snapshots):'';$('capability-session-note').hidden=!snapshots.length;for(const id of ['capability-export-html','capability-export-json','capability-clear'])$(id).disabled=!snapshots.length;diagnostics();}
  function download(data,name,type){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  $('capability-mode').onchange=()=>{mode=$('capability-mode').value;getState().assessmentMode=mode;invalidate();form();onChange(true);};
  $('capability-nominal').onchange=()=>{$('detection-nominal').checked=$('capability-nominal').checked;$('detection-nominal').dispatchEvent(new Event('change',{bubbles:true}));};

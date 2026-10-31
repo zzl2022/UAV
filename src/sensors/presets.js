@@ -35,7 +35,7 @@ function preset(id,type,name,overrides,documentFields,notes){
  return {id,type,name,parameters,provenance,notes,source:EQUIPMENT_SOURCE};
 }
 export const PRESETS=[
- preset('radar-02c','radar','02C 三坐标雷达',{frequencyGHz:9.4},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km，模型保守取 8 km；新建设备接入 MATLAB 能量方程，脉冲盲区约 450 m，功率与收发参数为假设。'),
+ preset('radar-02c','radar','02C 三坐标雷达',{frequencyGHz:9.4},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'资料距离 ≥8 km，默认取 8 km；脉冲盲区约 450 m，功率与收发参数为场景假设。'),
  preset('radar-03d','radar','03D 三坐标雷达',{frequencyGHz:15,elevationMax:60,updateSeconds:2,rangeAccuracy:6,azimuthAccuracy:0.3,elevationAccuracy:0.3},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km；Ku 波段具体频率及噪声、雨衰参数需标定。'),
  preset('radio-tdoa','radio','TDOA-X1B',{maxRange:4000,minRange:0,elevationMin:-90,elevationMax:90,capacity:35,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 2–6 km，默认取中值 4 km；并发 >35，保守取 35。定位误差 <20 m 属于 TDOA 网络，单站不输出三维定位误差。'),
  preset('radio-mini','radio','OA-X1Bmini',{maxRange:1250,minRange:0,elevationMin:-90,elevationMax:90,capacity:30,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 0.5–2 km，默认取中值 1.25 km；并发 >30，保守取 30。'),

@@ -36,10 +36,8 @@ export function assessmentSummary(result){
 }
 export function resultExplanation(result){
  const text=[];
- if(pathLabel(result))text.push(pathLabel(result)+'，依据当前三维场景。');
  if(result.type==='acoustic' && result.geometry?.state==='blocked')
   text.push('声波可经反射和绕射传播，直达路径受阻不等于完全无法感知。');
- if(result.type==='acoustic')text.push('距离区间用于核对资料标称条件。');
  if(result.raw_result?.fov?.status==='assumed')text.push('视场结果采用本场景设定的固定角度。');
  return text;
 }

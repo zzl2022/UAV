@@ -7,31 +7,48 @@ import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
+import {createWorkspace} from './workspace.js';
+import './workspace.css';
 
 const app=document.querySelector('#app');
-app.innerHTML=`<aside>
-  <div class="brand"><span class="mark">◈</span> UAV <small>地理空间实验室</small></div>
-  <div class="eyebrow">CITY RECONSTRUCTION / 01</div>
-  <h1>城市三维<br>地理建模<span>。</span></h1>
-  <p class="intro">郑州 · 河南博物院片区<br>基于仓库建筑轮廓与 DEM 的真实数据重建</p>
+app.innerHTML=`<aside id="workspace-sidebar">
+  <div class="platform-brand"><span class="platform-mark">◈</span><h1>反无人机<br><strong>部署仿真平台</strong></h1></div>
+  <nav class="workspace-launchers" aria-label="功能窗口">
+    <button id="open-city-model" aria-controls="city-window" aria-pressed="false"><span aria-hidden="true">▦</span>城市建模</button>
+    <button id="toggle-sensors" aria-controls="equipment-window" aria-pressed="false" disabled><span aria-hidden="true">◎</span>反无设备</button>
+  </nav>
+  <div class="deployment-heading"><h2>推演与部署</h2><span class="live" aria-hidden="true"></span></div>
+  <div class="deployment-tabs" role="tablist" aria-label="推演与部署">
+    <button id="toggle-task3" role="tab" aria-controls="task3-panel" aria-selected="true" disabled>综合推演</button>
+    <button id="toggle-planning" role="tab" aria-controls="planning-panel" aria-selected="false" disabled>部署与飞行</button>
+  </div>
+  <div id="deployment-panels"><p id="deployment-loading" class="hint">正在加载推演模块…</p></div>
+</aside><main id="scene-main">
+<div id="viewport" aria-label="可旋转的三维城市场景"></div><div class="north">N<br>↑</div><div id="status" role="status">正在加载场景…</div><div class="navigation">左键旋转 · 右键平移 · 滚轮缩放</div></main>
+<div id="city-panel">
+  <p class="intro">郑州 · 河南博物院片区</p>
   <div class="stats"><div><strong id="count">—</strong><span>建筑要素</span></div><div><strong id="height">—</strong><span>最高建筑 / m</span></div></div>
-  <section><h2>场景图层 <span>LAYERS</span></h2>
-  <label><input type="checkbox" id="buildings" checked>建筑重建 <small>SHP / high</small></label>
-  <label><input type="checkbox" id="terrain" checked>真实地形 <small>DEM / 30 m 级</small></label>
-  <label><input type="checkbox" id="imagery" checked>影像底图 <small>GeoTIFF / RGB</small></label>
-  <label><input type="checkbox" id="wire">建筑线框 <small>WIREFRAME</small></label>
-  <label><input type="checkbox" id="original">原始白模对比 <small>GLB</small></label>
-  <p class="hint">启用原始白模时隐藏重建建筑，避免重复叠加。原始白模的垂直基准未注明。</p></section>
-  <section><h2>模型工具 <span>TOOLS</span></h2><div class="buttons"><button id="reset">↗ 全域视角</button><button id="top">⌖ 俯视平面</button></div>
+  <section><h2>场景图层</h2>
+  <label><input type="checkbox" id="buildings" checked>建筑</label>
+  <label><input type="checkbox" id="terrain" checked>地形</label>
+  <label><input type="checkbox" id="imagery" checked>影像底图</label>
+  <details class="scene-details"><summary>高级图层</summary>
+  <label><input type="checkbox" id="wire">建筑线框</label>
+  <label title="与重建建筑互斥显示；原始白模高程基准未注明"><input type="checkbox" id="original">原始白模对比</label>
+  </details></section>
+  <section><h2>场景视角</h2><div class="buttons" id="city-views"><button id="reset">↗ 全域视角</button><button id="top">⌖ 俯视平面</button></div></section>
+  <details class="scene-details"><summary>场景数据与导出</summary>
   <button id="export" class="primary" disabled>导出三维模型 · GLB ↓</button>
   <a class="download" href="./data/buildings.geojson" download>下载建筑 GeoJSON ↗</a>
-  <a class="download" id="task3-showcase-link" href="./任务三成果展示.html" target="_blank" rel="noopener">任务三成果展示 ↗</a>
-  <a class="download" href="./任务三模型可解释性.html" target="_blank" rel="noopener">任务三模型说明 ↗</a>
-  </section>
-  <section id="selection"><h2>建筑属性 <span>INSPECT</span></h2><p class="hint" id="details">点击建筑查看名称、真实高度与地面海拔。</p></section>
-  <footer>坐标：WGS84 → 局部 ENU / 米<br>高程按源 DEM 使用，垂直基准未标注。<br>影像按坐标贴合地形，不改变建筑高度。</footer>
-</aside><main><header><div><span class="live"></span> 郑州城市数字底座 <span class="tag">REPOSITORY DATA</span></div><a href="./data/report.json" target="_blank" rel="noopener">数据报告 ↗</a></header>
-<div id="viewport" aria-label="可旋转的三维城市场景"></div><div class="north">N<br>↑</div><div id="status" role="status">正在读取仓库数据…</div><div class="navigation">左键旋转 · 右键平移 · 滚轮缩放</div><div id="location">LOCAL ENU · METERS</div></main>`;
+  <a class="download" href="./data/report.json" target="_blank" rel="noopener">场景数据报告 ↗</a>
+  <p class="hint">平面坐标：局部 ENU / m；地理坐标：WGS84。模型高程采用源 DEM，垂直基准未注明。</p>
+  <p id="location">局部 ENU / m</p>
+  </details>
+  <section id="selection"><h2>建筑属性</h2><button id="city-inspect">在地图中选取建筑</button><p class="hint" id="details">点击建筑查看属性</p></section>
+</div>`;
+const workspace=createWorkspace(app);
+workspace.mountWindow('city','城市建模',app.querySelector('#city-panel'));
+document.getElementById('city-inspect').onclick=()=>workspace.minimizeWindow('city');
 const el=id=>document.getElementById(id);
 let renderer,model,city,terrain,controls,original;
 let scene,camera,imageryTexture;
@@ -70,7 +87,7 @@ try {
   const grid=new THREE.GridHelper(Math.ceil(span/1000)*1000,Math.ceil(span/1000)*2,0x33515b,0x20333b);grid.position.y=box.min.y-1;scene.add(grid);
   el('count').textContent=city.metadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=city.metadata.maxHeight;
   el('location').textContent=`${city.metadata.origin[0].toFixed(5)}° E / ${city.metadata.origin[1].toFixed(5)}° N · ENU`;
-  const ready=()=>status(`已建模 ${city.metadata.sourceFeatures.toLocaleString('zh-CN')} 栋建筑 · 地形 ${terrain.cols} × ${terrain.rows} · ${imageryTexture?'影像已对齐':'米制坐标'}${imageryError?'（影像加载失败，可重新准备数据后刷新）':''}`);
+  const ready=()=>status(imageryError?'场景已加载 · 影像加载失败':'场景已加载');
   el('buildings').onchange=()=>{model.buildings.visible=el('buildings').checked&&!el('original').checked;};
   el('terrain').onchange=()=>{model.ground.visible=el('terrain').checked;};
   el('imagery').onchange=()=>{
@@ -85,7 +102,7 @@ try {
     const checked=el('original').checked;model.buildings.visible=!checked&&el('buildings').checked;
     if(original){original.visible=checked;return;}
     if(!checked)return;
-    el('original').disabled=true;status('正在加载仓库原始白模…');
+    el('original').disabled=true;status('正在加载原始白模…');
     const loaded=[];
     try {
       const loader=new GLTFLoader();
@@ -108,17 +125,22 @@ try {
     const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
     raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObject(model.buildings)[0];if(!hit)return;
     const b=model.ranges.find(r=>hit.faceIndex>=r.start&&hit.faceIndex<r.end)?.building;if(!b)return;
-    el('details').textContent=`${b.name} | 高度 ${b.height} m | 地面海拔 ${b.ground.toFixed(1)} m | ID ${b.id}`;
+    el('details').textContent=`${b.name} | 建筑高度 ${b.height} m | 地面模型高程 ${b.ground.toFixed(1)} m | ID ${b.id}`;
+    workspace.restoreWindow('city');
   });
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);};
   new ResizeObserver(resize).observe(viewport);resize();
   let planning,sensors;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport});
+  const museumFocus=el('museum-focus');if(museumFocus)el('city-views').append(museumFocus);
   renderer.setAnimationLoop(stamp=>{controls.update();landmarks.update();planning?.update(stamp);if(!sensors?.render())renderer.render(scene,camera);});
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
-  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
-  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
-  import('./task3/ui.js').then(({mountTask3UI})=>mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model})).catch(error=>console.warn('任务三面板挂载失败',error));
+  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace});
+  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model,workspace});
+  import('./task3/ui.js').then(({mountTask3UI})=>{
+    mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model,workspace});
+    if(!app.dataset.activeView&&!app.querySelector('.workspace-window[open]'))el('toggle-task3').click();
+  }).catch(error=>{console.warn('任务三面板挂载失败',error);el('toggle-task3').disabled=true;el('toggle-planning').click();});
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture};

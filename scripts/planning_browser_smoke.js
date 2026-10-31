@@ -8,7 +8,10 @@ try{
  await page.addInitScript(()=>{window.testSpeech=[];window.testSpeechCancels=0;Object.defineProperty(window,'speechSynthesis',{value:{cancel(){window.testSpeechCancels++;},getVoices:()=>[{lang:'zh-CN',localService:true}],speak:u=>window.testSpeech.push({text:u.text,lang:u.lang})}});window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;}};});
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173',{timeout:120000});await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  await page.locator('#toggle-planning').click();await page.waitForFunction(()=>window.planningDiagnostics?.ready,null,{timeout:120000});
- const initial=await page.evaluate(()=>window.planningDiagnostics);assert.ok(initial.deviceCount>0);assert.ok(initial.sampleCount>300);assert.equal(initial.coverageRate,1);
+ const initial=await page.evaluate(()=>window.planningDiagnostics);assert.ok(initial.deviceCount>0);assert.ok(initial.sampleCount>300);
+ const example=JSON.parse(await readFile('public/deployment-example.json','utf8'));
+ assert.equal(initial.planId,example.selectedId);
+ assert.equal(initial.coverageRate,example.plans.find(p=>p.id===example.selectedId).metrics[example.conditions.findIndex(c=>c.id===initial.condition)].coverageRate);
  assert.equal(await page.locator('#flight-label').isVisible(),true);
  assert.equal(await page.locator('#flight-hud').isVisible(),true);
  const telemetry=await page.evaluate(()=>window.planningDiagnostics.telemetry);assert.ok(telemetry.agl>0);assert.ok(telemetry.longitude>113&&telemetry.longitude<115);assert.ok(telemetry.latitude>34&&telemetry.latitude<36);
@@ -61,6 +64,7 @@ try{
  await page.setViewportSize({width:1500,height:1000});
  await page.locator('#planning-apply').click();await page.waitForFunction(()=>!document.querySelector('#equipment-panel').hidden);
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),initial.deviceCount);
- assert.equal(await page.locator('#planning-panel').isVisible(),false);
+ assert.equal(await page.locator('#equipment-window').isVisible(),true);
+ assert.equal(await page.evaluate(()=>document.querySelector('#app').dataset.activeView),'sensors');
  assert.deepEqual(errors,[]);console.log('Hover type/model, alarm marker pulses, live geographic/height HUD, opt-in Chinese speech dispatch passed. Planning browser passed: real plan, playback/pause/seek/reset, alarm export, Worker simulation, cancellation, invalid settings, mobile and equipment handoff.');
 }finally{await browser.close();}

@@ -14,7 +14,7 @@ export function mountLandmarks({city,scene,camera,controls,viewport}){
   group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0xffd783,depthTest:false,transparent:true,opacity:0.85})));
  }
  scene.add(group);
- const label=document.createElement('button');label.id='museum-label';label.className='map-landmark';label.textContent='⌖ 河南博物院';label.title=landmark.source;viewport.append(label);
+ const label=document.createElement('button');label.id='museum-label';label.className='map-landmark';label.textContent='⌖ 河南博物院';label.title=landmark.name;viewport.append(label);
  const focus=document.createElement('button');focus.id='museum-focus';focus.textContent='⌖ 定位河南博物院';viewport.parentElement.append(focus);
  function locate(){const p=new THREE.Vector3(...landmark.position);controls.target.copy(p);camera.position.copy(p).add(new THREE.Vector3(450,500,650));controls.update();}
  label.onclick=locate;focus.onclick=locate;
