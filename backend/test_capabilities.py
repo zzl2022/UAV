@@ -95,6 +95,25 @@ def test_json_serializable_and_inputs_preserved(service,scenario):
     json.dumps(service.evaluate(scenario),allow_nan=False,ensure_ascii=False)
     assert scenario==before
 
+def test_geometric_angles_are_derived_and_notes_are_neutral(service,scenario):
+    optical=service.evaluate(scenario)['results'][0]
+    assert optical['raw_result']['geometric_azimuth']['value']==0
+    assert optical['raw_result']['geometric_elevation']['value']==0
+    text=json.dumps(optical,ensure_ascii=False)
+    for word in ('老师平台','已复用原 Python','field_of_view','camera_components'):
+        assert word not in text
+
+def test_full_equipment_capacity_and_configuration_hashes(service,scenario):
+    base=copy.deepcopy(scenario['devices'][0])
+    scenario['devices']=[dict(copy.deepcopy(base),id=f'optical-{i}') for i in range(64)]
+    response=service.evaluate(scenario)
+    assert len(response['results'])==64
+    for kind,path in service.paths.items():
+        assert response['configuration_hashes'][kind]==hashlib.sha256(path.read_bytes()).hexdigest()
+    scenario['devices'].append(dict(copy.deepcopy(base),id='overflow'))
+    with pytest.raises(ValueError):
+        service.evaluate(scenario)
+
 def test_original_copies_unchanged():
     root=Path(__file__).resolve().parents[1]
     manifest=json.loads((root/'equipment_models/source_manifest.json').read_text(encoding='utf-8'))

@@ -7,7 +7,6 @@ import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
-import {mountStudentCapabilities} from './student-capabilities/ui.js';
 
 const app=document.querySelector('#app');
 app.innerHTML=`<aside>
@@ -25,7 +24,10 @@ app.innerHTML=`<aside>
   <p class="hint">启用原始白模时隐藏重建建筑，避免重复叠加。原始白模的垂直基准未注明。</p></section>
   <section><h2>模型工具 <span>TOOLS</span></h2><div class="buttons"><button id="reset">↗ 全域视角</button><button id="top">⌖ 俯视平面</button></div>
   <button id="export" class="primary" disabled>导出三维模型 · GLB ↓</button>
-  <a class="download" href="./data/buildings.geojson" download>下载建筑 GeoJSON ↗</a></section>
+  <a class="download" href="./data/buildings.geojson" download>下载建筑 GeoJSON ↗</a>
+  <a class="download" id="task3-showcase-link" href="./任务三成果展示.html" target="_blank" rel="noopener">任务三成果展示 ↗</a>
+  <a class="download" href="./任务三模型可解释性.html" target="_blank" rel="noopener">任务三模型说明 ↗</a>
+  </section>
   <section id="selection"><h2>建筑属性 <span>INSPECT</span></h2><p class="hint" id="details">点击建筑查看名称、真实高度与地面海拔。</p></section>
   <footer>坐标：WGS84 → 局部 ENU / 米<br>高程按源 DEM 使用，垂直基准未标注。<br>影像按坐标贴合地形，不改变建筑高度。</footer>
 </aside><main><header><div><span class="live"></span> 郑州城市数字底座 <span class="tag">REPOSITORY DATA</span></div><a href="./data/report.json" target="_blank" rel="noopener">数据报告 ↗</a></header>
@@ -116,8 +118,6 @@ try {
   disableControls(false);el('imagery').disabled=!imageryTexture;el('imagery').checked=!!imageryTexture;el('export').disabled=false;ready();
   sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city});
   planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model});
-  mountStudentCapabilities({app,city,scene,camera,controls,renderer,model});
-  // 任务三入口挂载（仅追加，不改既有逻辑）：优化部署与仿真推演面板
   import('./task3/ui.js').then(({mountTask3UI})=>mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model})).catch(error=>console.warn('任务三面板挂载失败',error));
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.

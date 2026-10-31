@@ -1,30 +1,53 @@
-﻿给上传同学的说明
+装备建模统一版 · 仓库上传说明（2026-10-29）
 
-本包已经按老师UAV仓库的根目录结构整理，包含本次新增／修改的68个源码、配置、测试和说明文件。
-不是完整平台；请上传到老师现有的UAV仓库，不要创建空仓库后只上传本包。
+本版本将光电、声学统一接入“装备建模”，取消独立入口，保留原模型、配置、测试和任务三。
+包含中文结果、场景对比、JSON方案和中文HTML报告导出。中文结果只列可用指标。
 
-直接用GitHub网页上传：
-1. 解压本ZIP，打开解压目录，确认能看到src、backend、equipment_models、package.json等。
-2. 在老师的UAV仓库新建分支，例如 integrate-optical-acoustic。
-3. 在仓库根目录点击 Add file → Upload files。
-4. 把本包内的文件及文件夹拖进去，保持目录结构。不要拖解压目录的外层文件夹，也不要只上传ZIP。
-5. 检查变更后提交，创建Pull Request给老师合并。
-“上传说明.txt”可以一起上传，也可不上传，不影响功能。
+适用仓库：现有完整UAV平台，基础提交为zzl2022/UAV的
+f684c3b9feac16129c8a7bdb698d87f98302e6b3，加本地装备建模整合。
+本包不是针对另一个666wow666三维查看器仓库的补丁。基础提交是已核对版本，不代表重新联网确认了远程当前版本。
 
-本包基于main的6097a2fbdaa71cd4c803396f7209e89ade755e5b制作。
-如老师之后修改了同名文件，请保留其新修改再合入；不要直接覆盖新代码。
-不需要上传node_modules、.venv、.git、生成的public/data或dist。本包已排除这些内容。
-两个原模型报告测试用的demo JSON是必要测试样例，已保留在equipment_models的outputs下。
+上传步骤：
+1. 解压ZIP，先打开“上传到仓库”文件夹。
+2. 将其中的src、backend、equipment_models、docs、package.json等内容放到现有仓库根目录。
+   不要把“上传到仓库”这层目录上传为子文件夹，也不要仅上传ZIP而期待页面自动更新。
+3. 推荐在现有仓库新建分支，例如integrate-equipment-20261029，将文件复制到克隆目录后提交、推送。
+   GitHub网页上传时，在仓库根目录选择Add file → Upload files，保持原目录结构；单次不超过100个文件，按目录分批上传。
+   .github是带点目录，使用Git客户端复制、提交时一并包含。
+4. 本包包含平台代码快照。若团队在基础提交之后改过同名文件，请合并双方修改，保留队友的新代码。
+5. 保留仓库原有“创意二文件”比赛数据目录；本包没有重复打包大体积建筑、DEM、影像和白模。
+   不要删除仓库原有但本包未包含的文件。本包不用于从空仓库直接运行。
 
-上传后运行方式：
+已排除node_modules、.venv、.git、缓存、dist和public/data等生成数据。
+radar/data下的大体积MATLAB城市缓存不重复打包，预处理源码保留；请保留现有仓库中的数据文件。
+模型outputs中的两个demo JSON为原测试需要的样例，已保留。
+根目录的任务三成果展示HTML和模型说明HTML已包含。
+页面不再显示依赖本机5180服务的独立查看器链接。
+“展示预览”只供离线查看，可不上传；文件清单和交付核验供检查打包完整性。
+
+Windows首次安装与运行（仓库根目录）：
 python -m venv .venv
-Windows：.venv\Scripts\python.exe -m pip install -r requirements-integration.txt
-Windows：.venv\Scripts\python.exe scripts/prepare_data.py
+.venv\Scripts\python.exe -m pip install -r requirements-integration.txt
 npm ci
-Windows：.venv\Scripts\python.exe scripts/start_integrated.py
+.venv\Scripts\python.exe scripts/prepare_data.py
+.venv\Scripts\python.exe scripts/start_integrated.py
 
-macOS/Linux将上面的.venv\Scripts\python.exe改为.venv/bin/python。
-浏览器打开http://127.0.0.1:5173/，点击顶部“我的光电／声学”。
-必须同时运行Python服务和前端。只上传静态网页不会执行Python模型。
-详细说明在docs/student-capabilities-integration.md，验证记录在docs/integration_validation.md。
-本包没有真实探测概率或识别精度保证；缺失设备信息保持未知。
+之后可双击“启动装备建模平台.cmd”。浏览器打开http://127.0.0.1:5173/，点击“装备建模”。
+macOS/Linux将.venv\Scripts\python.exe替换为.venv/bin/python。
+只上传文件不会自动更新正在运行的服务；需更新依赖、重新构建或重启实际运行的平台，再刷新浏览器。
+页面和Python服务都要运行。静态站点部署还需在服务器运行Python，并将/api/capabilities代理到模型服务。
+仅GitHub Pages或dist静态文件不能单独执行Python光电／声学评估。
+
+验证命令：
+npm test
+.venv\Scripts\python.exe -m pytest backend/test_capabilities.py -q
+.venv\Scripts\python.exe -m pytest equipment_models/optical/tests -q
+.venv\Scripts\python.exe -m pytest equipment_models/acoustic/tests -q
+npm run build
+以上三组Python测试分别执行，避免两套模型中的同名测试文件发生导入冲突。
+
+本机已通过98项JavaScript、102项Python测试，以及统一装备、原装备面板、任务三浏览器检查。
+模型测试验证软件逻辑，不代表实测设备精度。任务三仍使用JavaScript仿真链路。
+使用说明：docs/equipment-unification.md
+验证记录：docs/equipment-unification-validation.md
+比赛资料和模型来源：equipment_models下各模型的docs与config目录。

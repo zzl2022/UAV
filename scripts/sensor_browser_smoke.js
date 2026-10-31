@@ -1,7 +1,7 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--disable-gpu-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir('artifacts',{recursive:true});
  const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
@@ -20,7 +20,7 @@ try{
  await page.locator('#equipment-emitting').uncheck();
  await page.waitForFunction(()=>window.sensorDiagnostics.results.find(r=>r.type==='radio').reasons.includes('目标无线电静默'));
  await page.locator('#equipment-emitting').check();
- await page.locator('#equipment-panel summary').filter({hasText:'当前型号参数'}).click();
+ await page.locator('#equipment-panel summary').filter({hasText:'设备参数与来源'}).click();
  const range=page.locator('#equipment-panel').getByLabel('标称距离上限',{exact:true});await range.fill('100');
  await page.waitForFunction(()=>window.sensorDiagnostics.coverage.find(c=>c.deviceId==='sensor-3').maxRange===100);
  await range.press('Tab');
@@ -31,7 +31,8 @@ try{
  await page.waitForFunction(()=>window.sensorDiagnostics.results.find(r=>r.type==='radio').errors.networkLocalizationMeters===null);
  const downloadPromise=page.waitForEvent('download');await page.locator('#equipment-export').click();const download=await downloadPromise;
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/sensor-browser-scenario.json');
- const json=JSON.parse(await readFile('artifacts/sensor-browser-scenario.json','utf8'));assert.equal(json.devices.length,4);assert.equal(json.results.length,4);assert.ok(json.ecefTransform.length===16);
+ const json=JSON.parse(await readFile('artifacts/sensor-browser-scenario.json','utf8'));assert.equal(json.devices.length,4);assert.equal(json.results.length+json.capabilityAssessment.results.length,4);assert.ok(json.ecefTransform.length===16);
+ assert.deepEqual(json.capabilityAssessment.results.map(r=>r.type).sort(),['acoustic','optical']);
  await page.locator('#equipment-import').setInputFiles('artifacts/sensor-browser-scenario.json');await page.waitForFunction(()=>document.querySelector('#equipment-message').textContent.includes('方案导入成功'));
  // Invalid import must preserve the current valid four-device scheme.
  await page.locator('#equipment-import').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('{}')});

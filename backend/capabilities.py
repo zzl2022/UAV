@@ -17,7 +17,7 @@ from acoustic_model.config import ENV_UNITS
 
 VERSION = 'student-capabilities-1'
 FRAME = 'platform-local-ENU'
-HEIGHT_NOTE = '按老师平台将 high 解释为相对米高度并结合 DEM 的网格计算；源资料高度含义及 DEM 垂直基准尚未核实。'
+HEIGHT_NOTE = '建筑网格按 high 字段与 DEM 构建；源高度字段语义及 DEM 垂直基准的核验状态见模型方法文档。'
 STATUSES = {'provided':'资料提供', 'derived':'由输入计算', 'assumed':'用户假设', 'missing':'缺失', 'not_evaluated':'本阶段未评估', 'conditional':'按平台几何解释'}
 
 def metric(value, unit, status, source):
@@ -54,7 +54,7 @@ def geometry_context(context):
     state = 'blocked' if context['blocked'] else 'clear' if context['known'] else 'unknown'
     return {'state':state,'blocked':context['blocked'] if state != 'unknown' else None,
             'building_count':count,'coverage_complete':context['known'],'status':'conditional',
-            'source':'老师平台 createSceneQuery.trace，建筑网格 + DEM；由浏览器计算', 'limitation':HEIGHT_NOTE}
+            'source':'当前三维场景建筑与地形网格的直达路径查询', 'limitation':HEIGHT_NOTE}
 
 class CapabilityService:
     def __init__(self, city_path=None):
@@ -86,8 +86,8 @@ class CapabilityService:
         if request.get('scene_hash') != self.scene_hash:
             raise ValueError('城市场景版本不同，请刷新页面重新计算')
         devices = request.get('devices')
-        if not isinstance(devices,list) or not 1 <= len(devices) <= 32:
-            raise ValueError('需要1至32个光电或声学设备')
+        if not isinstance(devices,list) or not 1 <= len(devices) <= 64:
+            raise ValueError('需要1至64个光电或声学设备')
         if request.get('environment') not in (None, {}):
             raise ValueError('资料基础模式不接收外界环境参数')
         target = request.get('target')
@@ -109,7 +109,7 @@ class CapabilityService:
                       'geometry':context,'coordinate_frame':FRAME,
                       'coordinate_mapping':'Three.js [E,U,-N] -> Python [E,N,U]；共享原点，不转成UTM',
                       'inputs':{'device':deepcopy(d),'target':deepcopy(target)},
-                      'notes':[HEIGHT_NOTE,'设备和目标位置是用户设定场景，不是比赛提供的真实部署点。'],
+                      'notes':[HEIGHT_NOTE,'设备和目标位置为仿真场景设定。'],
                       'metrics':[], 'configuration':deepcopy(configs[d['type']])}
             if d['type'] == 'optical':
                 self.optical(common,d,target,sp,tp,configs['optical'])
@@ -146,18 +146,19 @@ class CapabilityService:
         mech = config['mechanical']
         mechanical = mech['yaw_range']['value'][0]<=yaw<=mech['yaw_range']['value'][1] and mech['pitch_range']['value'][0]<=pitch<=mech['pitch_range']['value'][1]
         result = {'distance':metric(dist(sp,tp),'m','derived','用户输入位置的欧氏距离'),
+                  'geometric_azimuth':metric(degrees(atan2(tp[0]-sp[0],tp[1]-sp[1])) % 360,'deg','derived','由已知位置计算目标方位'),
+                  'geometric_elevation':metric(degrees(atan2(tp[2]-sp[2],hypot(tp[0]-sp[0],tp[1]-sp[1]))),'deg','derived','由已知位置计算目标俯仰'),
                   'mechanical_orientation_valid':metric(mechanical,'boolean','derived','原模型云台范围约束'),
                   'channel':name,'fov':fov,'target_in_fov':metric(inside,'boolean','missing' if inside is None else fov['status'],'原模型目标中心矩形视场判断'),
                   'projected_target_size':metric(pixels,'px','missing' if pixels is None else 'assumed','原模型针孔投影；目标正对且与图像轴对齐'),
                   'recognition_probability':metric(None,'1','not_evaluated','资料未提供标定数据'),
-                  'environment_effect':metric(None,'1','not_evaluated','按老师要求，本阶段不评估外界光照、雨雾或对比度')}
+                  'environment_effect':metric(None,'1','not_evaluated','资料基础评估模式不引入外界光照、雨雾或对比度假设')}
         out['raw_result'] = result
-        out['metrics'] = [record(label,result[key]) for label,key in [('目标距离','distance'),('云台姿态满足机械范围','mechanical_orientation_valid'),('水平 × 垂直视场','fov'),('目标中心在当前视场内','target_in_fov'),('目标投影尺寸','projected_target_size')]]
+        out['metrics'] = [record(label,result[key]) for label,key in [('目标距离','distance'),('目标几何方位角','geometric_azimuth'),('目标几何俯仰角','geometric_elevation'),('云台姿态满足机械范围','mechanical_orientation_valid'),('水平 × 垂直视场','fov'),('目标中心在当前视场内','target_in_fov'),('目标投影尺寸','projected_target_size')]]
         out['metrics'] += [record(label,ch[key]) for label,key in [('通道分辨率','resolution'),('镜头焦距范围','focal_range'),('有效识别距离','effective_range'),('最低照度资料值','minimum_illuminance')]]
         out['metrics'].append(record('当前焦距',metric(fov['focal_mm'],'mm','assumed','用户选择的工作焦距；范围来自资料')))
         out['state'] = 'insufficient_data' if inside is None else 'scenario_geometry_only'
-        out['notes'] += ['已复用原 Python field_of_view、camera_components、Pose 和 Target 校验。',
-                         '云台转动范围不是瞬时视场；未提供光学视场时保留未知。',
+        out['notes'] += ['云台机械转动范围与瞬时光学视场分别处理。',
                          '50 m距离、切向15 m/s是资料中的跟踪条件，不能当作最大识别距离。']
         if direct is not None:
             out['notes'].append('当前采用用户固定视场假设，改变焦距不会自动改变该固定视场。')
@@ -182,7 +183,7 @@ class CapabilityService:
         out['metrics'] += [record('方位角（由已知位置计算）',raw['geometric_direction']['azimuth']), record('俯仰角（由已知位置计算）',raw['geometric_direction']['elevation'])]
         out['metrics'] += [record(label,device['parameters'][key]) for label,key in [('当前阵列直径','array_diameter'),('资料频率范围（仅110 cm）','frequency_range'),('资料方位测角精度','azimuth_error'),('资料俯仰测角精度','elevation_error')]]
         out['state'] = 'reference_comparison_only'
-        out['notes'] += ['已调用原 Python AcousticSensor.evaluate；环境参数全部显式缺失，未启用假设测角精度。',
+        out['notes'] += ['基础评估使用设备资料中的标称条件与输入位置。',
                          '资料中的94°×76°含义未确认，不将其当作声学波束来裁切目标。',
                          '28–132 dB的计权和测试条件缺失，不当作检测门限；标称500 m不保证此处可探测。',
                          '建筑遮挡只表示直达路径受影响；没有声源和传播参数，不判定声学能力为零。',
