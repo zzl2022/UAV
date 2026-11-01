@@ -19,6 +19,8 @@ export function mountLandmarks({city,scene,camera,controls,viewport}){
  function locate(){const p=new THREE.Vector3(...landmark.position);controls.target.copy(p);camera.position.copy(p).add(new THREE.Vector3(450,500,650));controls.update();}
  label.onclick=locate;focus.onclick=locate;
  const vector=new THREE.Vector3();
- function update(){camera.updateMatrixWorld();vector.fromArray(landmark.position);vector.y+=25;vector.project(camera);const visible=vector.z>=-1&&vector.z<=1&&Math.abs(vector.x)<0.95&&Math.abs(vector.y)<0.92;label.hidden=!visible;if(visible){label.style.left=`${(vector.x+1)/2*viewport.clientWidth}px`;label.style.top=`${(1-vector.y)/2*viewport.clientHeight}px`;}}
- return {update,landmark};
+ let active=true;
+ function setActive(value){active=value;group.visible=value;label.hidden=!value;focus.hidden=!value;}
+ function update(){if(!active){label.hidden=true;return;}camera.updateMatrixWorld();vector.fromArray(landmark.position);vector.y+=25;vector.project(camera);const visible=vector.z>=-1&&vector.z<=1&&Math.abs(vector.x)<0.95&&Math.abs(vector.y)<0.92;label.hidden=!visible;if(visible){label.style.left=`${(vector.x+1)/2*viewport.clientWidth}px`;label.style.top=`${(1-vector.y)/2*viewport.clientHeight}px`;}}
+ return {update,landmark,setActive,locate};
 }
