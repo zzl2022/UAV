@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync } from 'node:fs';
-import {collectRunsStats,extractRules,rulesToMarkdown} from '../src/task3/rules.js';
+import {collectRunsStats,extractRules,deriveRules,rulesToMarkdown} from '../src/task3/rules.js';
 
 const city=JSON.parse(readFileSync(new URL('../public/data/city.json',import.meta.url)));
 
@@ -32,4 +32,6 @@ test('rules: 阈值全部来自过程数据统计且可追溯',()=>{
 test('rules: 样本不足时如实缺省对应规则而非编造',()=>{
  const runs=[fakeRun({runId:'r1'})];const {rules}=extractRules({runs,report:null,city});
  const ids=rules.map(r=>r.id);assert.ok(!ids.includes('R1'));assert.ok(ids.includes('R3')&&ids.includes('R4')&&ids.includes('R5'));
+ const documented=deriveRules({runs,report:null,city}).rules;assert.ok(!documented.some(rule=>rule.id==='R1'||rule.id==='R5'),'离线文档不得保留零样本代理规则');
+ assert.ok(documented.every(rule=>rule.evidence.samples>0&&rule.evidence.runIds&&rule.evidence.method));
 });

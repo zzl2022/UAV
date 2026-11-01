@@ -25,6 +25,10 @@ export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
   return null;
  }
  const reflectedPaths=reflections?facadeIndex(model.ranges.map(r=>r.building)):null;
+ function getDataBounds(){
+  const rectangle=geometry=>{const b=geometry.boundingBox;return b&&[b.min.x,b.max.x,b.min.z,b.max.z].every(Number.isFinite)?{west:b.min.x,east:b.max.x,south:b.min.z,north:b.max.z}:null;};
+  return {dem:rectangle(model.ground.geometry),gis:rectangle(model.buildings.geometry)};
+ }
  function visible(a,b){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),length=start.distanceTo(end);raycaster.set(start,end.sub(start).normalize());raycaster.near=0.05;raycaster.far=length-0.05;raycaster.firstHitOnly=true;return !raycaster.intersectObjects([model.buildings,model.ground]).length;}
  function trace(from,to){
   const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),distance=a.distanceTo(b);
@@ -52,5 +56,5 @@ export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
   }
   return result;
  }
- return {trace,groundAt,groundAtRaycast,surfaceAt,featureAt};
+ return {trace,groundAt,groundAtRaycast,surfaceAt,featureAt,getDataBounds};
 }

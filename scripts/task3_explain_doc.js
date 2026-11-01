@@ -150,7 +150,7 @@ footer ol{padding-left:1.2rem}footer li{margin-bottom:.4rem;overflow-wrap:break-
 <li><a href="#s5">威胁推演层：帧判定与容量溢出</a></li>
 <li><a href="#s6">电磁兼容层：频段图与五条规则</a></li>
 <li><a href="#s7">择优与规则层：四指标归一化、布设规则的统计出处</a></li>
-<li><a href="#s8">复现与验证</a></li>
+<li><a href="#s8">如何亲手复核</a></li>
 </ol></nav>
 
 <!-- ================= 总览 ================= -->
@@ -202,7 +202,7 @@ margin = 13 + ${f2(radarTerms.rangeGainDb)} + 0 − ${f2(radarTerms.totalLossDb)
 角像素 = 1920×0.35/(2×${f1(S.optical.distanceM)}×tan30°) = ${f2(S.optical.angularPixels)} px；对比/透射系数 ${S.optical.contrastFactor}<br>
 有效像素 = ${f2(S.optical.angularPixels)} × ${S.optical.contrastFactor} = <strong>${f2(S.optical.effectivePixels)} px</strong> &lt; 8 px<br>
 margin = 20·log₁₀(${f2(S.optical.effectivePixels)}/8) = <span class="badres">${f2(S.optical.marginDb)} dB</span> → <strong>判定：不可识别 ✗</strong>（该距离下识别距离解为 0）</div>
-<p style="font-size:13.5px;color:var(--muted)">这一负例解释了对比报告中"光电未入选推荐方案"的原因：在 500 m 级采样间距的城区尺度上，光电的瞬时视场+像素约束使其边际覆盖增益为零——<strong>当前模型与采样条件下，其边际覆盖增益为零</strong>。</p>
+<p style="font-size:13.5px;color:var(--muted)">这一负例解释了对比报告中"光电未入选推荐方案"的原因：在 500 m 级采样间距的城区尺度上，光电的瞬时视场+像素约束使其边际覆盖增益为零——<strong>优化器不选它，是公式算出来的，不是人为偏好</strong>。</p>
 </div>
 
 <h3>3. 无线电侦测</h3>
@@ -239,7 +239,7 @@ SNR = ${f2(S.acoustic.snrDb)} dB → margin = <span class="badres">${f2(S.acoust
 <div class="table-wrap"><table><thead><tr><th>失败原因（reasons）</th><th>设备数</th></tr></thead><tbody>
 ${Object.entries(S.blindCase.reasonCounts).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
 </tbody></table></div>
-<p style="font-size:13.5px;color:var(--muted)">解读：没有一台设备同时满足"几何可达 + 裕量 ≥3 dB"——有的被楼体截断、有的超出标称距离、多数信噪比不足。<strong>盲区由逐设备几何和信号裕量判定得到</strong>。</p>
+<p style="font-size:13.5px;color:var(--muted)">解读：没有一台设备同时满足"几何可达 + 裕量 ≥3 dB"——有的被楼体截断、有的超出标称距离、多数信噪比不足。<strong>盲区不是"没画到"，而是逐台设备用同一套公式算出来的</strong>。</p>
 </div>
 
 <!-- ================= 优化层 ================= -->
@@ -299,7 +299,7 @@ ${Object.entries(S.blindCase.reasonCounts).map(([k,v])=>`<tr><td>${k}</td><td>${
 </div>
 
 <!-- ================= 复核指南 ================= -->
-<h2 id="s8">复现与验证<small>运行步骤与边界检查</small></h2>
+<h2 id="s8">如何亲手复核<small>不需要信任我们，自己算一遍</small></h2>
 <div class="callout"><strong>三分钟复核</strong>：用计算器验证雷达实例——40×log₁₀(8000/${f1(S.coverageRadar.distanceM)}) = ${f2(radarTerms.rangeGainDb)}，减双径 3.08 与杂波 3.00，得 margin ≈ +40.0 dB ≥ 3 → 覆盖。与系统输出一致。</div>
 <pre class="code"># 全流程复现（约 3–5 秒/轮）
 node scripts/task3_report.js --quick   <span class="cm"># 重跑基线流水线，输出 artifacts/task3/runs/</span>

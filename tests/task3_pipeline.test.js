@@ -13,7 +13,7 @@ const query=createSceneQuery(createModel(city,terrain));
 const yieldTask=()=>new Promise(resolve=>setImmediate(resolve));
 
 test('task3 pipeline: 一键串联产出 ≥3 套差异化方案、盲区分类、三威胁与 EMC 结论，过程数据可校验',async()=>{
- const {report,run}=await runTask3Pipeline({city,query,settings:{scope:'core',spacing:700,siteSpacing:500,heights:[30,60,100],maxSites:192,maxDevices:64,budget:600,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3},weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask});
+ const {report,run}=await runTask3Pipeline({city,query,weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask});
  // ≥3 套方案且点位/类型组合不同
  assert.equal(report.plans.length,3);
  assert.ok(new Set(report.plans.map(p=>p.devices.length)).size>1||new Set(report.plans.map(p=>p.presetSubset.join())).size>1,'三套方案须有差异');
@@ -25,8 +25,20 @@ test('task3 pipeline: 一键串联产出 ≥3 套差异化方案、盲区分类�
  // 三威胁场景
  for(const key of ['single','multi','swarm']){const th=report.threats[key];assert.ok(th.summary.targetCount>0);assert.ok(th.frames.length>0);assert.ok(th.summary.meanDetectedFraction>=0&&th.summary.meanDetectedFraction<=1);}
  assert.equal(report.threats.swarm.summary.targetCount,42);
- // EMC 每方案有结论
- for(const p of report.plans)assert.ok(['pass','degraded','fail'].includes(report.emc[p.id].verdict));
+ // 标准默认 500 m 网格：处置后推荐方案必须无 fail，记录和覆盖复核完整
+ assert.equal(report.settings.spacing,500);assert.equal(report.deploymentStatus,'deployable');
+ assert.equal(report.emc[report.recommendedId].counts.fail,0);
+ for(const p of report.plans){
+  assert.ok(['pass','degraded','fail'].includes(report.emc[p.id].verdict));assert.equal(report.emc[p.id].counts.fail,0);assert.ok(report.emc[p.id].remediation.coverageReview.after.length>0);assert.ok(run.emc[p.id].remediation);
+  // 逐设备贡献来自最终实际覆盖矩阵；独立贡献之和必须等于仅由一台设备覆盖的采样数。
+  for(const [c,condition] of report.conditions.entries()){
+   const rows=p.devices.map(d=>p.coverageContributions[d.id][c]);
+   assert.ok(rows.every(row=>row.condition===condition.id&&row.coveredSamples>=row.independentSamples&&row.independentSamples>=0));
+   assert.equal(rows.reduce((sum,row)=>sum+row.independentSamples,0),p.coverage[c].filter(count=>count===1).length);
+   assert.ok(rows.reduce((sum,row)=>sum+row.coveredSamples,0)>=p.metrics[c].covered);
+  }
+ }
+ assert.ok(report.emc.enhanced.remediation.before.counts.fail>0);assert.ok(report.emc.enhanced.remediation.actions.length>0);
  // 过程数据
  validateRun(run);assert.ok(run.rulesInput.candidateStats.length>0);assert.ok(run.rulesInput.perHeightBlind.length===3);
 });

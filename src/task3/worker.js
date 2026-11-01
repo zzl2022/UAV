@@ -2,6 +2,7 @@
 import {createModel} from '../model.js';
 import {createSceneQuery} from '../sensors/scene.js';
 import {runTask3Pipeline} from './pipeline.js';
+import {repairPlanWithMobileRadars} from './mobile-repair.js';
 let city,query;
 const yieldTask=()=>new Promise(resolve=>setTimeout(resolve,0));
 self.onmessage=async({data})=>{
@@ -11,6 +12,9 @@ self.onmessage=async({data})=>{
   if(data.type==='pipeline'){
    const {report,run}=await runTask3Pipeline({city,query,settings:data.settings,environment:data.environment,target:data.target,weights:data.weights,presetIds:data.presetIds,progress,yieldTask});
    self.postMessage({type:'report',report,run});
+  }else if(data.type==='mobile-repair'){
+   const result=await repairPlanWithMobileRadars({city,query,...data.input,progress:value=>self.postMessage({type:'mobile-progress',requestId:data.requestId,value}),yieldTask});
+   self.postMessage({type:'mobile-repair-result',requestId:data.requestId,result});
   }
- }catch(error){self.postMessage({type:'error',message:error.message});}
+ }catch(error){self.postMessage({type:'error',message:error.message,requestId:data.requestId??null,operation:data.type});}
 };

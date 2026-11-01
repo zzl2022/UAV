@@ -35,13 +35,13 @@ function preset(id,type,name,overrides,documentFields,notes){
  return {id,type,name,parameters,provenance,notes,source:EQUIPMENT_SOURCE};
 }
 export const PRESETS=[
- preset('radar-02c','radar','02C 三坐标雷达',{frequencyGHz:9.4},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'资料距离 ≥8 km，默认取 8 km；脉冲盲区约 450 m，功率与收发参数为场景假设。'),
+ preset('radar-02c','radar','02C 三坐标雷达',{frequencyGHz:9.4},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km，模型保守取 8 km；新建设备接入 MATLAB 能量方程，脉冲盲区约 450 m，功率与收发参数为假设。'),
  preset('radar-03d','radar','03D 三坐标雷达',{frequencyGHz:15,elevationMax:60,updateSeconds:2,rangeAccuracy:6,azimuthAccuracy:0.3,elevationAccuracy:0.3},['maxRange','azimuthFov','elevationMin','elevationMax','capacity','updateSeconds','rangeAccuracy','azimuthAccuracy','elevationAccuracy'],'文档距离 ≥8 km；Ku 波段具体频率及噪声、雨衰参数需标定。'),
  preset('radio-tdoa','radio','TDOA-X1B',{maxRange:4000,minRange:0,elevationMin:-90,elevationMax:90,capacity:35,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 2–6 km，默认取中值 4 km；并发 >35，保守取 35。定位误差 <20 m 属于 TDOA 网络，单站不输出三维定位误差。'),
  preset('radio-mini','radio','OA-X1Bmini',{maxRange:1250,minRange:0,elevationMin:-90,elevationMax:90,capacity:30,updateSeconds:1},['bandMinGHz','bandMaxGHz','networkAccuracy'],'文档城市半径 0.5–2 km，默认取中值 1.25 km；并发 >30，保守取 30。'),
  preset('radio-x1c','radio','X1C 侦测设备',{maxRange:3500,minRange:0,elevationMin:-90,elevationMax:90,capacity:15,updateSeconds:1,bandMinGHz:0.9,bandMaxGHz:5.8,networkAccuracy:10},['networkAccuracy'],'文档城市半径 2–5 km，默认取中值 3.5 km。仅接收列出的 0.9/1.2/2.4/5.2/5.8 GHz，带宽容差为模型假设。'),
  preset('optical-nvt','optical','NVT-951 双光谱光电',{maxRange:2000,minRange:0,elevationMin:-90,elevationMax:90,thresholdDb:0,capacity:1,updateSeconds:0.1},['imageWidth','imageHeight','thermalWidth','thermalHeight'],'文档提供 1920×1080、640×512、48×光学变焦及 ≥35 cm 目标识别；未给最大识别距离、实际视场及最低照度，默认值均为假设。云台转动范围不等于瞬时视场。'),
- preset('acoustic-cry','acoustic','CRY8500 声学相机',{maxRange:500,minRange:0.01,azimuthFov:360,elevationMin:-90,elevationMax:90,thresholdDb:6,capacity:1,updateSeconds:0.2},['maxRange','minRange'],'文档距离区间 0.01–500 m、110 cm阵列频带20 Hz–20 kHz。仿真假设全向接收；94°×76°不作为声学波束边界。声源、传播系数及误差尺度采用可调整假设。'),
+ preset('acoustic-cry','acoustic','CRY8500 声学相机',{maxRange:500,minRange:0.01,azimuthFov:94,elevationMin:-38,elevationMax:38,thresholdDb:6,capacity:1,updateSeconds:0.2},['maxRange','minRange','azimuthFov','elevationMin','elevationMax'],'文档探测距离 0.01–500 m、视场 94°×76°、20 Hz–20 kHz（110 cm 阵列）。无人机声谱、测角精度及传播参数为假设；声级能力不是无人机检出保证。'),
 ];
 export const DEFAULT_ENV=values(ENV_FIELDS);
 export const DEFAULT_TARGET={position:[0,150,-200],emitting:true,opticalMode:'wide',acousticFrequencyHz:2000,...values(TARGET_FIELDS)};

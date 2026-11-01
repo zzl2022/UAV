@@ -4,7 +4,9 @@ import {museumLandmark} from '../landmarks.js';
 export const PLAN_VERSION='deployment-1.0';
 export const DEFAULT_SETTINGS={scope:'city',spacing:500,heights:[30,60,100],siteSpacing:900,maxSites:192,maxDevices:64,budget:600,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3};
 export function validateSettings(s){
- if(!['city','core'].includes(s.scope)||!Number.isFinite(s.spacing)||s.spacing<150||s.spacing>1000||!Number.isFinite(s.siteSpacing)||s.siteSpacing<300||s.siteSpacing>1500)throw Error('优化范围或采样间距无效');
+ if(!['city','core','custom'].includes(s.scope)||!Number.isFinite(s.spacing)||s.spacing<150||s.spacing>1000||!Number.isFinite(s.siteSpacing)||s.siteSpacing<300||s.siteSpacing>1500)throw Error('优化范围或采样间距无效');
+ if(s.scope==='custom'&&(!Number.isFinite(s.scopeWidthM)||s.scopeWidthM<=0||!Number.isFinite(s.scopeDepthM)||s.scopeDepthM<=0))throw Error('自定义范围宽度和深度必须为有限正数（米）');
+ if(s.scope==='custom'&&(!Number.isSafeInteger(Math.ceil(s.scopeWidthM/s.spacing))||!Number.isSafeInteger(Math.ceil(s.scopeDepthM/s.spacing))))throw Error('自定义范围相对采样间距过大，无法安全采样');
  if(!Array.isArray(s.heights)||s.heights.length<1||s.heights.length>5||s.heights.some(h=>!Number.isFinite(h)||h<10||h>500))throw Error('需设置 1–5 个 10–500 m 离地高度');
  for(const [key,min,max] of [['maxSites',4,256],['maxDevices',1,64],['budget',1,1000]])if(!Number.isInteger(s[key])||s[key]<min||s[key]>max)throw Error(`${key} 超出允许范围`);
  for(const type of ['radar','radio','optical','acoustic'])if(!Number.isFinite(s.costs?.[type])||s.costs[type]<=0||s.costs[type]>100)throw Error('成本必须为正的相对成本单位');
@@ -19,13 +21,23 @@ export function scenarios(environment){return [
 export function boundsFor(city,settings){
  const landmark=museumLandmark(city);if(!landmark)throw Error('缺少河南博物院核心区定位');
  if(settings.scope==='core')return {west:landmark.position[0]-1200,east:landmark.position[0]+1200,south:landmark.position[2]-1200,north:landmark.position[2]+1200,core:landmark.position};
+ if(settings.scope==='custom')return {west:landmark.position[0]-settings.scopeWidthM/2,east:landmark.position[0]+settings.scopeWidthM/2,south:landmark.position[2]-settings.scopeDepthM/2,north:landmark.position[2]+settings.scopeDepthM/2,core:landmark.position};
  let west=Infinity,east=-Infinity,south=Infinity,north=-Infinity;
  for(const b of city.buildings)for(const p of b.rings[0]){west=Math.min(west,p[0]);east=Math.max(east,p[0]);south=Math.min(south,p[2]);north=Math.max(north,p[2]);}
  return {west,east,south,north,core:landmark.position};
 }
-export function generateSamples(city,query,settings){
- const bounds=boundsFor(city,settings),samples=[],seen=new Set();let outsideDem=0,insideBuildings=0;
+export function generateSamples(city,query,settings,dataBounds=null){
+ if(settings.scope==='custom'&&(!Number.isFinite(settings.scopeWidthM)||settings.scopeWidthM<=0||!Number.isFinite(settings.scopeDepthM)||settings.scopeDepthM<=0))throw Error('自定义范围宽度和深度必须为有限正数（米）');
+ if(settings.scope==='custom'&&(!Number.isSafeInteger(Math.ceil(settings.scopeWidthM/settings.spacing))||!Number.isSafeInteger(Math.ceil(settings.scopeDepthM/settings.spacing))))throw Error('自定义范围相对采样间距过大，无法安全采样');
+ const bounds=boundsFor(city,settings),samples=[],seen=new Set();let outsideDem=0,insideBuildings=0,sampleBounds=bounds,effectiveBounds={...bounds};
+ if(settings.scope==='custom'&&dataBounds?.dem){
+  const dem=dataBounds.dem;
+  effectiveBounds={west:Math.max(bounds.west,dem.west),east:Math.min(bounds.east,dem.east),south:Math.max(bounds.south,dem.south),north:Math.min(bounds.north,dem.north),core:bounds.core};
+  if(!(effectiveBounds.west<effectiveBounds.east&&effectiveBounds.south<effectiveBounds.north))throw Error('自定义范围超出 DEM 数据边界，没有可计算区域');
+  sampleBounds=effectiveBounds;
+ }
  function add(x,z,height,kind='grid'){
+  if(settings.scope==='custom'&&(x<bounds.west||x>=bounds.east||z<bounds.south||z>=bounds.north))return;
   const key=[x.toFixed(1),z.toFixed(1),height].join(',');if(seen.has(key))return;seen.add(key);
   const ground=query.groundAt(x,z);if(ground===null){outsideDem++;return;}
   const surface=query.surfaceAt(x,z);const y=ground+height;
@@ -33,12 +45,15 @@ export function generateSamples(city,query,settings){
   const core=Math.hypot(x-bounds.core[0],z-bounds.core[2])<=settings.coreRadius;
   samples.push({id:`sample-${samples.length+1}`,position:[x,y,z],agl:height,weight:core?settings.coreWeight:1,core,kind});
  }
- for(let x=bounds.west+settings.spacing/2;x<bounds.east;x+=settings.spacing)for(let z=bounds.south+settings.spacing/2;z<bounds.north;z+=settings.spacing)for(const height of settings.heights)add(x,z,height);
+ if(settings.scope==='custom'){
+  const xStart=bounds.west+settings.spacing/2,zStart=bounds.south+settings.spacing/2,ix0=Math.max(0,Math.ceil((sampleBounds.west-xStart)/settings.spacing-1e-12)),iz0=Math.max(0,Math.ceil((sampleBounds.south-zStart)/settings.spacing-1e-12));
+  for(let ix=ix0;;ix++){const x=xStart+ix*settings.spacing;if(x>=sampleBounds.east)break;for(let iz=iz0;;iz++){const z=zStart+iz*settings.spacing;if(z>=sampleBounds.north)break;for(const height of settings.heights)add(x,z,height);}}
+ }else for(let x=bounds.west+settings.spacing/2;x<bounds.east;x+=settings.spacing)for(let z=bounds.south+settings.spacing/2;z<bounds.north;z+=settings.spacing)for(const height of settings.heights)add(x,z,height);
  // Additional points behind facades around the core; never count points inside buildings as navigable airspace.
  const nearby=city.buildings.filter(b=>Math.hypot(b.rings[0][0][0]-bounds.core[0],b.rings[0][0][2]-bounds.core[2])<settings.coreRadius).sort((a,b)=>b.height-a.height).slice(0,24);
  for(const b of nearby){const r=b.rings[0],cx=r.reduce((a,p)=>a+p[0],0)/r.length,cz=r.reduce((a,p)=>a+p[2],0)/r.length;for(const p of [r[0],r[Math.floor(r.length/2)]]){const dx=p[0]-cx,dz=p[2]-cz,len=Math.hypot(dx,dz)||1;add(p[0]+dx/len*12,p[2]+dz/len*12,settings.heights[0],'facade');}}
  if(!samples.length)throw Error('选定区域没有可用空域采样点');
- return {bounds,samples,excluded:{outsideDem,insideBuildings},spacing:settings.spacing};
+ return {bounds,...(settings.scope==='custom'?{effectiveBounds}:{}),samples,excluded:{outsideDem,insideBuildings},spacing:settings.spacing};
 }
 export function generateCandidates(city,query,settings,sampling){
  const {bounds}=sampling,sites=[],cells=new Map();

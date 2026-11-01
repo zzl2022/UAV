@@ -5,6 +5,8 @@ export const RUN_SCHEMA='task3-run/1.0';
 
 // 默认推演范围：河南博物院周边 2.4×2.4 km（复用 optimizer.boundsFor 的 core 分支）。
 export const DEFAULT_SCOPE='core';
+export const DEFAULT_SCOPE_WIDTH_M=2400;
+export const DEFAULT_SCOPE_DEPTH_M=2400;
 export const CORE_RADIUS_M=700; // 核心权重区半径，沿用 planning 默认。
 
 // 盲区类别（任务书：楼栋夹缝、围墙边角、低空贴楼区域、建筑背面阴影区）。
@@ -38,16 +40,25 @@ export const EQUIPMENT_FACTS={
  'acoustic-cry':{weightKg:3.8,sizeMm:null,powerW:null,mount:'固定式',band:null,emissionGHz:[],receiveGHz:[],source:'文档（20Hz–20kHz 声学，无射频发射；尺寸以 8 英寸屏为准）'},
 };
 
+// 各装备既有推演模型使用的离散频道；仅用于合法换频，不代表厂家实际可用频点。
+export const EQUIPMENT_CHANNELS_GHZ={
+ 'radar-02c':[9.3,9.45,9.6,9.75], // X 带内既有 4×0.15 GHz 模型频道
+ 'radar-03d':[16,16.5,17,17.5],    // Ku 带内既有 4×0.5 GHz 模型频道
+};
+
 // EMC 规则阈值（工程代理，出处写入 EMC 报告；非频谱合规认证）。
 export const EMC_RULES={
  coChannelSeparationGHz:0.1,   // 同频判定：雷达载频差小于该值
  coChannelMinDistanceM:600,    // 同频复用最小间距（沿用 planning 代理）
  adjacentChannelGHz:0.5,       // 邻频判定带宽
  adjacentMinDistanceM:300,     // 邻频最小间距
+ receiverOverlapMinDistanceM:600, // 带内发射-接收耦合沿用同频复用间距代理；超过该距离不因频段重叠直接判 fail
  frontendBlockDistanceM:50,    // 大功率发射就近致接收机前端阻塞的间距代理
  frontendBlockPowerW:1000,     // 触发前端阻塞提示的发射功率阈值
  coSiteMinDistanceM:10,        // 同点位过密部署提示
- source:'工程代理规则，参考同频复用距离/邻道抑制方法（GNU Radio、CloudRF Signal-Server 同类方法论）；不是 EMC 认证',
+ relocationSearchRadiusM:1200, // 自动处置只在原点位 2 倍同频复用间距内搜索既有真实候选点
+ maxRelocationCandidates:24,   // 单设备局部移位候选上限，避免组合爆炸
+ source:'工程代理规则，参考同频复用距离/邻道抑制方法（GNU Radio、CloudRF Signal-Server 同类方法论）；接收耦合距离沿用同频复用代理，离散频道沿用既有推演模型；不是 EMC 认证或厂家参数',
 };
 
 // 威胁场景定义（任务书：单机单点入侵、多方向同步入侵、蜂群饱和攻击）。

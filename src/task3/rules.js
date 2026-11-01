@@ -105,6 +105,12 @@ export function extractRules({runs,report,city}){
  return {rules,stats};
 }
 
+// 离线布设文档专用：没有实际样本支撑的条目直接省略，不用代理阈值补齐数量。
+export function deriveRules(input){
+ const derived=extractRules(input);
+ return {...derived,rules:derived.rules.filter(rule=>rule.evidence?.samples>0&&rule.evidence.runIds&&rule.evidence.method)};
+}
+
 export function rulesToMarkdown({rules,stats}){
  const lines=['# 任务三 · 标准化布设规则','',`> 全部规则阈值提炼自 \`artifacts/task3/runs/\` 的 ${stats.runCount} 轮仿真过程数据（runId：${stats.runIds.join('、')}），统计口径逐条注明；非经验拍值。适用边界：河南博物院周边 2.4×2.4 km 城区、本仓库四类装备模型与采样密度；迁移到他场景需重新标定。`,''];
  for(const r of rules){lines.push(`## ${r.id} ${r.title}`,``,`**规则**：${r.text}`,``,`**数据依据**：${r.evidence.method}。样本量 ${r.evidence.samples}；来源批次：${r.evidence.runIds}。`,'');}
