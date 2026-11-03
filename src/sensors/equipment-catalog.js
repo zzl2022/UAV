@@ -1,14 +1,15 @@
-import {PRESETS,fieldsFor,createDevice} from './presets.js';
+import {fieldsFor,createDevice} from './presets.js';
 import {PHYSICS_FIELDS} from './physics.js';
+import {CATALOG_MODELS,catalogModel} from './equipment-models.js';
 
 export const CATALOG_SCHEMA='equipment-catalog/1';
 export const CATALOG_STORAGE_KEY='uav.equipment-catalog.v1';
 const field=(label,unit,min,max,value,options={})=>({label,unit,min,max,value,step:'any',...options});
 const modelGroups={
- radar:[['探测能力',['maxRange','minRange','capacity','updateSeconds']],['覆盖与精度',['azimuthFov','elevationMin','elevationMax','rangeAccuracy','azimuthAccuracy','elevationAccuracy']],['工作频率',['frequencyGHz']]],
- optical:[['成像通道',['imageWidth','imageHeight','thermalWidth','thermalHeight']],['光学性能',['wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels']],['探测能力',['maxRange','minRange','capacity','updateSeconds']]],
- radio:[['接收频段',['bandMinGHz','bandMaxGHz','bandToleranceMHz']],['探测能力',['maxRange','minRange','capacity','updateSeconds']],['测向与覆盖',['networkAccuracy','bearingAccuracy','azimuthFov','elevationMin','elevationMax']]],
- acoustic:[['探测能力',['maxRange','minRange','capacity','updateSeconds']],['声压范围',['minSoundDb','maxSoundDb','dynamicRangeDb']],['测角精度',['bearingAccuracy','elevationAccuracy']]],
+ radar:[['覆盖精度',['azimuthFov','elevationMin','elevationMax','rangeAccuracy','azimuthAccuracy','elevationAccuracy']],['工作频率',['frequencyGHz']]],
+ optical:[['图像尺寸',['imageWidth','imageHeight','thermalWidth','thermalHeight']],['光学性能',['wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels']]],
+ radio:[['接收频段',['bandMinGHz','bandMaxGHz','bandToleranceMHz']],['测向覆盖',['networkAccuracy','bearingAccuracy','azimuthFov','elevationMin','elevationMax']]],
+ acoustic:[['声压范围',['minSoundDb','maxSoundDb','dynamicRangeDb']],['测角精度',['bearingAccuracy','elevationAccuracy']]],
 };
 const workingFields={
  optical:{channel:field('成像通道','',0,0,'visible',{options:[['visible','可见光'],['thermal','热成像']],source:'资料'}),focalMm:field('工作焦距','mm',6.5,312,6.5,{source:'资料'}),yawMin:field('云台水平下限','°',0,360,0,{source:'资料'}),yawMax:field('云台水平上限','°',0,360,360,{source:'资料'}),pitchMin:field('云台俯仰下限','°',-90,90,-90,{source:'资料'}),pitchMax:field('云台俯仰上限','°',-90,90,90,{source:'资料'})},
@@ -19,7 +20,8 @@ const integerKeys=new Set(['capacity','imageWidth','imageHeight','thermalWidth',
 const path=(scope,key)=>`${scope}.${key}`;
 
 export function catalogFields(presetId){
- const preset=PRESETS.find(p=>p.id===presetId);if(!preset)throw Error('装备型号无效');
+ const preset=catalogModel(presetId);
+ if(preset.catalogOnly)return structuredClone(preset.fields);
  const definitions={};
  for(const [key,spec] of Object.entries(fieldsFor(preset.type))){
   if(['heading','pitch'].includes(key)||preset.type==='acoustic'&&['azimuthFov','elevationMin','elevationMax'].includes(key))continue;
@@ -31,18 +33,24 @@ export function catalogFields(presetId){
  return definitions;
 }
 export function defaultProfile(presetId){
- const preset=PRESETS.find(p=>p.id===presetId);if(!preset)throw Error('装备型号无效');
- const device=createDevice(presetId,'profile'),profile={presetId,type:preset.type,name:preset.name,parameters:{},physics:{},working:{}};
+ const preset=catalogModel(presetId),profile={presetId,type:preset.type,name:preset.name,parameters:{},physics:{},working:{}};
+ if(preset.catalogOnly){for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.value??null;}return profile;}
+ const device=createDevice(presetId,'profile');
  for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.nullable&&spec.source==='未提供'?null:scope==='working'?spec.value:device[scope][name];}
  return profile;
 }
 export function getProfileValue(profile,key){const [scope,name]=key.split('.');return profile[scope]?.[name];}
 export function setProfileValue(profile,key,value){const [scope,name]=key.split('.');if(!Object.hasOwn(catalogFields(profile.presetId),key))throw Error('参数无效');profile[scope][name]=value;}
 export function profileGroups(presetId){
- const preset=PRESETS.find(p=>p.id===presetId),used=new Set(),groups=[];
+ const preset=catalogModel(presetId),used=new Set(),groups=[];
  const add=(name,keys)=>{keys=keys.filter(key=>Object.hasOwn(catalogFields(presetId),key));keys.forEach(key=>used.add(key));if(keys.length)groups.push({name,keys});};
- if(preset.type==='optical')add('工作设置',['working.channel','working.focalMm']);
- if(preset.type==='acoustic')add('阵列与频带',['working.arrayDiameter','working.frequencyMin','working.frequencyMax']);
+ if(preset.catalogOnly){
+  for(const [name,keys] of preset.groups)add(name,keys.map(key=>path('parameters',key)));
+  return {groups,advanced:[]};
+ }
+ add('基础参数',['maxRange','minRange','capacity','updateSeconds'].map(key=>path('parameters',key)));
+ if(preset.type==='optical')add('通道焦距',['working.channel','working.focalMm']);
+ if(preset.type==='acoustic')add('阵列频带',['working.arrayDiameter','working.frequencyMin','working.frequencyMax']);
  for(const [name,keys] of modelGroups[preset.type])add(name,keys.map(key=>path('parameters',key)));
  if(preset.type==='optical')add('云台范围',['working.yawMin','working.yawMax','working.pitchMin','working.pitchMax']);
  const advanced=Object.keys(catalogFields(presetId)).filter(key=>!used.has(key));
@@ -51,6 +59,7 @@ export function profileGroups(presetId){
 export function validateProfile(profile){
  const base=defaultProfile(profile?.presetId);
  if(profile.type!==base.type||profile.name!==base.name)throw Error('装备型号信息不一致');
+ if(Object.keys(profile).some(key=>!Object.hasOwn(base,key)))throw Error('包含不支持的装备信息');
  for(const scope of ['parameters','physics','working']){
   if(!profile[scope]||typeof profile[scope]!=='object'||Array.isArray(profile[scope]))throw Error('参数格式无效');
   for(const name of Object.keys(profile[scope]))if(!Object.hasOwn(base[scope],name))throw Error('包含不支持的参数');
@@ -63,6 +72,7 @@ export function validateProfile(profile){
  const ordered=(scope,low,high,label,allowEqual=false)=>{const a=profile[scope][low],b=profile[scope][high];if(a!=null&&b!=null&&(allowEqual?a>b:a>=b))throw Object.assign(Error(`${label}上下限无效`),{field:path(scope,low)});};
  ordered('parameters','minRange','maxRange','探测距离');ordered('parameters','elevationMin','elevationMax','俯仰角');ordered('parameters','bandMinGHz','bandMaxGHz','接收频段');ordered('parameters','minSoundDb','maxSoundDb','声压');
  ordered('working','yawMin','yawMax','云台水平');ordered('working','pitchMin','pitchMax','云台俯仰');ordered('working','frequencyMin','frequencyMax','频率');
+ ordered('parameters','fieldMinVpm','fieldMaxVpm','场强量程');ordered('parameters','temperatureMin','temperatureMax','工作温度',true);
  if(profile.type==='optical'){
   const p=profile.parameters;if(p.narrowHfov!=null&&p.wideHfov!=null&&p.narrowHfov>p.wideHfov)throw Error('窄视场不能大于宽视场');
   if(profile.working.channel==='thermal'&&profile.working.focalMm!==75)throw Object.assign(Error('热成像通道焦距为 75 mm'),{field:'working.focalMm'});
@@ -70,11 +80,11 @@ export function validateProfile(profile){
  return structuredClone(profile);
 }
 export function validateCatalogFile(value){
- if(value?.schema!==CATALOG_SCHEMA||!Array.isArray(value.profiles)||!value.profiles.length||value.profiles.length>PRESETS.length)throw Error('请选择装备参数文件');
+ if(value?.schema!==CATALOG_SCHEMA||!Array.isArray(value.profiles)||!value.profiles.length||value.profiles.length>CATALOG_MODELS.length)throw Error('请选择装备参数文件');
  const ids=new Set();return value.profiles.map(profile=>{if(ids.has(profile.presetId))throw Error('装备型号重复');ids.add(profile.presetId);return validateProfile(profile);});
 }
 export function createCatalogStore(storage){
- const saved=new Map(PRESETS.map(p=>[p.id,defaultProfile(p.id)]));let readError=false;
+ const saved=new Map(CATALOG_MODELS.map(p=>[p.id,defaultProfile(p.id)]));let readError=false;
  try{const raw=storage?.getItem(CATALOG_STORAGE_KEY);if(raw)for(const profile of validateCatalogFile(JSON.parse(raw)))saved.set(profile.presetId,profile);}catch{readError=true;}
  const persist=next=>{if(!storage)throw Error('当前浏览器无法保存，请导出参数');storage.setItem(CATALOG_STORAGE_KEY,JSON.stringify({schema:CATALOG_SCHEMA,profiles:[...next.values()]}));};
  return {

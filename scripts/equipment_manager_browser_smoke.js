@@ -12,7 +12,7 @@ try{
  const sideBefore=await page.locator('#app').getAttribute('data-active-view');
  await page.locator('#toggle-sensors').click();
  assert.equal(await page.locator('#app').getAttribute('data-active-view'),sideBefore);
- assert.equal(await page.locator('.equipment-type-tabs [role=tab]').count(),4);
+ assert.equal(await page.locator('.equipment-type-tabs [role=tab]').count(),6);
  assert.equal(await page.locator('.equipment-model-trigger').count(),2);
  assert.equal(await page.locator('#equipment-scene-controls').isVisible(),false);
  const visible=await page.locator('#equipment-manager').innerText();for(const word of ['位置与姿态','单目标能力比较','评估结果','目标与工作模式','光电／声学场景对比'])assert.ok(!visible.includes(word));
@@ -28,10 +28,10 @@ try{
  await page.locator('#equipment-model-menu [data-preset-id=radio-x1c]').click();
  assert.equal(await page.locator('#equipment-tab-radio').getAttribute('aria-selected'),'true');
  assert.match(await page.locator('#equipment-model-name').innerText(),/X1C/);
- await page.locator('.equipment-group-nav').getByRole('button',{name:'探测能力',exact:true}).click();
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();
  await page.locator('#profile-parameters-maxRange').fill('5000');
  await page.locator('#equipment-tab-optical').click();await page.locator('#equipment-tab-radio').click();
- await page.locator('.equipment-group-nav').getByRole('button',{name:'探测能力',exact:true}).click();
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-profile-save').click();assert.equal(await page.locator('#equipment-save-state').innerText(),'已保存');
  await page.locator('#profile-parameters-maxRange').fill('0');await page.locator('.equipment-group-nav').getByRole('button',{name:'接收频段',exact:true}).click();await page.locator('#equipment-profile-save').click();
@@ -40,15 +40,15 @@ try{
  const exported=JSON.parse(await readFile('artifacts/equipment-manager/profile.json','utf8'));assert.equal(exported.schema,'equipment-catalog/1');assert.equal(exported.profiles[0].parameters.maxRange,5000);assert.ok(!('position'in exported.profiles[0]));assert.ok(!('environment'in exported));
  await page.locator('#profile-parameters-maxRange').fill('4444');await page.locator('#equipment-profile-file').setInputFiles('artifacts/equipment-manager/profile.json');
  await page.waitForFunction(()=>document.querySelector('#equipment-profile-message').textContent==='已导入');
- await page.locator('.equipment-group-nav').getByRole('button',{name:'探测能力',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-profile-file').setInputFiles({name:'scene.json',mimeType:'application/json',buffer:Buffer.from('{"devices":[]}')});
  await page.waitForFunction(()=>document.querySelector('#equipment-profile-message').textContent.includes('导入失败'));assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-tab-optical').click();
- await page.locator('.equipment-group-nav').getByRole('button',{name:'探测能力',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'');
- await page.locator('.equipment-group-nav').getByRole('button',{name:'工作设置',exact:true}).click();await page.locator('#profile-working-channel').selectOption('thermal');assert.equal(await page.locator('#profile-working-focalMm').inputValue(),'75');
- await page.locator('#equipment-tab-acoustic').click();await page.locator('#profile-working-arrayDiameter').selectOption('0.3');assert.equal(await page.locator('#profile-working-frequencyMin').inputValue(),'');
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'');
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'通道焦距',exact:true}).click();await page.locator('#profile-working-channel').selectOption('thermal');assert.equal(await page.locator('#profile-working-focalMm').inputValue(),'75');
+ await page.locator('#equipment-tab-acoustic').click();await page.locator('.equipment-group-nav').getByRole('button',{name:'阵列频带',exact:true}).click();await page.locator('#profile-working-arrayDiameter').selectOption('0.3');assert.equal(await page.locator('#profile-working-frequencyMin').inputValue(),'');
  await page.locator('#equipment-back').click();await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:120000});
- await page.locator('#toggle-sensors').click();await page.getByRole('button',{name:'选择无线电型号',exact:true}).click();await page.locator('#equipment-model-menu [data-preset-id=radio-x1c]').click();await page.locator('.equipment-group-nav').getByRole('button',{name:'探测能力',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await page.locator('#toggle-sensors').click();await page.getByRole('button',{name:'选择无线电型号',exact:true}).click();await page.locator('#equipment-model-menu [data-preset-id=radio-x1c]').click();await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-back').click();await page.locator('#open-city-model').click();
  await page.locator('#city-tab-environment').click();
  const stations=await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rfStations);
@@ -78,5 +78,5 @@ try{
  await page.locator('#equipment-back').click();await page.locator('#open-city-model').click();await page.locator('#city-tab-environment').click();await page.screenshot({path:'artifacts/equipment-manager/mobile-environment.png'});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  assert.ok(await page.locator('#city-environment-apply').evaluate(node=>{const r=node.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'mobile Apply button remains reachable');
  assert.deepEqual(api,[]);assert.deepEqual(errors,[]);
- console.log('PASS: four equipment tabs, independent model menus, model drafts/save/import/export/reload, missing specifications, city environment and target settings, map picking, mobile width; no assessment API requests or page errors.');
+ console.log('PASS: six equipment tabs, independent model menus, model drafts/save/import/export/reload, missing specifications, city environment and target settings, map picking, mobile width; no assessment API requests or page errors.');
 }finally{await browser.close();}
