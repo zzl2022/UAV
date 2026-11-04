@@ -22,10 +22,10 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPic
  const pages=new Map([['scene',scene]]);let active='scene';
  const editors={
   environment:{name:'环境工况',groups:environmentGroups,fields:ENV_FIELDS,draft:structuredClone(getState().environment),dirty:false,group:'气象'},
-  target:{name:'仿真目标',groups:targetGroups,fields:targetFields,draft:targetDraft(getState().target),dirty:false,group:'基本属性'},
+  target:{name:'侦测目标',groups:targetGroups,fields:targetFields,draft:targetDraft(getState().target),dirty:false,group:'基本属性'},
  };
  function activate(id){active=id;for(const [name,page] of pages)page.hidden=name!==id;for(const button of tabs.children){const selected=button.dataset.page===id;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;}}
- for(const [id,name] of [['scene','场景'],['environment','环境工况'],['target','仿真目标']]){
+ for(const [id,name] of [['scene','区域设置'],['environment','环境工况'],['target','侦测目标']]){
   const button=document.createElement('button');button.id=`city-tab-${id}`;button.type='button';button.dataset.page=id;button.textContent=name;button.setAttribute('role','tab');button.setAttribute('aria-controls',id==='scene'?scene.id:`city-${id}-page`);button.onclick=()=>activate(id);tabs.append(button);
  }
  panel.append(tabs,scene);scene.setAttribute('role','tabpanel');scene.setAttribute('aria-labelledby','city-tab-scene');

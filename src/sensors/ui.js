@@ -11,6 +11,7 @@ import {mountCapabilityAssessment} from './capability-ui.js';
 import {assessmentSummary} from './capability-data.js';
 import {mountEquipmentManager} from './equipment-manager.js';
 import {mountCityConditions} from './city-conditions.js';
+import {createEquipmentDemo} from './equipment-demo.js';
 
 const COLORS={radar:0x70d6ff,optical:0xffd783,radio:0xb89aff,acoustic:0x69e2bd};
 const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2)):'—';
@@ -31,7 +32,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  <div id="equipment-message" role="status" class="sensor-message"></div>
  <section class="sensor-io"><button id="equipment-export" class="primary">导出参数与评估报告 · JSON ↓</button><label class="sensor-import">导入参数方案<input id="equipment-import" type="file" accept=".json,application/json"></label><details><summary>示例方案</summary><button id="equipment-defaults">载入四类示例设备</button></details></section>`;
  const sceneControls=document.createElement('div');sceneControls.id='equipment-scene-controls';sceneControls.hidden=true;sceneControls.append(...panel.childNodes);panel.append(sceneControls);
- workspace.mountWindow('equipment','反无设备',panel,{closeId:'equipment-back'});
+ workspace.mountWindow('equipment','装备参数',panel,{closeId:'equipment-back'});
  const physicalSection=document.createElement('details');physicalSection.id='equipment-physics-section';physicalSection.innerHTML='<summary>雷达 / 无线电物理链路参数</summary><div id="equipment-physics" class="sensor-fields"></div>';
  panel.querySelector('.sensor-io').before(physicalSection);
  const hopping=document.createElement('label');hopping.innerHTML='跳频目标 <input id="equipment-fhss" type="checkbox">';panel.querySelector('#equipment-emitting').parentElement.after(hopping);
@@ -187,7 +188,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  }
  controls.addEventListener('change',updateMarkerScreens);
  function refreshProbe(){
-  if(!lastPointer||panel.hidden||drag||!valid)return;
+  if(!lastPointer||panel.hidden||sceneControls.hidden||drag||!valid)return;
   const surface=surfaceAt(lastPointer.x,lastPointer.y),heatHit=heat.probe(screenRay(lastPointer.x,lastPointer.y));
   const cell=heatHit&&(!surface||heatHit.distance<=surface.distance+0.1)?heatHit.cell:null;
   const hit=surface,device=cell?state.devices.find(d=>d.id===cell.deviceId):selected();hud.hidden=false;
@@ -267,7 +268,12 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  $('equipment-defaults').onclick=()=>{endDrag();hideProbe();state=defaultState();selectedId=state.devices[0].id;serial=4;renderForm();compute();focus();};
  capabilities=mountCapabilityAssessment({panel,city,getState:()=>state,getSelected:()=>selectedId,getQuery:()=>query,isVisible:()=>!panel.hidden,onChange:(reform=false)=>{if(reform)renderForm();compute();},onUpdate:()=>{renderResults();$('equipment-export').disabled=!valid||(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData());}});
  renderForm();toggle.disabled=false;
- const manager=mountEquipmentManager(panel);
+ const demoQueries={};
+ const demo=createEquipmentDemo({app,scene,camera,controls,renderer,model,workspace,getScenario:()=>state,
+  getQuery:reflections=>demoQueries[reflections?'reflections':'direct']??=(createSceneQuery(model,{reflections})),
+  onStart:()=>{heat.hide();layer.visible=false;hideProbe();},
+ });
+ const manager=mountEquipmentManager(panel,{demo});
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
  let cityTargetPick=false;
  const cityConditions=mountCityConditions({panel:app.querySelector('#city-panel'),getState:()=>state,
@@ -285,5 +291,5 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
   event.stopImmediatePropagation();cityTargetPick=false;const position=hit.point.toArray();position[1]+=50;cityConditions.setTargetPosition(position);workspace.restoreWindow('city');
  },true);
  app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
- return {panel,render:()=>heat.render(renderer,scene,camera),getScenario:()=>structuredClone(state),applyScenario(value){state=validateScenario(value,city.metadata.origin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();show();}};
+ return {panel,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario:()=>structuredClone(state),applyScenario(value){demo.stop();state=validateScenario(value,city.metadata.origin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();show();}};
 }

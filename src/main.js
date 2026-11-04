@@ -11,11 +11,11 @@ import {createWorkspace} from './workspace.js';
 import './workspace.css';
 
 const app=document.querySelector('#app');
-app.innerHTML=`<aside id="workspace-sidebar">
-  <div class="platform-brand"><span class="platform-mark">◈</span><h1>反无人机<br><strong>部署仿真平台</strong></h1></div>
+app.innerHTML=`<div class="platform-brand" role="banner"><h1>反无人机<strong>部署仿真平台</strong></h1></div>
+<aside id="workspace-sidebar">
   <nav class="workspace-launchers" aria-label="功能窗口">
     <button id="open-city-model" aria-controls="city-window" aria-pressed="false"><span aria-hidden="true">▦</span>城市建模</button>
-    <button id="toggle-sensors" aria-controls="equipment-window" aria-pressed="false" disabled><span aria-hidden="true">◎</span>反无设备</button>
+    <button id="toggle-sensors" aria-controls="equipment-window" aria-pressed="false" disabled><span aria-hidden="true">◎</span>装备参数</button>
   </nav>
   <div class="deployment-heading"><h2>推演与部署</h2><span class="live" aria-hidden="true"></span></div>
   <div class="deployment-tabs" role="tablist" aria-label="推演与部署">

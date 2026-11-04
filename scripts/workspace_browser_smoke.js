@@ -16,14 +16,26 @@ try{
   assert.ok(Math.abs(box.y+box.height/2-size.height/2)<2,selector+' centered vertically');
   assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=size.width+1&&box.y+box.height<=size.height+1,selector+' inside viewport');
  };
+ const checkPageLayout=async()=>{
+  const title=await page.locator('.platform-brand h1').boundingBox();
+  assert.ok(Math.abs(title.x+title.width/2-page.viewportSize().width/2)<2,'platform title centered on page');
+  assert.ok(title.y<30,'platform title at top of page');
+  const city=await page.locator('#open-city-model').boundingBox(),equipment=await page.locator('#toggle-sensors').boundingBox();
+  assert.equal(city.x,equipment.x,'launchers aligned');
+  assert.ok(equipment.y>=city.y+city.height,'launchers stacked vertically');
+  assert.ok((await page.locator('#toggle-sensors').innerText()).includes('装备参数'));
+ };
  assert.equal(await page.locator('main header').count(),0);
  assert.equal(await page.locator('aside').count(),1);
  assert.equal(await page.locator('#workspace-sidebar #toggle-task3').count(),1);
  assert.equal(await page.locator('#workspace-sidebar #toggle-planning').count(),1);
  assert.equal(await page.locator('#deployment-panels #task3-panel').isVisible(),true);
+ await checkPageLayout();
  await frame();await page.screenshot({path:'artifacts/workspace/desktop.png'});
  const mapBefore=await page.locator('#viewport').boundingBox();
  await page.locator('#open-city-model').click();await centered('#city-window');
+ assert.equal(await page.locator('#city-tab-scene').innerText(),'区域设置');
+ assert.equal(await page.locator('#city-tab-target').innerText(),'侦测目标');
  assert.equal(await page.locator('#city-window #buildings').count(),1);
  assert.equal(await page.locator('#city-window #museum-focus').count(),1);
  assert.equal(await page.locator('#workspace-sidebar #buildings').count(),0);
@@ -59,6 +71,7 @@ try{
  assert.equal(await page.locator('#flight-hud').isVisible(),true);
  await page.locator('#toggle-task3').click();
  await page.setViewportSize({width:390,height:844});await frame();
+ await checkPageLayout();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.screenshot({path:'artifacts/workspace/mobile.png'});
  for(const [button,dialog,close] of [['#open-city-model','#city-window','#city-window-close'],['#toggle-sensors','#equipment-window','#equipment-back']]){
