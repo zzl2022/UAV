@@ -24,6 +24,20 @@ try{
   const state=await page.evaluate(()=>window.equipmentDemoDiagnostics);assert.equal(state.status,'ready',JSON.stringify(state));assert.ok(state.counts.signal>0,`${type}: ${JSON.stringify(state.counts)}`);
   if(state.metric==='visibility')assert.deepEqual(state.range,[0,1]);
   assert.ok(await page.locator('#equipment-demo-hud').isVisible());
+  const viewport=await page.locator('#viewport canvas').boundingBox();let probe;
+  for(const [x,y] of [[.45,.55],[.5,.65],[.35,.7],[.6,.75]]){
+   await page.mouse.move(viewport.x+viewport.width*x,viewport.y+viewport.height*y);await page.waitForTimeout(180);
+   probe=await page.evaluate(()=>window.equipmentDemoDiagnostics.probe);if(probe)break;
+  }
+  assert.ok(probe,`${type}: hover returns a map or volume position`);
+  assert.ok(await page.locator('#demo-hover-values dt').count()>=6);
+  assert.ok(Number.isFinite(probe.distance));
+  const first=probe.position;
+  await page.mouse.move(viewport.x+viewport.width*.25,viewport.y+viewport.height*.8);await page.waitForTimeout(180);
+  const moved=await page.evaluate(()=>window.equipmentDemoDiagnostics.probe);
+  if(moved)assert.notDeepEqual(moved.position,first,'mouse movement updates position');
+  await page.mouse.move(5,5);await page.waitForTimeout(120);
+  assert.equal(await page.locator('#demo-hover-values dd').count(),0,'leaving canvas clears stale values');
   await page.screenshot({path:`artifacts/equipment-demo/${type}-map.png`});
   await page.locator('#equipment-demo-hud [data-demo-action=settings]').click();
   assert.ok(await page.locator('#demo-start').isVisible());
@@ -42,6 +56,7 @@ try{
  assert.equal(await page.evaluate(()=>window.equipmentDemoDiagnostics.status),'stopped');assert.equal(await page.locator('#equipment-demo-hud').isVisible(),false);
  await page.locator('#equipment-window-minimize').click();await page.locator('#demo-start').click();
  await page.locator('#equipment-back').click();await page.waitForTimeout(200);assert.equal(await page.locator('#equipment-demo-hud').isVisible(),false);
+ if(await page.locator('#task3-window[open]').count())await page.keyboard.press('Escape');
  await page.locator('#toggle-sensors').click();await page.locator('#equipment-tab-optical').click();
  await page.setViewportSize({width:390,height:844});await page.locator('.equipment-group-nav').getByRole('button',{name:'演示',exact:true}).click();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.locator('#demo-start').scrollIntoViewIfNeeded();

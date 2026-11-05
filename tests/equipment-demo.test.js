@@ -2,15 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CATALOG_MODELS} from '../src/sensors/equipment-models.js';
 import {defaultProfile} from '../src/sensors/equipment-catalog.js';
-import {DEMO_METRICS,demoDefaults,prepareDemo,demoValue,sampleDemo} from '../src/sensors/equipment-demo-model.js';
+import {DEMO_METRICS,demoDefaults,prepareDemo,demoValue,sampleDemo,probeDemo} from '../src/sensors/equipment-demo-model.js';
 import {DEFAULT_TARGET,DEFAULT_ENV} from '../src/sensors/presets.js';
 import {volumeGrid} from '../src/sensors/volume.js';
 const scenario={target:structuredClone(DEFAULT_TARGET),environment:{...DEFAULT_ENV}},position=[0,30,0];
 const context={known:true,blocked:false,buildingCount:0,sensorGround:0,targetGround:0};
 const make=(id,overrides={})=>{const p=defaultProfile(id);return prepareDemo(p,{...demoDefaults(p),...overrides},position);};
 
+test('hover queries return every metric using the same model as the field and preserve invalid masks',()=>{
+ const query={groundAt:()=>0,surfaceAt:()=>0,trace:()=>context};
+ for(const [type,point] of [['radar',[0,100,-900]],['radio',[0,100,-500]],['optical',[0,40,-100]],['acoustic',[0,30,-50]],['fivega',[0,40,-100]],['electrostatic',[0,30,-50]]]){
+  const model=CATALOG_MODELS.find(m=>m.type===type);
+  const spec=make(model.id),result=probeDemo(spec,point,scenario,query);
+  assert.equal(result.metrics.length,DEMO_METRICS[spec.type].length);
+  for(const metric of result.metrics){
+   const reference=demoValue({...spec,settings:{...spec.settings,metric:metric.id}},point,scenario,context);
+   assert.equal(metric.value,reference.mask===1?reference.value:null);
+  }
+  assert.equal(result.heightAboveGround,point[1]);
+  assert.equal(probeDemo(spec,point,scenario,{...query,groundAt:()=>null}).mask,0);
+  const solid=probeDemo(spec,[0,0,-50],scenario,query);assert.equal(solid.mask,3);assert.deepEqual(solid.metrics,[]);
+  assert.equal(probeDemo(spec,[0,spec.settings.ceiling+1,-50],scenario,query).mask,4);
+ }
+});
+
 test('every catalog model has demonstration metrics without inventing detection probabilities for other modalities',()=>{
- for(const model of CATALOG_MODELS){const p=defaultProfile(model.id),before=structuredClone(p),s=prepareDemo(p,demoDefaults(p),position);assert.ok(s.metric);assert.deepEqual(p,before);}
+ for(const model of CATALOG_MODELS){const p=defaultProfile(model.id),before=structuredClone(p),s=prepareDemo(p,demoDefaults(p),position);assert.ok(s.metric);assert.equal(s.settings.ceiling,800);assert.deepEqual(p,before);}
  for(const type of ['optical','acoustic','fivega','electrostatic'])assert.ok(DEMO_METRICS[type].every(m=>m.id!=='pd'));
  assert.throws(()=>make('optical-nvt',{horizontal:200}));assert.throws(()=>make('radar-02c',{radius:NaN}));
 });

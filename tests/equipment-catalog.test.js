@@ -38,6 +38,19 @@ test('storage errors leave saved models intact and damaged local data falls back
  assert.throws(()=>store.save(profile));assert.equal(store.get(profile.presetId).parameters.maxRange,8000);
  const corrupt=createCatalogStore({getItem:()=>'{invalid'});assert.equal(corrupt.readError,true);assert.equal(corrupt.get('radar-02c').parameters.maxRange,8000);
 });
+
+test('restoring an older catalog fills new fields and isolates incompatible profiles',()=>{
+ const storage=memory(),valid=defaultProfile('radar-02c'),bad=defaultProfile('radio-tdoa');
+ valid.parameters.maxRange=6400;delete valid.physics.pulses;valid.parameters.retiredField=123;
+ bad.parameters.minRange=99999;
+ storage.setItem(CATALOG_STORAGE_KEY,JSON.stringify({schema:CATALOG_SCHEMA,profiles:[bad,valid]}));
+ const restored=createCatalogStore(storage);
+ assert.equal(restored.readError,true);
+ assert.equal(restored.get(valid.presetId).parameters.maxRange,6400);
+ assert.equal(restored.get(valid.presetId).physics.pulses,defaultProfile(valid.presetId).physics.pulses);
+ assert.equal(restored.get(bad.presetId).parameters.minRange,defaultProfile(bad.presetId).parameters.minRange);
+ assert.ok(!Object.hasOwn(restored.get(valid.presetId).parameters,'retiredField'));
+});
 test('complete saved snapshots are isolated and publish once per successful save or batch import',()=>{
  const store=createCatalogStore(memory()),events=[],unsubscribe=store.subscribe(snapshot=>events.push(snapshot)),initial=store.getSnapshot();
  initial.profiles.find(p=>p.presetId==='radar-02c').parameters.maxRange=1;assert.equal(store.get('radar-02c').parameters.maxRange,8000);

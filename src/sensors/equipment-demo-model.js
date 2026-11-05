@@ -1,5 +1,6 @@
 import {validateProfile} from './equipment-catalog.js';
 import {createDevice} from './presets.js';
+import {catalogModel} from './equipment-models.js';
 import {angles,angularDifference,evaluate,powerSumDb,knifeEdgeLoss,twoRayLoss} from './engine.js';
 
 const metric=(id,label,unit,min,max,floor)=>({id,label,unit,min,max,floor});
@@ -15,9 +16,9 @@ export function demoDefaults(profile){
  const p=profile.parameters,w=profile.working,type=profile.type;
  const radius={radar:1500,radio:1000,optical:400,acoustic:500,fivega:1500,electrostatic:100}[type];
  const horizontal=type==='optical'?(w.channel==='thermal'?p.thermalHfov:p.wideHfov):type==='fivega'?120:p.azimuthFov;
- return {radius,ceiling:type==='electrostatic'?150:type==='fivega'?600:400,spacing:['electrostatic','optical'].includes(type)?25:type==='acoustic'?50:100,
-  heading:0,pitch:type==='optical'||type==='fivega'?10:0,mountHeight:10,horizontal:horizontal??60,
-  vertical:type==='fivega'?(p.verticalBeamAngle??65):40,metric:DEMO_METRICS[type][0].id,style:'volume',density:1.3,clip:1,autoscale:true,nominal:['optical','fivega','electrostatic'].includes(type),reflections:false};
+ return {radius,ceiling:800,heightDefaultVersion:1,spacing:['electrostatic','optical'].includes(type)?25:type==='acoustic'?50:100,
+  heading:0,pitch:type==='optical'||type==='fivega'?10:0,mountHeight:30,horizontal:horizontal??60,
+  vertical:type==='fivega'?(p.verticalBeamAngle??65):40,metric:type==='fivega'?'distance':DEMO_METRICS[type][0].id,style:'volume',density:2,clip:1,autoscale:true,nominal:false,reflections:false};
 }
 export function prepareDemo(profile,settings,position){
  profile=validateProfile(profile);settings={...demoDefaults(profile),...settings};
@@ -30,7 +31,7 @@ export function prepareDemo(profile,settings,position){
  const type=profile.type,selected=DEMO_METRICS[type].find(m=>m.id===settings.metric);if(!selected)throw Error('演示物理量无效');
  let device=null;
  if(['radar','radio'].includes(type)){
-  device=createDevice(profile.presetId,'equipment-demo',position);Object.assign(device.parameters,profile.parameters,{heading:settings.heading,pitch:settings.pitch});device.physics={...profile.physics};
+  device=createDevice(catalogModel(profile.presetId).basePresetId??profile.presetId,'equipment-demo',position);device.name=profile.name;Object.assign(device.parameters,profile.parameters,{heading:settings.heading,pitch:settings.pitch});device.physics={...profile.physics};
   if(!settings.reflections)device.parameters.reflection=0;
  }
  return {profile,settings,position:[...position],type,metric:{...selected,max:selected.id==='distance'?settings.radius:selected.max},device,
@@ -101,4 +102,23 @@ export async function sampleDemo({spec,grid,scenario,query,cancelled=()=>false,o
   }
  }
  return {grid,values,counts};
+}
+
+// Point queries share the same masks and metric calculations as the displayed field.
+export function probeDemo(spec,position,scenario,query){
+ const ground=query.groundAt(position[0],position[2]),surface=ground==null?null:query.surfaceAt(position[0],position[2]);
+ const geometry=angles(spec.position,position);let mask;
+ if(ground==null)mask=0;
+ else if(position[1]-ground>spec.settings.ceiling)mask=4;
+ else if(position[1]<=Math.max(ground,surface??ground)+.1)mask=3;
+ const metrics=[];
+ if(mask===undefined){
+  const context=spec.type==='electrostatic'?{known:true,blocked:false}:query.trace(spec.position,position);
+  for(const metric of DEMO_METRICS[spec.type]){
+   const result=demoValue({...spec,settings:{...spec.settings,metric:metric.id}},position,scenario,context);
+   metrics.push({id:metric.id,label:metric.label,unit:metric.unit,value:result.mask===1&&Number.isFinite(result.value)?result.value:null});
+   if(metric.id===spec.settings.metric)mask=result.mask;
+  }
+ }
+ return {position:[...position],distance:geometry.distance,azimuth:geometry.azimuth,elevation:geometry.elevation,heightAboveGround:ground==null?null:position[1]-ground,mask,metrics};
 }
