@@ -1,14 +1,15 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--disable-gpu-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir('artifacts',{recursive:true});
  const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true');
- await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
+ await page.locator('#open-city-model').click();await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
+ await page.locator('#city-window-close').click();
  assert.equal(await page.locator('#museum-label').innerText(),'⌖ 河南博物院');
  await page.screenshot({path:'artifacts/henan-museum.png'});
  await page.locator('#toggle-sensors').click();await page.waitForFunction(()=>window.sensorDiagnostics?.results?.length===4,null,{timeout:120000});
@@ -20,7 +21,7 @@ try{
  await page.locator('#equipment-emitting').uncheck();
  await page.waitForFunction(()=>window.sensorDiagnostics.results.find(r=>r.type==='radio').reasons.includes('目标无线电静默'));
  await page.locator('#equipment-emitting').check();
- await page.locator('#equipment-panel summary').filter({hasText:'当前型号参数'}).click();
+ await page.locator('#equipment-panel summary').filter({hasText:'设备参数与来源'}).click();
  const range=page.locator('#equipment-panel').getByLabel('标称距离上限',{exact:true});await range.fill('100');
  await page.waitForFunction(()=>window.sensorDiagnostics.coverage.find(c=>c.deviceId==='sensor-3').maxRange===100);
  await range.press('Tab');
@@ -31,7 +32,8 @@ try{
  await page.waitForFunction(()=>window.sensorDiagnostics.results.find(r=>r.type==='radio').errors.networkLocalizationMeters===null);
  const downloadPromise=page.waitForEvent('download');await page.locator('#equipment-export').click();const download=await downloadPromise;
  await mkdir('artifacts',{recursive:true});await download.saveAs('artifacts/sensor-browser-scenario.json');
- const json=JSON.parse(await readFile('artifacts/sensor-browser-scenario.json','utf8'));assert.equal(json.devices.length,4);assert.equal(json.results.length,4);assert.ok(json.ecefTransform.length===16);
+ const json=JSON.parse(await readFile('artifacts/sensor-browser-scenario.json','utf8'));assert.equal(json.devices.length,4);assert.equal(json.results.length+json.capabilityAssessment.results.length,4);assert.ok(json.ecefTransform.length===16);
+ assert.deepEqual(json.capabilityAssessment.results.map(r=>r.type).sort(),['acoustic','optical']);
  await page.locator('#equipment-import').setInputFiles('artifacts/sensor-browser-scenario.json');await page.waitForFunction(()=>document.querySelector('#equipment-message').textContent.includes('方案导入成功'));
  // Invalid import must preserve the current valid four-device scheme.
  await page.locator('#equipment-import').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('{}')});
@@ -53,6 +55,7 @@ try{
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),0);
  await page.locator('#equipment-add').click();assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),1);
  await page.locator('#equipment-remove').click();assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),0);
+ await page.locator('#equipment-panel summary').filter({hasText:'示例方案'}).click();
  await page.locator('#equipment-defaults').click();
  await page.locator('#equipment-focus').click();
  // Hover uses the actual city surface and reports values at an explicit height.
@@ -62,7 +65,9 @@ try{
  assert.equal(await page.locator('#signal-probe').isVisible(),true);
  assert.ok((await page.locator('#signal-value').innerText()).length>0);
  await page.screenshot({path:'artifacts/signal-hover.png'});
+ await page.locator('#equipment-window-minimize').click();
  const probeHeight=page.locator('#equipment-probe-height');await probeHeight.fill('100');
+ await page.locator('#equipment-window-minimize').click();
  await page.mouse.move(view.x+view.width/2,view.y+view.height/2);
  await page.waitForFunction(()=>window.sensorDiagnostics.probe?.heightAboveSurface===100);
  const firstProbe=await page.evaluate(()=>window.sensorDiagnostics.probe.position);
@@ -76,18 +81,21 @@ try{
  await page.mouse.move(marker.x+65,marker.y-20,{steps:5});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.devicePositions.find(d=>d.id==='sensor-1').position)!==JSON.stringify(p),before);
  const targetBefore=await page.evaluate(()=>window.sensorDiagnostics.targetPosition);
+ await page.locator('#equipment-window-minimize').click();
  const targetMarker=await page.evaluate(()=>window.sensorDiagnostics.markerScreens.find(m=>m.kind==='target'));
  await page.mouse.move(targetMarker.x,targetMarker.y);await page.mouse.down();await page.mouse.move(targetMarker.x-45,targetMarker.y+15,{steps:4});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.targetPosition)!==JSON.stringify(p),targetBefore);
  // Cancellation must release camera controls and allow a subsequent map interaction.
  const cancelMarker=await page.evaluate(()=>window.sensorDiagnostics.markerScreens.find(m=>m.deviceId==='sensor-1'));
+ await page.locator('#equipment-window-minimize').click();
  await page.mouse.move(cancelMarker.x,cancelMarker.y);await page.mouse.down();
  await page.locator('canvas').dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.cameraControlsEnabled),true);
  const oldCamera=await page.evaluate(()=>window.sensorDiagnostics.cameraPosition);
  await page.mouse.move(view.x+view.width*.5,view.y+view.height*.15);await page.mouse.down();await page.mouse.move(view.x+view.width*.5+40,view.y+view.height*.15+15,{steps:3});await page.mouse.up();
  await page.waitForFunction(p=>JSON.stringify(window.sensorDiagnostics.cameraPosition)!==JSON.stringify(p),oldCamera);
- await page.locator('#equipment-focus').click();
+ await page.locator('#equipment-window-minimize').click();
+ await page.locator('#equipment-focus').click();await page.locator('#equipment-window-minimize').click();
 
  await page.locator('#equipment-panel details').evaluateAll(nodes=>nodes.forEach(node=>node.open=false));
  await page.locator('#equipment-panel').evaluate(node=>node.scrollTop=0);

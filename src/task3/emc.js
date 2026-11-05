@@ -5,6 +5,17 @@ import {EQUIPMENT_FACTS,EMC_RULES} from './constants.js';
 
 const RX_TOLERANCE_GHZ=0.02; // 发射频点落入接收频段的判定容差
 
+export function devicePosition(device){
+ const p=device?.position;
+ if(!Array.isArray(p)||p.length!==3||p.some(v=>!Number.isFinite(v)))throw Error(`设备 ${device?.id??'?'} 缺少有效三维坐标`);
+ return p;
+}
+
+export function distance3D(a,b){
+ const pa=devicePosition(a),pb=devicePosition(b);
+ return Math.hypot(pa[0]-pb[0],pa[1]-pb[1],pa[2]-pb[2]);
+}
+
 export function deviceSpectrum(device){
  const facts=EQUIPMENT_FACTS[device.presetId];
  if(!facts)throw Error(`未知装备预设 ${device.presetId}`);
@@ -21,30 +32,36 @@ function hitReceiver(emissionGHz,spectrum){
   (spectrum.receiveDiscreteGHz&&spectrum.receiveDiscreteGHz.some(g=>Math.abs(g-f)<=RX_TOLERANCE_GHZ)));
 }
 
+function conflict(a,b,kind,severity,distance,extra){
+ return {a:a.id,b:b.id,kind,severity,distanceM:distance,coLocated:distance===0,...extra};
+}
+
 export function emcAnalysis(devices){
  const spectra=new Map(devices.map(d=>[d.id,deviceSpectrum(d)]));
  const penalties=Object.fromEntries(devices.map(d=>[d.id,0])),conflicts=[],notes=[];
  if(devices.some(d=>['optical','acoustic'].includes(d.type)))notes.push('光电/声学设备无射频发射与接收，射频兼容天然通过');
  for(let i=0;i<devices.length;i++)for(let j=i+1;j<devices.length;j++){
   const a=devices[i],b=devices[j],sa=spectra.get(a.id),sb=spectra.get(b.id);
-  const distance=Math.hypot(...a.position.map((v,k)=>v-b.position[k]));
+  const distance=distance3D(a,b);
   if(sa.emissionGHz.length&&sb.emissionGHz.length){
    const minDelta=Math.min(...sa.emissionGHz.flatMap(fa=>sb.emissionGHz.map(fb=>Math.abs(fa-fb))));
    if(minDelta<EMC_RULES.coChannelSeparationGHz&&distance<EMC_RULES.coChannelMinDistanceM){
-    const penaltyDb=6*(1-distance/EMC_RULES.coChannelMinDistanceM); // 与 planning emcCheck 同口径
+    const penaltyDb=6*(1-distance/EMC_RULES.coChannelMinDistanceM); // 与 planning emcCheck 同口径，每设备对只罚一次
     penalties[a.id]+=penaltyDb;penalties[b.id]+=penaltyDb;
-    conflicts.push({a:a.id,b:b.id,kind:'co-channel',severity:'fail',distanceM:distance,detailGHz:minDelta,penaltyDb,recommendation:'换频（错开 ≥0.1 GHz）或拉距至 ≥600 m'});
+    conflicts.push(conflict(a,b,'co-channel','fail',distance,{detailGHz:minDelta,penaltyDb,recommendation:'换频（错开 ≥0.1 GHz）或拉距至 ≥600 m'}));
    }else if(minDelta<EMC_RULES.adjacentChannelGHz&&distance<EMC_RULES.adjacentMinDistanceM)
-    conflicts.push({a:a.id,b:b.id,kind:'adjacent-channel',severity:'warning',distanceM:distance,detailGHz:minDelta,recommendation:'拉距 ≥300 m 或换频'});
+    conflicts.push(conflict(a,b,'adjacent-channel','warning',distance,{detailGHz:minDelta,recommendation:'拉距 ≥300 m 或换频'}));
   }
   for(const [tx,rx,txs,rxs] of [[a,b,sa,sb],[b,a,sb,sa]]){
    const hit=hitReceiver(txs.emissionGHz,rxs);
-   if(hit!==undefined)conflicts.push({a:tx.id,b:rx.id,kind:'receiver-overlap',severity:'fail',distanceM:distance,detailGHz:hit,recommendation:'接收机换型/换频段或显著拉距'});
+   // 只有明确的发射机→接收机关系且处于工程耦合距离内才判 fail；远距频段重叠不再无差别报警。
+   if(hit!==undefined&&distance<EMC_RULES.receiverOverlapMinDistanceM)
+    conflicts.push(conflict(tx,rx,'receiver-overlap','fail',distance,{detailGHz:hit,recommendation:`接收机与带内发射源换频或拉距至 ≥${EMC_RULES.receiverOverlapMinDistanceM} m`}));
    if((txs.powerW??0)>=EMC_RULES.frontendBlockPowerW&&rx.type==='radio'&&distance<EMC_RULES.frontendBlockDistanceM)
-    conflicts.push({a:tx.id,b:rx.id,kind:'frontend-block',severity:'warning',distanceM:distance,recommendation:'大功率雷达与无源接收机间距 ≥50 m'});
+    conflicts.push(conflict(tx,rx,'frontend-block','warning',distance,{recommendation:'大功率雷达与无源接收机间距 ≥50 m'}));
   }
   // 同点位过密仅在至少一方有射频发射时提示（纯无源/光电/声学共址无射频互扰）。
-  if(distance<EMC_RULES.coSiteMinDistanceM&&(sa.emissionGHz.length||sb.emissionGHz.length))conflicts.push({a:a.id,b:b.id,kind:'co-site',severity:'warning',distanceM:distance,recommendation:'错开安装点位 ≥10 m'});
+  if(distance<EMC_RULES.coSiteMinDistanceM&&(sa.emissionGHz.length||sb.emissionGHz.length))conflicts.push(conflict(a,b,'co-site','warning',distance,{recommendation:'错开安装点位 ≥10 m'}));
  }
  const counts={fail:conflicts.filter(c=>c.severity==='fail').length,warning:conflicts.filter(c=>c.severity==='warning').length};
  const verdict=counts.fail?'fail':counts.warning?'degraded':'pass';

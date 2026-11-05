@@ -7,10 +7,12 @@ artifacts/
 
 __pycache__/
 *.pyc
+.trae/
+.idea/
 
 .npm-cache/
 .python-deps/
-
-# IDE / 本地配置
-.trae/
-.trae-html-share-packages/
+.integration-runtime/
+equipment_models/*/outputs/*
+!equipment_models/optical/outputs/optical_demo.json
+!equipment_models/acoustic/outputs/acoustic_demo.json

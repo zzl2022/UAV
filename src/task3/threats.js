@@ -4,7 +4,7 @@
 import {evaluate} from '../sensors/engine.js';
 import {emcCheck} from '../planning/optimizer.js';
 import {interpolateRoute,AlarmTracker} from '../planning/flight.js';
-import {THREAT_SCENARIOS} from './constants.js';
+import {DEFAULT_THREAT_CONFIGS,THREAT_CONFIG_LIMITS} from './constants.js';
 const DEG=Math.PI/180,STEP=20,CLEARANCE=25;
 const GEOMETRY_FAIL=['近距盲区','超出标称距离','超出方位视场','超出俯仰视场','目标无线电静默','目标信号不在接收频段'];
 
@@ -39,13 +39,31 @@ export function buildRadialRoute(query,bounds,{azimuthDeg,aglM,speedMps,id,later
  return {id,azimuthDeg,points,duration:points.at(-1).time,speed:speedMps,startDelayS,length,skipped,repairs,blockedSegments,notes:'直线径向入侵航路；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
 }
 
-// 按 THREAT_SCENARIOS 生成三类威胁航路：single=8 方位各 1 架；multi=4 方位同时；swarm=3 方位 ×14 架横向铺开。
-export function buildThreatRoutes(query,bounds,scenarioKey){
- const s=THREAT_SCENARIOS[scenarioKey];if(!s)throw Error(`未知威胁场景 ${scenarioKey}`);
- const routes=[],offsets=[0,30,-30,60,-60];
- for(let d=0;d<s.directions;d++)for(let k=0;k<s.dronesPerDirection;k++){
-  const swarm=scenarioKey==='swarm';
-  routes.push(buildRadialRoute(query,bounds,{azimuthDeg:d*(360/s.directions),aglM:s.aglM[(d+k)%s.aglM.length],speedMps:s.speedMps,id:`${scenarioKey}-${d+1}-${k+1}`,lateralOffsetM:swarm?offsets[k%offsets.length]:0,startDelayS:swarm?k*2:0}));
+// 规范化单个场景配置；缺省字段继承默认值，返回的新对象和数组可直接 JSON 序列化。
+export function normalizeThreatConfig(scenarioKey,config={}){
+ const defaults=Object.hasOwn(DEFAULT_THREAT_CONFIGS,scenarioKey)?DEFAULT_THREAT_CONFIGS[scenarioKey]:null;if(!defaults)throw Error(`未知威胁场景 ${scenarioKey}`);
+ if(!config||typeof config!=='object'||Array.isArray(config))throw Error(`威胁场景 ${scenarioKey} 配置必须是对象`);
+ const s={...defaults,...config},l=THREAT_CONFIG_LIMITS;
+ if(!Number.isInteger(s.count)||s.count<l.minCount||s.count>l.maxCount)throw Error(`威胁场景 ${scenarioKey} 数量必须是 ${l.minCount}–${l.maxCount} 的整数`);
+ if(!Number.isInteger(s.directions)||s.directions<l.minDirections||s.directions>l.maxDirections||s.directions>s.count)throw Error(`威胁场景 ${scenarioKey} 方位数必须是 ${l.minDirections}–${l.maxDirections} 且不超过总数量的整数`);
+ if(!Array.isArray(s.azimuthsDeg)||s.azimuthsDeg.length!==s.directions)throw Error(`威胁场景 ${scenarioKey} 必须提供与方位数一致的攻击来向方位角数组`);
+ for(const azimuth of s.azimuthsDeg)if(!Number.isFinite(azimuth)||azimuth<0||azimuth>=360)throw Error(`威胁场景 ${scenarioKey} 方位角必须是 [0,360) 内的有限数值`);
+ if(!Array.isArray(s.aglM)||!s.aglM.length)throw Error(`威胁场景 ${scenarioKey} 至少需要一个离地高度`);
+ for(const agl of s.aglM)if(!Number.isFinite(agl)||agl<=0||agl>l.maxAglM)throw Error(`威胁场景 ${scenarioKey} 离地高度必须是 (0,${l.maxAglM}] 米内的有限数值`);
+ if(!Number.isFinite(s.speedMps)||s.speedMps<=0||s.speedMps>l.maxSpeedMps)throw Error(`威胁场景 ${scenarioKey} 速度必须是 (0,${l.maxSpeedMps}] 米/秒内的有限数值`);
+ return {count:s.count,directions:s.directions,azimuthsDeg:s.azimuthsDeg.map(a=>Object.is(a,-0)?0:a),aglM:[...s.aglM],speedMps:s.speedMps,simultaneous:defaults.simultaneous};
+}
+
+// 总架数均分到各方位，余数从第一个方位依次加一；蜂群保留横向铺开和方向内 2 秒错峰。
+export function buildThreatRoutes(query,bounds,scenarioKey,config){
+ const s=normalizeThreatConfig(scenarioKey,config),routes=[],offsets=[0,30,-30,60,-60];
+ const base=Math.floor(s.count/s.directions),remainder=s.count%s.directions;
+ for(let d=0;d<s.directions;d++){
+  const directionCount=base+(d<remainder?1:0);
+  for(let k=0;k<directionCount;k++){
+   const swarm=scenarioKey==='swarm';
+   routes.push(buildRadialRoute(query,bounds,{azimuthDeg:s.azimuthsDeg[d],aglM:s.aglM[(d+k)%s.aglM.length],speedMps:s.speedMps,id:`${scenarioKey}-${d+1}-${k+1}`,lateralOffsetM:swarm?offsets[k%offsets.length]:0,startDelayS:swarm?k*2:0}));
+  }
  }
  return routes;
 }

@@ -6,7 +6,7 @@ import './volume.css';
 
 export function mountHeatmap({panel,scene,model,getState,getSelected,isActive,getQuery,onNominalChange,onProbeChange}){
  const section=document.createElement('section');section.id='detection-controls';
- section.innerHTML=`<h2>三维探测场 <span>VOLUMETRIC FIELD</span></h2>
+ section.innerHTML=`<h2>三维探测场</h2>
  <label><input id="detection-enabled" type="checkbox" checked>显示三维体渲染</label>
  <label>装备图层<select id="detection-mode" aria-label="探测装备图层"><option value="selected">当前装备</option><option value="radar">全部雷达</option><option value="radio">全部无线电</option><option value="combined">雷达＋无线电联合</option></select></label>
  <label>连续物理量<select id="detection-metric" aria-label="探测渲染物理量"><option value="margin">探测裕量 / dB</option><option value="snr">处理后 SNR / dB</option><option value="pd">统计模型 Pd / 0–1</option></select></label>
@@ -14,19 +14,18 @@ export function mountHeatmap({panel,scene,model,getState,getSelected,isActive,ge
  <label><input id="detection-autoscale" type="checkbox" checked>按物理值自动缩放色带</label>
  <label>分析高度上限<select id="detection-height" aria-label="探测场离地高度上限"><option value="300">离地 300 m</option><option value="600" selected>离地 600 m</option><option value="1200">离地 1200 m</option><option value="3000">离地 3000 m</option><option value="8000">离地 8000 m</option></select></label>
  <label>采样范围<select id="detection-scope" aria-label="探测采样范围"><option value="local">当前装备周边 3 × 3 km</option><option value="city">整个建模城区</option></select></label>
- <label>空间精度<select id="detection-spacing" aria-label="探测空间采样精度"><option value="150">快速 · 水平150 / 垂直75 m</option><option value="100" selected>标准 · 水平100 / 垂直40 m</option><option value="50">精细 · 水平50 / 垂直20 m</option></select></label>
+ <label title="采样间距影响计算密度，不代表实测精度">采样间距<select id="detection-spacing" aria-label="探测空间采样精度"><option value="150">快速 · 水平150 / 垂直75 m</option><option value="100" selected>标准 · 水平100 / 垂直40 m</option><option value="50">精细 · 水平50 / 垂直20 m</option></select></label>
  <label>显示下限 <output id="detection-floor-value"></output><input id="detection-floor" aria-label="物理量显示下限" type="range" min="-20" max="40" step=".5" value="0"></label>
  <label>体密度<input id="detection-density" aria-label="体渲染密度" type="range" min=".1" max="2" step=".05" value="1.3"></label>
  <label>东西剖切<input id="detection-clip" aria-label="探测场剖切位置" type="range" min=".05" max="1" step=".01" value="1"></label>
  <label><input id="detection-reflections" type="checkbox" checked>计入一次立面反射</label>
- <label><input id="detection-nominal" type="checkbox">叠加标称范围体</label>
+ <label title="未裁切建筑遮挡，不代表有效覆盖"><input id="detection-nominal" type="checkbox">标称范围示意</label>
  <div class="buttons"><button id="detection-overview">俯视区域</button><button id="detection-oblique">三维观察</button><button id="detection-refresh">重新计算</button></div>
  <button id="detection-export" disabled>导出三维探测场 · JSON ↓</button>
- <p id="detection-progress" role="status" class="hint"></p>
- <p class="hint">独立计算 X/Y/Z 三维体素，连续色带显示模型物理量。近距盲区、视场外、实体阻断与数据缺口留空；低于门限的信号可通过显示下限查看。精细采样不等于实测精度。</p>`;
+ <p id="detection-progress" role="status" class="hint"></p>`;
  panel.querySelector('.probe-setting').before(section);const $=id=>section.querySelector('#'+id);
  const legend=document.createElement('div');legend.id='detection-legend';legend.hidden=true;
- legend.innerHTML='<strong>三维探测能力 · 连续体渲染</strong><div id="detection-caption"></div><div id="detection-scale-title"></div><div id="detection-colorbar"></div><div id="detection-scale-ticks"></div><div id="detection-summary"></div><small>空白：硬边界失效、实体或数据不足；不跨盲区插值<br>模型 Pd 是统计假设，非实测概率；联合取最佳单设备<br>体颜色是局部数值，沿视线透明叠加不代表联合概率</small>';
+ legend.innerHTML='<strong>三维探测场</strong><div id="detection-caption"></div><div id="detection-scale-title"></div><div id="detection-colorbar"></div><div id="detection-scale-ticks"></div><div id="detection-summary"></div><small id="detection-note" title="空白可能来自近距盲区、视场外、实体遮挡、数据缺口或低于显示下限；体颜色表示局部数值。"></small>';
  document.querySelector('main').append(legend);
  legend.querySelector('#detection-colorbar').style.background=`linear-gradient(to right,${Array.from({length:64},(_,i)=>`rgb(${rampColor(i/63).map(v=>Math.round(v*255)).join(',')})`).join(',')})`;
  const group=new THREE.Group();group.name='Effective_Detection_Volume';group.visible=false;scene.add(group);
@@ -40,6 +39,7 @@ export function mountHeatmap({panel,scene,model,getState,getSelected,isActive,ge
   if(reset){input.min=m.min;input.max=m.max;input.step=metric==='pd'?.01:.5;input.value=metric==='pd'?.1:metric==='snr'?-10:0;}
   const floor=Number(input.value);$('detection-floor-value').textContent=`${floor.toFixed(metric==='pd'?2:1)} ${m.unit}`;
   legend.querySelector('#detection-scale-title').textContent=`${m.label} ${m.unit} · 显示 ≥ ${floor.toFixed(metric==='pd'?2:1)}`;
+  legend.querySelector('#detection-note').textContent=['空白：未显示或数据不足',metric==='pd'?'Pd 为模型估计，非实测概率':'',$('detection-mode').value!=='selected'?'取设备最佳值':''].filter(Boolean).join(' · ');
   const range=$('detection-autoscale').checked&&ranges[metric]?ranges[metric]:[m.min,m.max];
   legend.querySelector('#detection-scale-ticks').replaceChildren(...[0,.25,.5,.75,1].map(t=>{const span=document.createElement('span');span.textContent=(range[0]+t*(range[1]-range[0])).toFixed(metric==='pd'?2:0);return span;}));
   volume?.configure({metric,floor,density:Number($('detection-density').value),clip:Number($('detection-clip').value),range,style:$('detection-style').value});

@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import {createSceneQuery} from '../sensors/scene.js';
 import {defaultScenario} from '../sensors/scenario.js';
-import {buildRequest,requestJSON,statusText,valueText,unitText,snapshotHTML} from './api.js';
+import {buildRequest,requestJSON,statusText,valueText,unitText,snapshotHTML,presentationNotes} from './api.js';
 import './ui.css';
 
 export function mountStudentCapabilities({app,scene,camera,controls,renderer,model,city}){
  const cityPanel=app.querySelector('aside');
  const panel=document.createElement('aside');panel.id='student-panel';panel.hidden=true;
- panel.innerHTML=`<div class="brand">我的光电／声学</div><p class="student-hint">比赛资料基础模式 · Python 原模型<br>不输入外界天气、光照或现场噪声</p>
- <button id="student-back">← 返回城市</button><button id="student-connect">连接／重读配置</button>
+ panel.innerHTML=`<div class="brand">光电与声学评估</div><p class="student-hint">设备能力评估 · 仿真场景<br>基于设备资料与三维场景进行计算</p>
+ <button id="student-back">← 返回城市</button><button id="student-connect">刷新设备参数</button>
  <p id="student-message" role="status">正在连接模型服务…</p>
  <section><h2>设备与目标</h2><select id="student-device" aria-label="我的设备"><option value="student-optical">NVT-951 光电</option><option value="student-acoustic">CRY8500 声学</option></select>
  <div id="student-position"></div><div class="buttons"><button id="student-pick-device">地图选设备点</button><button id="student-pick-target">地图选目标点</button></div><button id="student-focus">聚焦设备与目标</button><p class="student-hint">可拖动彩色设备球和红色目标球；选点使用真实建筑／DEM表面。高度为局部上坐标，不是海拔或离地高度。新增设备点在表面上方2 m，目标上方50 m。</p></section>
@@ -16,7 +16,7 @@ export function mountStudentCapabilities({app,scene,camera,controls,renderer,mod
  <details><summary>补充光学视场（可选，明确为用户假设）</summary><p class="student-hint">资料缺少传感器尺寸和光学视场。留空时显示未知；成对填写才启用。此为固定视场，焦距变化不驱动该假设视场变化。</p><div id="student-fov"></div></details></section>
  <section id="student-acoustic-settings" hidden><h2>声学阵列</h2><label>阵列规格<select id="student-array"><option value="0.3">30 cm</option><option value="0.7">70 cm</option><option value="1.1" selected>110 cm</option></select></label><p class="student-hint">20 Hz～20 kHz仅明确对应110 cm阵列；94°×76°不作为声学波束裁切条件。</p></section>
  <details><summary>目标位置与可选属性</summary><div id="student-target-position"></div><div id="student-target-settings"></div><p class="student-hint">宽高、频带可留空；填入的是用户场景条件，不是现场测量。</p></details>
- <section><h2>当前设备 · 中文结果</h2><div id="student-results"></div></section>
+ <section><h2>当前设备 · 评估结果</h2><div id="student-results"></div><details><summary>评估条件与数据状态</summary><div id="student-assessment-notes"></div></details></section>
  <details><summary>设备原始参数与来源</summary><div id="student-parameters"></div></details>
  <section><h2>场景对比</h2><label>场景名称<input id="student-snapshot-name" maxlength="80" value="场景1"></label><button id="student-save" disabled>保存当前两台设备结果</button><div id="student-comparison"></div><div class="buttons"><button id="student-export-json" disabled>导出JSON</button><button id="student-export-html" disabled>导出中文报告</button></div><button id="student-clear">清空对比记录</button><p class="student-hint">保存一个场景后移动目标或调整工作设置，再保存第二个。对比记录只保留本次页面会话，刷新前请导出。不会把相对指标当作成功率。</p></section>
  <footer id="student-scene-note"></footer>`;
@@ -48,10 +48,11 @@ export function mountStudentCapabilities({app,scene,camera,controls,renderer,mod
  function addMetric(parent,label,value){const row=document.createElement('div');row.className='student-metric';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=label;b.textContent=value;row.append(a,b);parent.append(row);}
  function results(){
   const box=$('student-results');box.replaceChildren();const r=payload?.results.find(r=>r.id===selected);if(!r)return;
-  addMetric(box,'计算来源','原Python模块 · 资料基础模式');
+  addMetric(box,'评估依据','设备资料与三维场景');
   addMetric(box,'建筑／地形直达路径',{clear:'当前网格未检出遮挡',blocked:'当前网格存在遮挡',unknown:'无法判断'}[r.geometry.state]);
   for(const m of r.metrics)addMetric(box,m.label,`${valueText(m.value)} ${unitText(m.unit)} · ${statusText[m.status]??m.status}`);
-  for(const note of r.notes){const p=document.createElement('p');p.className='student-hint';p.textContent=note;box.append(p);}
+  const notes=$('student-assessment-notes');notes.replaceChildren();
+  for(const note of presentationNotes(r)){const p=document.createElement('p');p.className='student-hint';p.textContent=note;notes.append(p);}
   const params=$('student-parameters');params.replaceChildren();
   function show(obj,prefix=''){for(const [k,v] of Object.entries(obj)){if(v&&typeof v==='object'&&!Array.isArray(v)){if('value'in v&&'status'in v)addMetric(params,prefix+k,`${valueText(v.value)} ${v.unit} · ${statusText[v.status]??v.status}；${typeof v.source==='string'?v.source:JSON.stringify(v.source)}`);else show(v,prefix+k+'.');}}}
   show(r.configuration);
@@ -67,7 +68,7 @@ export function mountStudentCapabilities({app,scene,camera,controls,renderer,mod
  function diagnostics(){camera.updateMatrixWorld();const rect=renderer.domElement.getBoundingClientRect();window.studentDiagnostics={connected:!!catalog,pending:!payload,results:payload?.results,devicePositions:devices.map(d=>({id:d.id,position:[...d.position]})),targetPosition:[...target.position],snapshots:snapshots.length,markers:markers.map(m=>{const p=m.position.clone().project(camera);return {id:m.userData.id,x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,visible:p.z>=-1&&p.z<=1};}),cameraControlsEnabled:controls.enabled};}
  async function compute(){
   clearTimeout(timer);const seq=++sequence;controller?.abort();controller=new AbortController();payload=null;$('student-save').disabled=true;
-  $('student-results').textContent='正在调用Python模型…';draw();diagnostics();
+  $('student-results').textContent='正在评估设备能力…';draw();diagnostics();
   if(!catalog){message('请先启动 Python 服务，再点击“连接／重读配置”。');return;}
   try{
    const body=buildRequest(catalog,devices,target,(a,b)=>query.trace(a,b));
@@ -81,7 +82,7 @@ export function mountStudentCapabilities({app,scene,camera,controls,renderer,mod
   invalidate();message('正在读取设备配置…');
   try{catalog=await requestJSON('/api/capabilities/catalog');
    if(JSON.stringify(catalog.scene.origin)!==JSON.stringify(city.metadata.origin))throw Error('Python服务与当前页面的城市原点不一致');
-   $('student-scene-note').textContent=`实际建筑 ${catalog.scene.building_count} 栋。${catalog.scene.height_note} `;
+   $('student-scene-note').textContent=`场景建筑 ${catalog.scene.building_count} 栋 · 仿真评估 · 高程基准待核验`;
    form();await compute();
   }catch(e){catalog=null;message('连接失败：'+e.message);diagnostics();}
  }

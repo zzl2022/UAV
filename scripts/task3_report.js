@@ -5,7 +5,7 @@
 import {readFile,writeFile,mkdir,readdir} from 'node:fs/promises';
 import {createModel} from '../src/model.js';
 import {createSceneQuery} from '../src/sensors/scene.js';
-import {DEFAULT_SETTINGS} from '../src/planning/optimizer.js';
+import {TASK3_DEFAULT_SETTINGS} from '../src/task3/scope.js';
 import {runTask3Pipeline} from '../src/task3/pipeline.js';
 import {validateRun} from '../src/task3/runs.js';
 import {extractRules,rulesToMarkdown} from '../src/task3/rules.js';
@@ -13,6 +13,7 @@ import {METRIC_WEIGHTS,THREAT_SCENARIOS} from '../src/task3/constants.js';
 
 const root=new URL('../',import.meta.url);
 const quick=process.argv.includes('--quick');
+const presetIds=['radar-02c','radio-tdoa','optical-nvt','acoustic-cry'];
 const city=JSON.parse(await readFile(new URL('public/data/city.json',root)));
 const terrain=JSON.parse(await readFile(new URL('public/data/terrain.json',root)));
 const query=createSceneQuery(createModel(city,terrain));
@@ -33,9 +34,9 @@ await mkdir(runsDir,{recursive:true});await mkdir(docsDir,{recursive:true});
 
 const runs=[];let main=null;
 for(const [i,v] of (quick?variants.slice(0,1):variants).entries()){
- const settings={...DEFAULT_SETTINGS,scope:'core',siteSpacing:500,...v.over};
+ const settings={...TASK3_DEFAULT_SETTINGS,scope:'core',siteSpacing:500,...v.over};
  const t0=Date.now();
- const {report,run}=await runTask3Pipeline({city,query,settings,weights:{...METRIC_WEIGHTS},progress:quiet,yieldTask,withThreatFrames:!i||!quick?true:true});
+ const {report,run}=await runTask3Pipeline({city,query,settings,weights:{...METRIC_WEIGHTS},presetIds,progress:quiet,yieldTask,withThreatFrames:true});
  const record=validateRun({...run,label:v.label});
  await writeFile(new URL(`${record.runId}.json`,runsDir),JSON.stringify(record));
  runs.push(record);
@@ -43,6 +44,7 @@ for(const [i,v] of (quick?variants.slice(0,1):variants).entries()){
  console.log(`[${i+1}/${quick?1:variants.length}] ${v.label}: runId=${record.runId} 方案=${record.summary.plans.map(p=>`${p.id}:${p.devices}台/成本${p.cost.toFixed(0)}/rank${p.rank}`).join(' ')} 推荐=${record.summary.recommendedId} 耗时 ${((Date.now()-t0)/1000).toFixed(1)}s`);
 }
 await writeFile(new URL('artifacts/task3/latest-report.json',root),JSON.stringify(main.report));
+await writeFile(new URL('artifacts/task3/latest-source.json',root),JSON.stringify({schema:'task3-doc-source/1.0',generatedAt:new Date().toISOString(),runId:main.run.runId,reportPath:'artifacts/task3/latest-report.json',runPath:`artifacts/task3/runs/${main.run.runId}.json`,presetIds,settings:main.report.settings,inputHashes:main.report.inputHashes,runIds:runs.map(item=>item.runId)},null,2));
 
 // —— 文档生成（全部数据来自上述真实轮次）——
 const fmt=x=>typeof x==='number'?x.toFixed(3):x;

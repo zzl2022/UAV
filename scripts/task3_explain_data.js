@@ -4,21 +4,21 @@
 import {readFile,writeFile,readdir} from 'node:fs/promises';
 import {createModel} from '../src/model.js';
 import {createSceneQuery} from '../src/sensors/scene.js';
-import {generateSamples,scenarios} from '../src/planning/optimizer.js';
+import {scenarios} from '../src/planning/optimizer.js';
 import {generateCandidatesWithEquipment} from '../src/task3/pipeline.js';
 import {evaluate,angles} from '../src/sensors/engine.js';
-import {createDevice,PRESETS} from '../src/sensors/presets.js';
 import {classifySample,buildBuildingIndex} from '../src/task3/blindspots.js';
 import {emcAnalysis} from '../src/task3/emc.js';
 
 const city=JSON.parse(await readFile('public/data/city.json','utf8'));
 const terrain=JSON.parse(await readFile('public/data/terrain.json','utf8'));
 const report=JSON.parse(await readFile('artifacts/task3/latest-report.json','utf8'));
+const source=JSON.parse(await readFile('artifacts/task3/latest-source.json','utf8'));
 const query=createSceneQuery(createModel(city,terrain));
 const settings=report.settings,environment=report.environment,target=report.target;
-const sampling=generateSamples(city,query,settings),conditions=scenarios(environment),n=sampling.samples.length;
+const sampling=report.sampling,conditions=scenarios(environment),n=sampling.samples.length;
 const plan=report.plans.find(p=>p.id===report.recommendedId);
-const out={generatedAt:new Date().toISOString(),runId:'run-20261024-095721-7rap2',steps:{}};
+const out={generatedAt:new Date().toISOString(),runId:source.runId,steps:{}};
 
 // ── ① 覆盖判定单点实例：推荐方案一台雷达对一个被覆盖采样的完整代入 ──
 {
@@ -60,7 +60,7 @@ const out={generatedAt:new Date().toISOString(),runId:'run-20261024-095721-7rap2
  out.steps.radio={deviceId:radio.id,distanceM:+angles(radio.position,s.position).distance.toFixed(1),marginDb:+on.marginDb?.toFixed(2),losses:on.losses,silentReasons:off.reasons,silentMargin:off.marginDb,
   note:'静默目标：reasons 含「目标无线电静默」，marginDb 置空、等效距离为 0（engine.js L108/L145）'};
  // 光电：最终方案未选中光电，取候选池中同点位光电候选做完整演示（明确标注）
- const {candidates}=generateCandidatesWithEquipment(city,query,settings,sampling,PRESETS.map(p=>p.id));
+ const {candidates}=generateCandidatesWithEquipment(city,query,settings,sampling,source.presetIds);
  const optical=candidates.find(c=>c.device.type==='optical').device;
  const octx=query.trace(optical.position,s.position);
  const oe=evaluate(optical,{...target,position:s.position},conditions[0].environment,octx);
@@ -72,35 +72,11 @@ const out={generatedAt:new Date().toISOString(),runId:'run-20261024-095721-7rap2
  out.steps.acoustic={deviceId:acoustic.id,distanceM:+angles(acoustic.position,s.position).distance.toFixed(1),receivedSoundDb:+ae.extras.receivedSoundDb?.toFixed(1),noiseDb:+ae.extras.noiseDb?.toFixed(1),snrDb:+ae.snrDb?.toFixed(2),marginDb:+ae.marginDb?.toFixed(2),soundSpeed:+ae.extras.soundSpeed?.toFixed(1)};
 }
 
-// ── ③ 贪心集合覆盖：插桩重放前 6 步（逻辑与 optimizer.js L65–84 逐行一致） ──
+// ── ③ 贪心集合覆盖：直接读取流水线实际轨迹，不再用另一套循环重放 ──
 {
- const {candidates}=generateCandidatesWithEquipment(city,query,settings,sampling,PRESETS.map(p=>p.id));
- const weights=conditions.flatMap((_,c)=>sampling.samples.map(p=>p.weight*(c===0?2:1)));
- const contexts=new Map();
- for(const cand of candidates){
-  const cover=[];
-  for(let j=0;j<n;j++){
-   const pos=sampling.samples[j].position,base={...target,position:pos};
-   const quick=evaluate(cand.device,base,environment,{known:true,blocked:false,buildingCount:0});
-   if(quick.reasons.some(r=>['近距盲区','超出标称距离','超出方位视场','超出俯仰视场'].includes(r)))continue;
-   const key=[cand.site.id,j].join(':');let cx=contexts.get(key);if(!cx){cx=query.trace(cand.device.position,pos);contexts.set(key,cx);}
-   for(let c=0;c<conditions.length;c++){const r=evaluate(cand.device,{...base,...conditions[c].target},conditions[c].environment,cx);if(r.status==='within-model'&&r.marginDb!==null&&r.marginDb>=settings.marginReserveDb)cover.push(c*n+j);}
-  }
-  cand.cover=cover;
- }
- const policy={budget:Math.round(settings.budget*0.75),maxDevices:Math.max(1,Math.round(settings.maxDevices*0.75))};
- const covered=new Uint8Array(weights.length),selected=[];let cost=0;const picks=[];
- for(let step=0;step<6;step++){
-  let best=-1,bestScore=0,bestGain=0;
-  for(let i=0;i<candidates.length;i++){
-   const cand=candidates[i];if(selected.includes(i)||cost+cand.cost>policy.budget+1e-9)continue;
-   let gain=0;for(const j of cand.cover)if(!covered[j])gain+=weights[j];
-   const score=gain/cand.cost;if(score>bestScore+1e-10){bestScore=score;best=i;bestGain=gain;}
-  }
-  if(best<0)break;selected.push(best);cost+=candidates[best].cost;for(const j of candidates[best].cover)covered[j]=1;
-  picks.push({step:step+1,device:candidates[best].device.id,preset:candidates[best].device.name,gain:+bestGain.toFixed(1),cost:+candidates[best].cost.toFixed(1),gainPerCost:+bestScore.toFixed(2),cumulativeCost:+cost.toFixed(1),coveredWeightPct:+(100*weights.reduce((s,w,k)=>s+w*covered[k],0)/weights.reduce((a,b)=>a+b,0)).toFixed(1)});
- }
- out.steps.greedy={candidateCount:candidates.length,policy,formula:'score = 新增覆盖权重 Σwⱼ / 相对成本（optimizer.js L65–84）',picks};
+ const trace=plan.optimizationTrace;if(!trace)throw Error('推荐方案缺少实际优化轨迹');
+ const picks=trace.events.filter(event=>event.type==='select').slice(0,6).map(event=>({step:event.step,device:event.deviceId,preset:plan.devices.find(device=>device.id===event.deviceId)?.name??event.presetId,gain:+event.gain.toFixed(1),cost:+event.cost.toFixed(1),gainPerCost:+event.gainPerCost.toFixed(2),cumulativeCost:+event.cumulativeCost.toFixed(1),coveredWeightPct:+event.coveredWeightPct.toFixed(1)}));
+ out.steps.greedy={candidateCount:trace.poolSize,policy:trace.policy,formula:'score = 新增覆盖权重 Σwⱼ / 相对成本（实际 optimizationTrace）',picks};
 }
 
 // ── ④ 四类盲区归因决策路径：真实盲点复核 ──

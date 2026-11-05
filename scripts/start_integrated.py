@@ -29,7 +29,7 @@ def main():
                     if json.load(r).get('ok'):break
             except OSError:time.sleep(.1)
         else:raise SystemExit('Python模型服务未能就绪。')
-        print('浏览器打开 http://127.0.0.1:5173 ，点击“我的光电／声学”。Ctrl+C 停止两个服务。',flush=True)
+        print('浏览器打开 http://127.0.0.1:5173 ，点击“装备建模”选择光电或声学设备。Ctrl+C 停止两个服务。',flush=True)
         web=subprocess.Popen([node,str(vite),'--host','127.0.0.1','--port','5173','--strictPort'],cwd=ROOT)
         while api.poll() is None and web.poll() is None:time.sleep(.3)
     except KeyboardInterrupt:

@@ -1,18 +1,18 @@
-这是老师UAV平台的光电／声学本地接入版。
+这是UAV平台的装备建模统一接入版。
 
 一、当前本机演示地址：http://127.0.0.1:5173/
-打开后点击顶部“我的光电／声学”，选择设备，在真实地图上选点或拖动球。
+打开后点击顶部“装备建模”，选择光电或声学，在真实地图上选点或拖动球。
 保存两个场景后，可导出JSON与中文HTML对比报告。
 
 二、下次使用
-首次安装请查看 docs/student-capabilities-integration.md 的Windows命令。
-安装完成后双击“启动光电声学平台.cmd”。两个服务窗口运行期间才能计算。
+首次安装请查看 docs/equipment-unification.md 的Windows命令。
+安装完成后双击“启动装备建模平台.cmd”。页面与Python服务运行期间才能计算。
 设备配置位于equipment_models目录，两套原模型分别保留。
 
 三、交给老师查看
-artifacts/student-platform-report.html 是本次真实页面导出的离线结果，双击即可查看。
-docs/integration_validation.md 记录测试与来源。
+artifacts/equipment-unified/report.html 是浏览器验证导出的离线结果，双击即可查看。
+docs/equipment-unification.md 说明使用方法、计算边界及验证。
 
 默认仅用比赛资料做基础判断，不输入现场天气和噪声。
-缺少光学视场、声源声级或测角精度等资料时显示未知，不伪造实际设备能力。
+中文结果只展示实际可用指标，完整JSON保留数据状态。自定义视场为显式场景假设，不伪造实际设备能力。
 原桌面“低空/光电”和“低空/声学”没有修改；GitHub仓库尚未推送。

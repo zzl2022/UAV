@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildRadialRoute,buildThreatRoutes,simulateThreat,threatSummaryText} from '../src/task3/threats.js';
-import {THREAT_SCENARIOS} from '../src/task3/constants.js';
+import {buildRadialRoute,buildThreatRoutes,normalizeThreatConfig,simulateThreat,threatSummaryText} from '../src/task3/threats.js';
+import {DEFAULT_THREAT_CONFIGS,THREAT_CONFIG_LIMITS,THREAT_SCENARIOS} from '../src/task3/constants.js';
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../src/sensors/presets.js';
 import {createModel} from '../src/model.js';
 import {createSceneQuery} from '../src/sensors/scene.js';
@@ -33,6 +33,53 @@ test('radial route skips DEM gaps and throws when nothing valid remains',()=>{
  assert.ok(r.skipped>0);assert.ok(r.points.length>2);
  const voidQuery={...flatQuery,groundAt:()=>null,surfaceAt:()=>null};
  assert.throws(()=>buildRadialRoute(voidQuery,bounds,{azimuthDeg:0,aglM:45,speedMps:15,id:'void'}));
+});
+
+test('default threat configs are serializable and normalization fixes simultaneous semantics',()=>{
+ assert.deepEqual(JSON.parse(JSON.stringify(DEFAULT_THREAT_CONFIGS)),DEFAULT_THREAT_CONFIGS);
+ assert.deepEqual(Object.fromEntries(Object.entries(DEFAULT_THREAT_CONFIGS).map(([key,c])=>[key,c.count])),{single:8,multi:4,swarm:42});
+ for(const [key,config] of Object.entries(DEFAULT_THREAT_CONFIGS)){
+  const normalized=normalizeThreatConfig(key,config);
+  assert.deepEqual(normalized,config);assert.notEqual(normalized.azimuthsDeg,config.azimuthsDeg);assert.notEqual(normalized.aglM,config.aglM);
+  assert.deepEqual(JSON.parse(JSON.stringify(normalized)),normalized);
+  const implicit=normalizeThreatConfig(key);assert.deepEqual(implicit,config);assert.notEqual(implicit.azimuthsDeg,config.azimuthsDeg);
+ }
+ assert.equal(normalizeThreatConfig('single',{...DEFAULT_THREAT_CONFIGS.single,simultaneous:true}).simultaneous,false);
+ assert.equal(normalizeThreatConfig('multi',{...DEFAULT_THREAT_CONFIGS.multi,simultaneous:false}).simultaneous,true);
+ assert.equal(normalizeThreatConfig('swarm',{...DEFAULT_THREAT_CONFIGS.swarm,simultaneous:false}).simultaneous,true);
+});
+
+test('threat config validation rejects unsafe counts, directions, angles, heights and speeds',()=>{
+ const valid={count:4,directions:2,azimuthsDeg:[0,180],aglM:[30,60],speedMps:15};
+ const invalid=[null,[],
+  {...valid,count:0},{...valid,count:129},{...valid,count:1.5},{...valid,count:'4'},
+  {...valid,directions:0},{...valid,directions:17},{...valid,directions:5},{...valid,directions:2.5},
+  {...valid,azimuthsDeg:[0]},{...valid,azimuthsDeg:[-1,180]},{...valid,azimuthsDeg:[0,360]},{...valid,azimuthsDeg:[0,Infinity]},{...valid,azimuthsDeg:[0,'180']},
+  {...valid,aglM:[]},{...valid,aglM:[0]},{...valid,aglM:[-30]},{...valid,aglM:[Infinity]},{...valid,aglM:[THREAT_CONFIG_LIMITS.maxAglM+1]},
+  {...valid,speedMps:0},{...valid,speedMps:-15},{...valid,speedMps:Infinity},{...valid,speedMps:THREAT_CONFIG_LIMITS.maxSpeedMps+1},{...valid,speedMps:'15'},
+ ];
+ for(const config of invalid)assert.throws(()=>normalizeThreatConfig('single',config));
+ assert.throws(()=>normalizeThreatConfig('nope',valid));
+ const upper=normalizeThreatConfig('single',{count:128,directions:16,azimuthsDeg:Array(16).fill(359.9),aglM:[THREAT_CONFIG_LIMITS.maxAglM],speedMps:THREAT_CONFIG_LIMITS.maxSpeedMps});
+ assert.equal(upper.count,128);assert.equal(upper.directions,16);
+ assert.equal(normalizeThreatConfig('single',{...valid,azimuthsDeg:[-0,180]}).azimuthsDeg[0],0);
+});
+
+test('custom threat configs distribute remainder, cycle heights and reproduce routes',()=>{
+ const config={count:5,directions:2,azimuthsDeg:[30,210],aglM:[30,50,80],speedMps:22};
+ const routes=buildThreatRoutes(flatQuery,bounds,'single',config);
+ assert.equal(routes.length,5);assert.deepEqual(routes.map(r=>r.id),['single-1-1','single-1-2','single-1-3','single-2-1','single-2-2']);
+ assert.deepEqual(routes.map(r=>r.azimuthDeg),[30,30,30,210,210]);
+ assert.deepEqual(routes.map(r=>r.points[0].position[1]),[30,50,80,50,80]);
+ assert.ok(routes.every(r=>r.speed===22&&r.startDelayS===0));
+ assert.deepEqual(buildThreatRoutes(flatQuery,bounds,'single',config),routes,'相同输入必须生成完全相同的航路');
+ const multi=buildThreatRoutes(flatQuery,bounds,'multi',config);assert.equal(multi.length,5);assert.ok(multi.every(r=>r.startDelayS===0));
+ const swarm=buildThreatRoutes(flatQuery,bounds,'swarm',config);assert.equal(swarm.length,5);
+ for(const [d,count] of [[1,3],[2,2]]){
+  const group=swarm.filter(r=>r.id.startsWith(`swarm-${d}-`));assert.equal(group.length,count);
+  assert.deepEqual(group.map(r=>r.startDelayS),Array.from({length:count},(_,k)=>k*2));
+  assert.equal(new Set(group.map(r=>r.points[0].position.map(v=>v.toFixed(6)).join(','))).size,count,'自定义蜂群仍须横向铺开');
+ }
 });
 
 test('threat scenarios build the required route counts, offsets and delays',()=>{

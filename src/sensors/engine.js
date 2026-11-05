@@ -4,6 +4,23 @@ export const MODEL_VERSION='sensors-1.0';
 const DEG=Math.PI/180;
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const log=x=>Math.log10(Math.max(x,1e-12));
+function validateCapabilityOptions(value,type){
+ if(value==null)return;
+ if(typeof value!=='object'||Array.isArray(value))throw Error('设备评估设置必须为对象');
+ const number=(key,min,max)=>{if(key in value)validateNumber(value[key],{min,max,unit:''},key);};
+ const pair=(key,min,max)=>{if(!(key in value))return;if(!Array.isArray(value[key])||value[key].length!==2)throw Error(key+' 需要两个数值');for(const v of value[key])validateNumber(v,{min,max,unit:''},key);};
+ if(type==='optical'){
+  if('channel'in value&&!['visible','thermal'].includes(value.channel))throw Error('光电通道无效');
+  number('focal_mm',.001,10000);pair('custom_fov_deg',.001,179.999);
+  if('use_custom_fov'in value&&typeof value.use_custom_fov!=='boolean')throw Error('视场试算开关无效');
+ }else if(type==='acoustic'){
+  if('array_diameter_m'in value&&![.3,.7,1.1].includes(value.array_diameter_m))throw Error('阵列规格无效');
+ }else if(type==='target'){
+  number('width_m',.001,100);number('height_m',.001,100);pair('band_hz',1,100000);
+  if(value.band_hz&&value.band_hz[0]>=value.band_hz[1])throw Error('目标频带上下限顺序无效');
+  if('check_band'in value&&typeof value.check_band!=='boolean')throw Error('频带核对开关无效');
+ }
+}
 export function powerSumDb(levels){const max=Math.max(...levels);return max+10*log(levels.reduce((sum,x)=>sum+10**((x-max)/10),0));}
 export function validateNumber(value,field,name){if(typeof value!=='number'||!Number.isFinite(value)||value<field.min||value>field.max)throw Error(`${name} 必须在 ${field.min}–${field.max} ${field.unit} 范围内`);}
 function validateFields(values,fields){for(const [key,field] of Object.entries(fields)){validateNumber(values?.[key],field,field.label);if(['capacity','imageWidth','imageHeight','thermalWidth','thermalHeight','rfStations','count'].includes(key)&&!Number.isInteger(values[key]))throw Error(`${field.label} 必须为整数`);}}
@@ -11,6 +28,7 @@ export function validatePosition(p){if(!Array.isArray(p)||p.length!==3||p.some((
 export function validateDevice(device){
  const preset=PRESETS.find(p=>p.id===device?.presetId);
  if(!preset||device.type!==preset.type)throw Error('装备类型或预设无效');
+ validateCapabilityOptions(device.capability,device.type);
  if(typeof device.name!=='string'||!device.name.length||device.name.length>120)throw Error('装备名称无效');
  if(typeof device.id!=='string'||!device.id.length||device.id.length>64)throw Error('装备 ID 无效');
  validateFields(device.parameters,fieldsFor(device.type));validatePosition(device.position);
@@ -21,7 +39,7 @@ export function validateDevice(device){
  if(device.type==='acoustic'&&p.minSoundDb>=p.maxSoundDb)throw Error('输入声压上下限顺序无效');
  if(device.type==='optical'&&p.narrowHfov>p.wideHfov)throw Error('窄视场不能大于宽视场');
 }
-export function validateTarget(target){if(target?.fhss!==undefined&&typeof target.fhss!=='boolean')throw Error('Invalid physics pulses or FHSS flag');validatePosition(target?.position);validateFields(target,TARGET_FIELDS);if(typeof target.emitting!=='boolean'||!['wide','narrow','thermal'].includes(target.opticalMode))throw Error('目标发射状态或光电模式无效');validateNumber(target.acousticFrequencyHz,{min:20,max:20000,unit:'Hz'},'目标声频');}
+export function validateTarget(target){validateCapabilityOptions(target?.capability,'target');if(target?.fhss!==undefined&&typeof target.fhss!=='boolean')throw Error('Invalid physics pulses or FHSS flag');validatePosition(target?.position);validateFields(target,TARGET_FIELDS);if(typeof target.emitting!=='boolean'||!['wide','narrow','thermal'].includes(target.opticalMode))throw Error('目标发射状态或光电模式无效');validateNumber(target.acousticFrequencyHz,{min:20,max:20000,unit:'Hz'},'目标声频');}
 export function validateEnvironment(env){validateFields(env,ENV_FIELDS);}
 export function angles(from,to){const [x,y,z]=to.map((v,i)=>v-from[i]);return {distance:Math.hypot(x,y,z),horizontal:Math.hypot(x,z),azimuth:(Math.atan2(x,-z)/DEG+360)%360,elevation:Math.atan2(y,Math.hypot(x,z))/DEG};}
 export function angularDifference(a,b){return ((a-b+540)%360)-180;}
@@ -153,5 +171,7 @@ export function validateScenario(value,origin){
  if(!Array.isArray(value.origin)||value.origin.length!==3||value.origin.some((x,i)=>!Number.isFinite(x)||Math.abs(x-origin[i])>1e-7))throw Error('方案坐标原点与当前城市不一致');
  const ids=new Set();for(const device of value.devices){validateDevice(device);if(ids.has(device.id))throw Error('装备 ID 重复');ids.add(device.id);}
  validateTarget(value.target);validateEnvironment(value.environment);
- return structuredClone({modelVersion:MODEL_VERSION,origin:value.origin,devices:value.devices,target:value.target,environment:value.environment});
+ if(value.assessmentMode!==undefined&&!['dataset','simulation'].includes(value.assessmentMode))throw Error('评估方式无效');
+ return structuredClone({modelVersion:MODEL_VERSION,origin:value.origin,devices:value.devices,target:value.target,environment:value.environment,
+  ...(value.assessmentMode!==undefined?{assessmentMode:value.assessmentMode}:{})});
 }

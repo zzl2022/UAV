@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {deviceSpectrum,emcAnalysis,emcVerdictText} from '../src/task3/emc.js';
-import {EMC_RULES} from '../src/task3/constants.js';
+import {deviceSpectrum,distance3D,emcAnalysis,emcVerdictText} from '../src/task3/emc.js';
+import {EMC_RULES,EQUIPMENT_CHANNELS_GHZ} from '../src/task3/constants.js';
+import {remediateEmcConflicts} from '../src/task3/pipeline.js';
 import {emcCheck} from '../src/planning/optimizer.js';
 import {createDevice} from '../src/sensors/presets.js';
 
@@ -36,14 +37,16 @@ test('adjacent-channel pair degrades without fail or penalty',()=>{
  assert.equal(result.conflicts[0].severity,'warning');assert.equal(result.verdict,'degraded');
  assert.equal(result.penalties.a,0);assert.equal(result.penalties.b,0);
 });
-test('receiver-overlap: retuned radar emission falls inside discrete receive band',()=>{
+test('receiver-overlap: only a near transmitter-receiver pair fails; distant band overlap does not',()=>{
  const radar=createDevice('radar-02c','tx',[0,100,0]);radar.parameters.frequencyGHz=5.8;
- const rx=createDevice('radio-x1c','rx',[1000,100,0]);
- const result=emcAnalysis([radar,rx]);
+ const near=createDevice('radio-x1c','rx',[100,120,0]);
+ const result=emcAnalysis([radar,near]);
  assert.deepEqual(result.conflicts.map(c=>c.kind),['receiver-overlap']);
  const conflict=result.conflicts[0];
  assert.equal(conflict.severity,'fail');assert.equal(conflict.a,'tx');assert.equal(conflict.b,'rx');assert.equal(conflict.detailGHz,5.8);
- assert.equal(result.verdict,'fail');
+ assert.equal(conflict.distanceM,Math.hypot(100,20));assert.equal(result.verdict,'fail');
+ const far=createDevice('radio-x1c','far',[1000,100,0]),distant=emcAnalysis([radar,far]);
+ assert.equal(distant.counts.fail,0);assert.equal(distant.conflicts.length,0);
 });
 test('frontend-block: high-power radar within 50 m of passive receiver warns',()=>{
  const radar=createDevice('radar-03d','tx',[0,100,0]),rx=createDevice('radio-tdoa','rx',[30,100,0]);
@@ -70,6 +73,48 @@ test('conflict-free deployment passes',()=>{
  const result=emcAnalysis([a,b,c]);
  assert.equal(result.verdict,'pass');assert.equal(result.conflicts.length,0);
  assert.ok(emcVerdictText(result).includes('通过'));
+});
+test('3D distance: non-colocated and sub-metre conflicts retain full precision',()=>{
+ const a=createDevice('radar-03d','a',[0,100,0]),b=createDevice('radar-03d','b',[30,140,40]);
+ assert.equal(distance3D(a,b),Math.hypot(30,40,40));
+ const conflict=emcAnalysis([a,b]).conflicts.find(c=>c.kind==='co-channel');
+ assert.equal(conflict.distanceM,Math.hypot(30,40,40));assert.equal(conflict.coLocated,false);
+ b.position=[0.3,100,0.4];const close=emcAnalysis([a,b]).conflicts.find(c=>c.kind==='co-channel');
+ assert.equal(close.distanceM,0.5);assert.equal(close.coLocated,false);
+ b.position=[0,100,0];const same=emcAnalysis([a,b]);
+ assert.ok(same.conflicts.every(c=>c.distanceM===0&&c.coLocated));
+ assert.equal(same.penalties.a,6);assert.equal(same.penalties.b,6,'同一共址设备对不得重复罚同频损耗');
+});
+test('passive radio and optical/acoustic devices do not create RF conflicts',()=>{
+ const radio=createDevice('radio-tdoa','r',[0,100,0]),optical=createDevice('optical-nvt','o',[0,100,0]),acoustic=createDevice('acoustic-cry','s',[1,100,0]);
+ const result=emcAnalysis([radio,optical,acoustic]);
+ assert.equal(result.verdict,'pass');assert.equal(result.conflicts.length,0);
+});
+test('remediation retunes within existing model channels before moving',()=>{
+ const a=createDevice('radar-03d','a',[0,100,0]),b=createDevice('radar-03d','b',[0,100,0]);
+ a.parameters.frequencyGHz=b.parameters.frequencyGHz=16;
+ const result=remediateEmcConflicts({devices:[a,b]});
+ assert.equal(result.status,'resolved');assert.equal(result.after.counts.fail,0);assert.equal(result.actions.length,1);assert.equal(result.actions[0].action,'retune');
+ for(const d of result.devices)assert.ok(EQUIPMENT_CHANNELS_GHZ[d.presetId].includes(d.parameters.frequencyGHz));
+ assert.deepEqual(result.devices.map(d=>d.position),[a.position,b.position]);
+});
+function channelConflictCandidates(withAlternative){
+ const channels=EQUIPMENT_CHANNELS_GHZ['radar-03d'],frequencies=[...channels,channels[0]];
+ const devices=frequencies.map((f,i)=>{const d=createDevice('radar-03d',`r${i}`,[0,100,0]);d.parameters.frequencyGHz=f;return d;});
+ const sites=devices.map((d,i)=>({id:`s${i}`,position:[...d.position],installationProxy:1}));
+ const candidates=devices.map((device,i)=>({device:structuredClone(device),site:structuredClone(sites[i]),cover:[]}));
+ if(withAlternative){const device=createDevice('radar-03d','moved',[700,100,0]);device.parameters.frequencyGHz=channels[0];const site={id:'alternative',position:[...device.position],installationProxy:1};candidates.push({device,site,cover:[]});}
+ return {devices,sites,candidates,indices:[0,1,2,3,4]};
+}
+test('remediation moves to an existing nearby candidate when four channels cannot separate five co-located radars',()=>{
+ const input=channelConflictCandidates(true),result=remediateEmcConflicts(input);
+ assert.equal(result.before.counts.fail,1);assert.equal(result.status,'resolved');assert.equal(result.after.counts.fail,0);
+ assert.equal(result.actions.length,1);assert.equal(result.actions[0].action,'relocate');assert.equal(result.actions[0].after.siteId,'alternative');
+ assert.ok(result.devices.some(d=>d.id==='moved'&&d.position[0]===700));
+});
+test('remediation keeps an explicit unresolved state when no legal action can remove fail',()=>{
+ const input=channelConflictCandidates(false),result=remediateEmcConflicts({...input,candidates:[]});
+ assert.equal(result.status,'unresolved');assert.equal(result.deployable,false);assert.ok(result.after.counts.fail>0);assert.ok(result.unresolved.length>0);assert.match(result.reason,/人工/);
 });
 test('shipped example plan: structure complete and co-channel penalties match planning emcCheck',()=>{
  const report=JSON.parse(readFileSync(new URL('../public/deployment-example.json',import.meta.url)));
