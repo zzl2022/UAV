@@ -1,0 +1,118 @@
+import {chromium} from 'playwright-core';
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{
+ await mkdir('artifacts/workspace',{recursive:true});
+ const page=await browser.newPage({viewport:{width:1515,height:980}}),errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(process.env.APP_URL||'http://127.0.0.1:5191');
+ await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:120000});
+ const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const centered=async selector=>{
+  const box=await page.locator(selector).boundingBox(),size=page.viewportSize();
+  assert.ok(Math.abs(box.x+box.width/2-size.width/2)<2,selector+' centered horizontally');
+  assert.ok(Math.abs(box.y+box.height/2-size.height/2)<2,selector+' centered vertically');
+  assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=size.width+1&&box.y+box.height<=size.height+1,selector+' inside viewport');
+ };
+ const insideViewport=async selector=>{const box=await page.locator(selector).boundingBox(),size=page.viewportSize();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=size.width+1&&box.y+box.height<=size.height+1,selector+' inside viewport');};
+ const dragTo=async(selector,headerSelector,x,y)=>{
+  const before=await page.locator(selector).boundingBox(),header=await page.locator(headerSelector).boundingBox();
+  const start={x:header.x+Math.min(100,header.width/3),y:header.y+header.height/2};
+  await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(start.x+x-before.x,start.y+y-before.y,{steps:8});await page.mouse.up();
+  const after=await page.locator(selector).boundingBox();assert.ok(Math.abs(after.x-x)<2&&Math.abs(after.y-y)<2,`${selector} dragged across the whole desktop`);return after;
+ };
+ const resizeSE=async(selector,handleSelector,dx=50,dy=30)=>{
+  const before=await page.locator(selector).boundingBox(),handle=await page.locator(handleSelector).boundingBox();
+  const hit=await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.outerHTML,{x:handle.x+handle.width/2,y:handle.y+handle.height/2});
+  await page.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2);await page.mouse.down();await page.mouse.move(handle.x+handle.width/2+dx,handle.y+handle.height/2+dy,{steps:5});await page.mouse.up();
+  const after=await page.locator(selector).boundingBox();assert.ok(after.width>before.width&&after.height>before.height,`${selector} resizable: ${JSON.stringify({before,handle,hit,after})}`);return after;
+ };
+ const exerciseMainWindow=async id=>{
+  await dragTo(`#${id}-window`,`#${id}-window .window-bar`,120,110);
+  const resized=await resizeSE(`#${id}-window`,`#${id}-window [data-resize="se"]`);
+  await page.locator(`#${id}-window-minimize`).click();await page.locator(`#${id}-window-minimize`).click();
+  const restored=await page.locator(`#${id}-window`).boundingBox();assert.ok(Math.abs(restored.x-resized.x)<2&&Math.abs(restored.y-resized.y)<2&&Math.abs(restored.width-resized.width)<2&&Math.abs(restored.height-resized.height)<2,`${id} restores dragged rectangle`);
+ };
+ assert.equal(await page.locator('main header').count(),0);
+ assert.equal(await page.locator('aside').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #toggle-task3').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar button').filter({hasText:'优化推演'}).count(),1);
+ assert.equal(await page.locator('.workspace-launchers > button').count(),3);
+ assert.equal(await page.locator('#workspace-sidebar #toggle-planning').count(),0);
+ assert.equal(await page.locator('#deployment-panels #task3-panel').count(),0);
+ assert.equal(await page.locator('#task3-window').isVisible(),false,'初始不得自动打开任务三');
+ assert.equal(await page.locator('#task3-window #task3-panel').isVisible(),false);
+ assert.equal(await page.locator('#toggle-task3').getAttribute('aria-pressed'),'false');
+ await frame();await page.screenshot({path:'artifacts/workspace/desktop.png'});
+ const mapBefore=await page.locator('#viewport').boundingBox();
+ await page.locator('#open-city-model').click();await centered('#city-window');
+ assert.equal(await page.locator('#city-window #buildings').count(),1);
+ assert.equal(await page.locator('#city-window #museum-focus').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #buildings').count(),0);
+ assert.deepEqual(await page.locator('#viewport').boundingBox(),mapBefore);
+ for(const id of ['buildings','terrain','imagery']){await page.locator(`#${id}`).uncheck();await page.locator(`#${id}`).check();}
+ await page.screenshot({path:'artifacts/workspace/city-window.png'});
+ await page.locator('#city-inspect').click();
+ assert.ok(await page.locator('#city-window').evaluate(el=>el.classList.contains('is-minimized')));
+ await page.locator('#city-window-minimize').click();await centered('#city-window');await exerciseMainWindow('city');
+ await page.keyboard.press('Escape');assert.equal(await page.locator('#city-window').isVisible(),false);
+ await page.locator('#toggle-task3').click();await centered('#task3-window');
+ assert.equal(await page.locator('#task3-window #task3-panel').isVisible(),true);
+ assert.equal(await page.locator('#toggle-task3').getAttribute('aria-pressed'),'true');
+ assert.equal(await page.evaluate(()=>document.querySelector('#app').dataset.activeView),'task3');
+ await page.locator('#task3-window-minimize').click();assert.ok(await page.locator('#task3-window').evaluate(el=>el.classList.contains('is-minimized')));
+ assert.equal(await page.locator('#task3-window-minimize').getAttribute('aria-expanded'),'false');
+ await page.locator('#task3-window-minimize').click();await centered('#task3-window');await exerciseMainWindow('task3');
+ assert.equal(await page.locator('#task3-window-minimize').getAttribute('aria-expanded'),'true');
+ await page.locator('#open-city-model').click();assert.equal(await page.locator('#task3-window').isVisible(),false);assert.equal(await page.locator('#city-window').isVisible(),true);
+ assert.equal(await page.locator('#toggle-task3').getAttribute('aria-pressed'),'false');
+ await page.locator('#toggle-task3').click();assert.equal(await page.locator('#city-window').isVisible(),false);assert.equal(await page.locator('#task3-window').isVisible(),true);
+ await page.keyboard.press('Escape');assert.equal(await page.locator('#task3-window').isVisible(),false);
+ await page.locator('#toggle-task3').click();
+ assert.equal(await page.locator('#task3-open-simulation').count(),0);assert.equal(await page.locator('#task3-open-flight').count(),1);assert.equal(await page.locator('#task3-open-alarms').count(),1);
+ await page.locator('#task3-open-flight').click();
+ assert.equal(await page.locator('#task3-window-simulation #planning-panel').isVisible(),true);
+ assert.equal(await page.locator('#planning-optimize').count(),0);assert.equal(await page.locator('#planning-plan').count(),0);assert.equal(await page.locator('#planning-cost-radar').count(),0);
+ assert.equal(await page.evaluate(()=>document.querySelector('#task3-floating-layer').parentElement.id),'app');
+ assert.equal(await page.locator('#task3-floating-layer').evaluate(el=>getComputedStyle(el).position),'fixed');
+ await dragTo('#task3-window-simulation','#task3-window-simulation .task3-floating-header',110,135);
+ await resizeSE('#task3-window-simulation','#task3-window-simulation [data-resize="se"]',35,20);
+ await page.locator('#task3-window-simulation .task3-floating-close').click();await page.locator('#task3-window-minimize').click();
+ await page.locator('#task3-open-alarms').click();assert.equal(await page.locator('#task3-window-simulation').isVisible(),true);assert.equal(await page.locator('#task3-open-alarms').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#task3-open-flight').getAttribute('aria-expanded'),'false');
+ await page.locator('#task3-window-simulation .task3-floating-close').click();
+ await page.locator('#toggle-sensors').click();
+ await page.waitForFunction(()=>window.equipmentCapabilityDiagnostics?.results?.length===2,null,{timeout:30000});
+ await centered('#equipment-window');await exerciseMainWindow('equipment');
+ assert.equal(await page.locator('#equipment-window #equipment-panel').count(),1);
+ assert.equal(await page.locator('#workspace-sidebar #equipment-panel').count(),0);
+ assert.equal(await page.locator('#planning-panel').isVisible(),false);
+ assert.equal(await page.locator('#task3-window-simulation').isVisible(),false);
+ assert.equal(await page.locator('#flight-hud').isVisible(),false);
+ assert.equal(await page.locator('#equipment-manager').isVisible(),true);
+ assert.equal(await page.locator('.equipment-type-tab [role=tab]').count(),6);
+ await page.locator('#equipment-tab-optical').click();
+ await page.waitForFunction(()=>window.equipmentManagerDiagnostics?.type==='optical'&&window.equipmentCapabilityDiagnostics?.results?.length===2);
+ await page.screenshot({path:'artifacts/workspace/equipment-window.png'});
+ await page.locator('#equipment-window-minimize').click();
+ assert.ok(await page.locator('#equipment-window').evaluate(el=>el.classList.contains('is-minimized')));
+ await page.locator('#equipment-window-minimize').click();
+ await page.locator('#equipment-back').click();
+ assert.equal(await page.locator('#equipment-window').isVisible(),false);
+ assert.equal(await page.evaluate(()=>document.querySelector('#app').dataset.activeView),'task3');
+ assert.equal(await page.locator('#flight-hud').isVisible(),false);
+ await page.locator('#toggle-task3').click();
+ assert.equal(await page.locator('#task3-window').isVisible(),true);assert.equal(await page.locator('#planning-panel').isVisible(),false);
+ await page.setViewportSize({width:390,height:844});await frame();await insideViewport('#task3-window');
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.screenshot({path:'artifacts/workspace/mobile.png'});
+ await page.locator('#task3-window-close').click();
+ for(const [button,dialog,close] of [['#open-city-model','#city-window','#city-window-close'],['#toggle-sensors','#equipment-window','#equipment-back']]){
+  await page.locator(button).click();await insideViewport(dialog);
+  await page.screenshot({path:`artifacts/workspace/mobile-${dialog.slice(1)}.png`});
+  await page.locator(close).click();
+ }
+ assert.deepEqual(errors,[]);
+ console.log('PASS: three main windows and task3 child window drag across sidebar/map, resize, restore; unified flight entries and mobile layout.');
+}finally{await browser.close();}

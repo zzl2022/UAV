@@ -1,0 +1,10 @@
+# 所有系数为假设值，独立于设备真实参数，不能解释成识别概率或经验证的传播模型。
+schema_version: 1
+channels:
+  visible:
+    illumination_reference: {value: 100, unit: lux, status: assumed, source: 演示归一化照度不是最低照度}
+    fog_coefficient: {value: 3.912, unit: '1', status: assumed, source: 经验可见度形式的示例系数未对设备标定}
+    rain_coefficient: {value: 0.02, unit: h/mm/km, status: assumed, source: 演示经验系数}
+  thermal:
+    fog_coefficient: {value: 1.5, unit: '1', status: assumed, source: 演示假设不代表热红外真实传播模型}
+    rain_coefficient: {value: 0.01, unit: h/mm/km, status: assumed, source: 演示经验系数}

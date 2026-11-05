@@ -1,0 +1,5450 @@
+{
+  "warning": "合成声源/噪声/假设环境系数；未标定，不是实测探测概率、定位精度或声场仿真",
+  "assumed_angles_enabled": false,
+  "configuration_files": {
+    "device": "C:\\Users\\72665\\Desktop\\声学\\config\\acoustic_sensor.yaml",
+    "environment": "C:\\Users\\72665\\Desktop\\声学\\config\\acoustic_environment.yaml",
+    "scenarios": "C:\\Users\\72665\\Desktop\\声学\\config\\acoustic_demo.yaml"
+  },
+  "official_buildings_file": null,
+  "scene_audit": null,
+  "scenarios": [
+    {
+      "scenario": "quiet_clear",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 53.78040008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": 13.780400086720377,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 1.0,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "farther_clear",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              400,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 400.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 52.04119982655925,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.399,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 47.55980017344075,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": 7.559800173440749,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 0.8779900086720375,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "traffic",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "traffic",
+                "level_db": 60,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端交通噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "traffic",
+              "level_db": 60,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端交通噪声"
+            }
+          ],
+          "total_level": {
+            "value": 60.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 53.78040008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": -6.219599913279623,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 0.18902000433601884,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "mixed_city_noise",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "traffic",
+                "level_db": 60,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成交通"
+              },
+              {
+                "name": "construction",
+                "level_db": 60,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成施工"
+              },
+              {
+                "name": "speech",
+                "level_db": 55,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成人声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "traffic",
+              "level_db": 60,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成交通"
+            },
+            {
+              "name": "construction",
+              "level_db": 60,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成施工"
+            },
+            {
+              "name": "speech",
+              "level_db": 55,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成人声"
+            }
+          ],
+          "total_level": {
+            "value": 63.64781263458074,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 53.78040008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": -9.867412547860361,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 0.006629372606981931,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "wind_rain",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 5,
+            "rain_mm_h": 10,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            },
+            {
+              "name": "model_wind",
+              "level_db": 53.979400086720375,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              }
+            },
+            {
+              "name": "model_rain",
+              "level_db": 50.0,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              }
+            }
+          ],
+          "total_level": {
+            "value": 55.56302500767287,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.6965,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 53.08390008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": -2.4791249209524935,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 0.3760437539523753,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "building_screen",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "blocked",
+            "blocked": true,
+            "unit": "boolean",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "blockers": [
+              {
+                "id": "synthetic_screen",
+                "status": "assumed",
+                "source": "synthetic test building",
+                "segment_fraction": [
+                  0.4,
+                  0.5
+                ]
+              }
+            ],
+            "unknown_height_candidates": [],
+            "checked_buildings": [
+              {
+                "id": "synthetic_screen",
+                "status": "assumed",
+                "source": "synthetic test building"
+              }
+            ],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.013492642181562452,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 0.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.026985284363124903,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 1,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 12,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 41.78040008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": 1.7804000867203769,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 0.5890200043360189,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "narrow_corridor",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.7405041465528005,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 10.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 1.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 2,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": 53.78040008672038,
+          "unit": "dB_SPL",
+          "status": "uncalibrated",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": 13.780400086720377,
+          "unit": "dB",
+          "status": "uncalibrated",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": 1.0,
+          "unit": "1",
+          "status": "uncalibrated",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "relative_only",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "missing_building_height",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": 100,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "unknown",
+            "blocked": null,
+            "unit": "boolean",
+            "status": "missing",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [
+              "unknown_screen"
+            ],
+            "checked_buildings": [
+              {
+                "id": "unknown_screen",
+                "status": "missing",
+                "source": "synthetic missing height fixture"
+              }
+            ],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": false,
+          "density": {
+            "value": 0.013492642181562452,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 0.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.026985284363124903,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 1,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": null,
+            "unit": "dB",
+            "status": "missing",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": null,
+          "unit": "dB_SPL",
+          "status": "missing",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": null,
+          "unit": "dB",
+          "status": "missing",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "insufficient_data",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    },
+    {
+      "scenario": "missing_source_level",
+      "result": {
+        "device": "CRY8500 series",
+        "coordinate_frame": "local_m",
+        "inputs": {
+          "sensor": {
+            "position": [
+              0,
+              0,
+              5
+            ],
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成传感器位置"
+          },
+          "target": {
+            "position": [
+              0,
+              200,
+              5
+            ],
+            "reference_level_db": null,
+            "reference_distance_m": 1,
+            "band_hz": [
+              500,
+              2000
+            ],
+            "weighting": "Z",
+            "frame": "local_m",
+            "vertical_datum": "synthetic local z",
+            "status": "assumed",
+            "source": "合成单频带声源在1m处100dB_SPL，不代表真实无人机"
+          },
+          "conditions": {
+            "noise": [
+              {
+                "name": "background",
+                "level_db": 40,
+                "band_hz": [
+                  500,
+                  2000
+                ],
+                "weighting": "Z",
+                "status": "assumed",
+                "source": "合成接收端背景噪声"
+              }
+            ],
+            "wind_speed_m_s": 0,
+            "rain_mm_h": 0,
+            "temperature_c": 20,
+            "status": "assumed",
+            "source": "合成场景气象",
+            "generate_weather_noise": true
+          }
+        },
+        "configuration": {
+          "device": {
+            "schema_version": 1,
+            "device": "CRY8500 series",
+            "source_document": "装备参数.doc / 四、声学 / CRY8500系列声像派声学相机",
+            "parameters": {
+              "nominal_range": {
+                "value": [
+                  0.01,
+                  500
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文有效探测距离，目标声级与环境条件未给出"
+              },
+              "array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+              },
+              "frequency_range": {
+                "value": [
+                  20,
+                  20000
+                ],
+                "unit": "Hz",
+                "status": "provided",
+                "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+              },
+              "frequency_array_diameter": {
+                "value": 1.1,
+                "unit": "m",
+                "status": "provided",
+                "source": "原文频率范围仅明确关联110cm阵列"
+              },
+              "azimuth_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给方位测角精度及统计定义"
+              },
+              "elevation_error": {
+                "value": null,
+                "unit": "deg",
+                "status": "missing",
+                "source": "原文未给俯仰测角精度及统计定义"
+              },
+              "sensitivity": {
+                "value": null,
+                "unit": "dBV/Pa",
+                "status": "missing",
+                "source": "原文未给出灵敏度"
+              },
+              "self_noise": {
+                "value": null,
+                "unit": "dB_SPL",
+                "status": "missing",
+                "source": "原文未给自噪声及频带"
+              },
+              "temperature_range": {
+                "value": null,
+                "unit": "degC",
+                "status": "missing",
+                "source": "原文未给工作温度范围"
+              }
+            },
+            "reported_claims": {
+              "microphone_count": {
+                "value": 208,
+                "unit": "count",
+                "status": "provided",
+                "source": "原文208个MEMS麦克风"
+              },
+              "array_options": {
+                "value": [
+                  0.3,
+                  0.7,
+                  1.1
+                ],
+                "unit": "m",
+                "status": "provided",
+                "source": "原文30/70/110cm模块阵型"
+              },
+              "spl_range": {
+                "value": [
+                  28,
+                  132
+                ],
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文声压级范围，计权和参考声压未说明"
+              },
+              "maximum_dynamic_range": {
+                "value": 40,
+                "unit": "dB",
+                "status": "provided",
+                "source": "原文最高可达40dB，不是自噪声"
+              },
+              "stated_field_of_view": {
+                "value": [
+                  94,
+                  76
+                ],
+                "unit": "deg",
+                "status": "provided",
+                "source": "原文视场角，未确认为声学波束覆盖范围，不用于声学判定"
+              },
+              "battery_life": {
+                "value": 8,
+                "unit": "h",
+                "status": "provided",
+                "source": "原文续航"
+              },
+              "screen_size": {
+                "value": 8,
+                "unit": "inch",
+                "status": "provided",
+                "source": "原文8英寸触摸屏"
+              },
+              "mass_30cm": {
+                "value": 2.9,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文30cm阵列"
+              },
+              "maximum_mass_110cm": {
+                "value": 3.8,
+                "unit": "kg",
+                "status": "provided",
+                "source": "原文110cm阵列最大重量"
+              },
+              "frequency_response_claim": "符合1级精度要求，原文未给标准编号"
+            },
+            "demo_overrides": {
+              "azimuth_error": {
+                "value": 2,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              },
+              "elevation_error": {
+                "value": 3,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "演示方向误差尺度，不是设备精度或标准差"
+              }
+            }
+          },
+          "environment": {
+            "schema_version": 1,
+            "parameters": {
+              "distance_limits": {
+                "value": [
+                  1,
+                  5000
+                ],
+                "unit": "m",
+                "status": "assumed",
+                "source": "区域自由场示例适用范围，不是设备探测范围"
+              },
+              "neighborhood_radius": {
+                "value": 30,
+                "unit": "m",
+                "status": "assumed",
+                "source": "视线路径两侧建筑统计缓冲宽度"
+              },
+              "air_loss": {
+                "value": 0.001,
+                "unit": "dB/m",
+                "status": "assumed",
+                "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+              },
+              "wind_loss": {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              "rain_loss": {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              },
+              "wind_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1m/s风速下合成频带噪声，Z计权，参考20uPa"
+              },
+              "rain_noise_reference": {
+                "value": 40,
+                "unit": "dB_SPL",
+                "status": "assumed",
+                "source": "接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa"
+              },
+              "screening_loss": {
+                "value": 12,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+              },
+              "snr_zero": {
+                "value": -10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化下界，不是实际检测阈值"
+              },
+              "snr_full": {
+                "value": 10,
+                "unit": "dB",
+                "status": "assumed",
+                "source": "相对信号质量归一化上界，不是实际检测阈值"
+              },
+              "noise_angle": {
+                "value": 0.3,
+                "unit": "deg/dB",
+                "status": "assumed",
+                "source": "低信噪差附加方向不确定性尺度，无统计分布保证"
+              },
+              "multipath_angle": {
+                "value": 6,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "建筑密度及截线空隙代理量的方向不确定性系数"
+              },
+              "screening_angle": {
+                "value": 4,
+                "unit": "deg",
+                "status": "assumed",
+                "source": "直达路径被挡后的方向不确定性增量示例"
+              }
+            }
+          }
+        },
+        "distance": {
+          "value": 200.0,
+          "unit": "m",
+          "status": "assumed",
+          "source": "Euclidean separation of supplied coordinates"
+        },
+        "geometric_direction": {
+          "azimuth": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, grid north=0 clockwise"
+          },
+          "elevation": {
+            "value": 0.0,
+            "unit": "deg",
+            "status": "derived",
+            "source": "known input geometry, upward positive"
+          }
+        },
+        "nominal_range": {
+          "value": [
+            0.01,
+            500
+          ],
+          "unit": "m",
+          "status": "provided",
+          "source": "原文有效探测距离，目标声级与环境条件未给出"
+        },
+        "within_nominal_range": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              0.01,
+              500
+            ],
+            "unit": "m",
+            "status": "provided",
+            "source": "原文有效探测距离，目标声级与环境条件未给出"
+          },
+          "reason": "comparison with a reference claim only; not detection verdict"
+        },
+        "frequency_supported": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": [
+            {
+              "value": [
+                20,
+                20000
+              ],
+              "unit": "Hz",
+              "status": "provided",
+              "source": "原文20-20kHz（110cm阵列），解释为20Hz至20kHz"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "本配置选择原文110cm阵列，非所有阵型共用频带"
+            },
+            {
+              "value": 1.1,
+              "unit": "m",
+              "status": "provided",
+              "source": "原文频率范围仅明确关联110cm阵列"
+            }
+          ]
+        },
+        "temperature_supported": {
+          "value": null,
+          "unit": "boolean",
+          "status": "missing",
+          "source": {
+            "value": null,
+            "unit": "degC",
+            "status": "missing",
+            "source": "原文未给工作温度范围"
+          }
+        },
+        "within_model_distance_scope": {
+          "value": true,
+          "unit": "boolean",
+          "status": "derived",
+          "source": {
+            "value": [
+              1,
+              5000
+            ],
+            "unit": "m",
+            "status": "assumed",
+            "source": "区域自由场示例适用范围，不是设备探测范围"
+          }
+        },
+        "building_environment": {
+          "direct_path": {
+            "state": "clear",
+            "blocked": false,
+            "unit": "boolean",
+            "status": "derived",
+            "source": "explicit synthetic scene",
+            "blockers": [],
+            "unknown_height_candidates": [],
+            "checked_buildings": [],
+            "vertical_datum": "scene caller-defined shared datum",
+            "scope": "opaque closed prisms only; touching boundaries blocks; no terrain/vegetation occlusion"
+          },
+          "height_complete_for_path": true,
+          "density": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "union footprint area / buffered horizontal path area"
+          },
+          "cross_section_free_width": {
+            "value": 60.0,
+            "unit": "m",
+            "status": "assumed",
+            "source": "explicit synthetic scene",
+            "definition": "free interval through midpoint on perpendicular cut; capped at 2*radius; not surveyed street width"
+          },
+          "multipath_proxy": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "uncalibrated",
+            "source": "min(1,density*(1+confinement)); no actual reflected ray"
+          },
+          "candidate_count": 0,
+          "neighborhood_radius_m": 30,
+          "scope": "loaded footprints only; 2D statistics ignore height/material; boundary clipping and missing buildings can bias them"
+        },
+        "noise": {
+          "components": [
+            {
+              "name": "background",
+              "level_db": 40,
+              "band_hz": [
+                500,
+                2000
+              ],
+              "weighting": "Z",
+              "status": "assumed",
+              "source": "合成接收端背景噪声"
+            }
+          ],
+          "total_level": {
+            "value": 40.0,
+            "unit": "dB_SPL",
+            "status": "uncalibrated",
+            "source": "10*log10(sum(10**(Li/10))); uncorrelated receiver contributions; matching band/Z/20uPa/time interval required"
+          },
+          "scope": "environmental pressure noise only; excludes unknown microphone/electronic self-noise; do not double count measured weather"
+        },
+        "losses": {
+          "spreading": {
+            "value": 46.020599913279625,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": "20*log10(d/reference_distance), point-source spherical spreading"
+          },
+          "air": {
+            "value": 0.199,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 0.001,
+              "unit": "dB/m",
+              "status": "assumed",
+              "source": "单频带示例，不是ISO9613或真实大气吸收系数"
+            }
+          },
+          "weather": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": [
+              {
+                "value": 0.0005,
+                "unit": "dB/m/(m/s)",
+                "status": "assumed",
+                "source": "风速相关附加损失示例，不模拟风向折射"
+              },
+              {
+                "value": 0.0001,
+                "unit": "dB/m/(mm/h)",
+                "status": "assumed",
+                "source": "雨强相关附加损失示例"
+              }
+            ]
+          },
+          "screening": {
+            "value": 0.0,
+            "unit": "dB",
+            "status": "uncalibrated",
+            "source": {
+              "value": 12,
+              "unit": "dB",
+              "status": "assumed",
+              "source": "已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声"
+            },
+            "reason": "aggregate screen/diffraction proxy, not ray-traced path loss"
+          }
+        },
+        "estimated_received_level": {
+          "value": null,
+          "unit": "dB_SPL",
+          "status": "missing",
+          "source": "reference source SPL minus explicit model losses; no measured signal"
+        },
+        "signal_noise_difference": {
+          "value": null,
+          "unit": "dB",
+          "status": "missing",
+          "source": "estimated band signal SPL minus combined environmental noise; not detector SNR"
+        },
+        "relative_signal_quality": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "clipped linear normalization of signal_noise_difference",
+          "state": "insufficient_data",
+          "probability": false
+        },
+        "direction_uncertainty": {
+          "azimuth_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给方位测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "azimuth_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "elevation_scale": {
+            "value": null,
+            "unit": "deg",
+            "status": "missing",
+            "source": {
+              "value": null,
+              "unit": "deg",
+              "status": "missing",
+              "source": "原文未给俯仰测角精度及统计定义"
+            },
+            "reason": "base + noise penalty + multipath proxy penalty + screening penalty; not RMSE, confidence interval or actual direction estimate",
+            "state": "missing"
+          },
+          "elevation_transverse_scale": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "range*tan(angular scale); illustrative displacement only, not position accuracy"
+          },
+          "range_error": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "no time-of-flight, source-power calibration or ranging estimator"
+          },
+          "estimated_target_position": {
+            "value": null,
+            "unit": "m",
+            "status": "missing",
+            "source": "known input coordinates are not an acoustic localization result"
+          }
+        },
+        "detection_probability": {
+          "value": null,
+          "unit": "1",
+          "status": "missing",
+          "source": "no labelled detection calibration data"
+        },
+        "estimated_effective_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "single link quality cannot infer a site-wide detection boundary"
+        },
+        "measured_detection_range": {
+          "value": null,
+          "unit": "m",
+          "status": "missing",
+          "source": "no device field measurements"
+        },
+        "scope": "stationary single-band point-source approximation; unknown direct-path height stays unknown; blocked path can retain finite sound; no waveform, beamforming, refraction, coherent reflection, trajectory or deployment optimization"
+      }
+    }
+  ]
+}

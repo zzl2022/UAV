@@ -1,0 +1,27 @@
+schema_version: 1
+device: CRY8500 series
+source_document: 装备参数.doc / 四、声学 / CRY8500系列声像派声学相机
+parameters:
+  nominal_range: {value: [0.01, 500], unit: m, status: provided, source: 原文有效探测距离，目标声级与环境条件未给出}
+  array_diameter: {value: 1.1, unit: m, status: provided, source: 本配置选择原文110cm阵列，非所有阵型共用频带}
+  frequency_range: {value: [20, 20000], unit: Hz, status: provided, source: '原文20-20kHz（110cm阵列），解释为20Hz至20kHz'}
+  frequency_array_diameter: {value: 1.1, unit: m, status: provided, source: 原文频率范围仅明确关联110cm阵列}
+  azimuth_error: {value: null, unit: deg, status: missing, source: 原文未给方位测角精度及统计定义}
+  elevation_error: {value: null, unit: deg, status: missing, source: 原文未给俯仰测角精度及统计定义}
+  sensitivity: {value: null, unit: dBV/Pa, status: missing, source: 原文未给出灵敏度}
+  self_noise: {value: null, unit: dB_SPL, status: missing, source: 原文未给自噪声及频带}
+  temperature_range: {value: null, unit: degC, status: missing, source: 原文未给工作温度范围}
+reported_claims:
+  microphone_count: {value: 208, unit: count, status: provided, source: 原文208个MEMS麦克风}
+  array_options: {value: [0.3, 0.7, 1.1], unit: m, status: provided, source: 原文30/70/110cm模块阵型}
+  spl_range: {value: [28, 132], unit: dB, status: provided, source: 原文声压级范围，计权和参考声压未说明}
+  maximum_dynamic_range: {value: 40, unit: dB, status: provided, source: 原文最高可达40dB，不是自噪声}
+  stated_field_of_view: {value: [94, 76], unit: deg, status: provided, source: 原文视场角，未确认为声学波束覆盖范围，不用于声学判定}
+  battery_life: {value: 8, unit: h, status: provided, source: 原文续航}
+  screen_size: {value: 8, unit: inch, status: provided, source: 原文8英寸触摸屏}
+  mass_30cm: {value: 2.9, unit: kg, status: provided, source: 原文30cm阵列}
+  maximum_mass_110cm: {value: 3.8, unit: kg, status: provided, source: 原文110cm阵列最大重量}
+  frequency_response_claim: 符合1级精度要求，原文未给标准编号
+demo_overrides:
+  azimuth_error: {value: 2, unit: deg, status: assumed, source: 演示方向误差尺度，不是设备精度或标准差}
+  elevation_error: {value: 3, unit: deg, status: assumed, source: 演示方向误差尺度，不是设备精度或标准差}

@@ -1,0 +1,49 @@
+# provided = 主办方参考文件明确提供，非本工程实测。
+# missing = 资料缺失；assumed = 可修改示例值；calibrated = 用户另行标定。
+schema_version: 1
+device: NVT-951
+source_document: 装备参数.doc / 三、光电 / NVT-951
+mechanical:
+  yaw_range: {value: [0, 360], unit: deg, status: provided, source: 装备参数.doc 云台水平范围}
+  pitch_range: {value: [-90, 90], unit: deg, status: provided, source: 装备参数.doc 云台俯仰范围}
+  temperature_range: {value: [-35, 60], unit: degC, status: provided, source: 装备参数.doc 工作温度}
+channels:
+  visible:
+    resolution: {value: [1920, 1080], unit: px, status: provided, source: 装备参数.doc 可见光}
+    focal_range: {value: [6.5, 312], unit: mm, status: provided, source: 装备参数.doc 可见光}
+    sensor_size: {value: null, unit: mm, status: missing, source: 原文未给出有效传感器宽高}
+    direct_fov: {value: null, unit: deg, status: missing, source: 原文未给出光学水平与垂直视场角}
+    minimum_illuminance: {value: null, unit: lux, status: missing, source: 原文未给出}
+    recognition_pixels: {value: null, unit: px, status: missing, source: 待标定目标关键尺寸像素判据}
+    effective_range: {value: null, unit: m, status: missing, source: 原文未给出有效识别距离}
+  thermal:
+    resolution: {value: [640, 512], unit: px, status: provided, source: 装备参数.doc 热成像}
+    focal_range: {value: [75, 75], unit: mm, status: provided, source: 装备参数.doc 热成像定焦}
+    sensor_size: {value: null, unit: mm, status: missing, source: 原文未给出像元间距或有效传感器宽高}
+    direct_fov: {value: null, unit: deg, status: missing, source: 原文未给出}
+    minimum_illuminance: {value: null, unit: lux, status: missing, source: 热成像通道不采用可见光照度阈值}
+    recognition_pixels: {value: null, unit: px, status: missing, source: 待标定}
+    effective_range: {value: null, unit: m, status: missing, source: 原文未给出}
+reported_claims:
+  optical_zoom: {value: 48, unit: ratio, status: provided, source: 装备参数.doc 可见光}
+  tracking_distance: {value: 50, unit: m, status: provided, source: 装备参数.doc 系统跟踪的测试条件不是最大识别距离}
+  tracking_tangential_speed: {value: 15, unit: m/s, status: provided, source: 装备参数.doc 50m距离下的跟踪条件}
+  recognizable_uav_min_size: {value: 0.35, unit: m, status: provided, source: 装备参数.doc 可识别≥35cm无人机但未提供距离及环境}
+  maximum_power: {value: 60, unit: W, status: provided, source: 装备参数.doc ≤60W}
+  maximum_mass: {value: 8, unit: kg, status: provided, source: 装备参数.doc ≤8kg}
+  dimensions_wdh: {value: [345, 190, 245], unit: mm, status: provided, source: 装备参数.doc}
+  supply_ac: {value: 220, unit: V, status: provided, source: 装备参数.doc}
+  supply_dc_range: {value: [24, 36], unit: V, status: provided, source: 装备参数.doc}
+  thermal_type: 非制冷热成像
+  protection: IP66
+  guidance_inputs: [5G-A, 雷达, TDOA, RID]
+  classification_claim: 无人机/飞机/鸟等自动识别（本模块不实现图像分类网络）
+  standard_features: [角度偏转, 内舱温湿度/压力监测, 温控, 雨刷]
+demo_overrides:
+  # 只在示例 --assumed-optics 下显式应用。不是 NVT-951 真实参数。
+  visible:
+    sensor_size: {value: [6.4, 3.6], unit: mm, status: assumed, source: 合成验证示例值不是设备实测}
+    recognition_pixels: {value: 12, unit: px, status: assumed, source: 合成验证像素阈值无真实精度保证}
+  thermal:
+    sensor_size: {value: [10.88, 8.704], unit: mm, status: assumed, source: 合成验证示例值不是设备实测}
+    recognition_pixels: {value: 6, unit: px, status: assumed, source: 合成验证像素阈值}

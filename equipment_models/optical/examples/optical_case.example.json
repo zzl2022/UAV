@@ -1,0 +1,30 @@
+{
+  "pose": {
+    "position": [0, 0, 5],
+    "yaw_deg": 0,
+    "pitch_deg": 0,
+    "roll_deg": 0,
+    "frame": "local_m"
+  },
+  "target": {
+    "position": [0, 200, 5],
+    "width_m": 0.35,
+    "height_m": 0.35,
+    "frame": "local_m",
+    "source": "synthetic example target",
+    "status": "assumed"
+  },
+  "conditions": {
+    "period": "day",
+    "illuminance_lux": 1000,
+    "visibility_m": null,
+    "rain_mm_h": 0,
+    "visible_contrast": 0.8,
+    "thermal_contrast": 0.7,
+    "temperature_c": 20,
+    "source": "synthetic example weather and contrast",
+    "status": "assumed"
+  },
+  "focal_mm": {"visible": 50, "thermal": 75},
+  "scene": {"kind": "synthetic_empty"}
+}
