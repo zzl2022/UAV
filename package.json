@@ -8,6 +8,7 @@
     "dev:integrated": "python scripts/start_integrated.py",
     "test:student:browser": "node scripts/equipment_manager_browser_smoke.js",
     "test:equipment:browser": "node scripts/equipment_manager_browser_smoke.js",
+    "test:equipment:demo:browser": "node scripts/equipment_demo_browser_smoke.js",
     "test:equipment:catalog:browser": "node scripts/equipment_catalog_browser_smoke.js",
     "test:workspace:browser": "node scripts/workspace_browser_smoke.js",
     "build": "vite build",
