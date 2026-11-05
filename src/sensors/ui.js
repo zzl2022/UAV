@@ -139,8 +139,11 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
  }
  function focus(){if(!selected())return;const p=new THREE.Vector3(...selected().position),t=new THREE.Vector3(...state.target.position),center=p.clone().add(t).multiplyScalar(0.5),span=Math.max(200,p.distanceTo(t)*1.5);controls.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(span*.65,span*.65,span*.85));controls.update();updateMarkerScreens();}
  function show(){
-workspace.activateView('sensors');if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model,{reflections:true});}
-  workspace.showWindow('equipment');manager.refresh();layer.visible=true;compute();focus();
+  workspace.activateView('sensors');workspace.showWindow('equipment');manager.refresh();
+  layer.visible=!sceneControls.hidden;
+  if(sceneControls.hidden){heat.hide();hideProbe();return;}
+  if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model,{reflections:true});}
+  compute();focus();
  }
  toggle.onclick=show;
  $('equipment-device').onchange=()=>{selectedId=$('equipment-device').value;renderForm();compute();};
@@ -171,7 +174,7 @@ workspace.activateView('sensors');if(!query){message('正在建立建筑/地形�
  viewport.parentElement.append(hud);
  const probeMarker=new THREE.Mesh(new THREE.SphereGeometry(5,8,6),new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false}));probeMarker.visible=false;probeMarker.renderOrder=11;scene.add(probeMarker);
  let heatQuery;
- const heat=mountHeatmap({panel,scene,model,getState:()=>state,getSelected:()=>selectedId,isActive:()=>!panel.hidden&&valid&&!['optical','acoustic'].includes(selected()?.type),
+ const heat=mountHeatmap({panel,scene,model,getState:()=>state,getSelected:()=>selectedId,isActive:()=>!sceneControls.hidden&&!panel.hidden&&valid&&!['optical','acoustic'].includes(selected()?.type),
   getQuery:reflections=>reflections?query:(heatQuery??=createSceneQuery(model)),
   onNominalChange:visible=>{for(const child of layer.children)if(child.userData.kind==='nominal-range-shade')child.visible=visible;},onProbeChange:refreshProbe});
  heat.setOverview((region,heights,oblique)=>{
@@ -278,21 +281,13 @@ const demoQueries={};
  const scenarioListeners=new Set(),getScenario=()=>structuredClone(state);
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
  const publishScenario=()=>{publishConfiguration();const snapshot=getScenario();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
- let cityTargetPick=false;
  const cityConditions=mountCityConditions({panel:app.querySelector('#city-panel'),getState:()=>state,
   onEnvironment:value=>{state.environment=structuredClone(value);capabilities.invalidate();publishScenario();},
   onTarget:value=>{state.target=structuredClone(value);capabilities.invalidate();publishScenario();},
-  onPickTarget:()=>{cityTargetPick=true;workspace.minimizeWindow('city');},
  });
  publishConfiguration();
  app.querySelector('#open-city-model').addEventListener('click',()=>cityConditions.refresh());
- renderer.domElement.addEventListener('pointerup',event=>{
-  if(!cityTargetPick)return;
-  if(!app.querySelector('#city-window').open){cityTargetPick=false;return;}
-  if(!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
-  const hit=surfaceAt(event.clientX,event.clientY);if(!hit)return;
-  event.stopImmediatePropagation();cityTargetPick=false;const position=hit.point.toArray();position[1]+=50;cityConditions.setTargetPosition(position);workspace.restoreWindow('city');
- },true);
+
  app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
 return {panel,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario,getScenarioSnapshot:getScenario,getEquipmentSnapshot:manager.getSnapshot,subscribeEquipmentChanges:manager.subscribe,subscribeScenarioChanges(listener){scenarioListeners.add(listener);return()=>scenarioListeners.delete(listener);},applyScenario(value){demo.stop();state=validateScenario(value,city.metadata.origin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();show();}};
 }

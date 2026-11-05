@@ -53,7 +53,7 @@ try{
  await page.locator('#city-tab-environment').click();
  const stations=await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rfStations);
  await page.locator('#city-environment-rainMmH').fill('12');
- await page.locator('#city-environment-page .city-settings-nav').getByRole('button',{name:'声环境',exact:true}).click();await page.locator('#city-environment-trafficDb').fill('52');
+ await page.locator('#city-environment-page .city-settings-nav').getByRole('button',{name:'噪声环境',exact:true}).click();await page.locator('#city-environment-trafficDb').fill('52');
  await page.locator('#city-environment-apply').click();
  const environment=await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment);assert.equal(environment.rainMmH,12);assert.equal(environment.trafficDb,52);assert.equal(environment.rfStations,stations);
  assert.equal(await page.locator('#city-environment-rfStations').count(),0);
@@ -62,15 +62,20 @@ try{
  await page.locator('#city-target-page .city-settings-nav').getByRole('button',{name:'无线电',exact:true}).click();await page.locator('#city-target-emitting').uncheck();await page.locator('#city-target-fhss').check();await page.locator('#city-target-apply').click();
  const target=await page.evaluate(()=>window.sceneConfigurationDiagnostics.target);assert.equal(target.count,3);assert.equal(target.emitting,false);assert.equal(target.fhss,true);
  await page.screenshot({path:'artifacts/equipment-manager/target.png'});
- // Target map picking edits the draft, then Apply updates the shared target.
- await page.locator('#city-tab-scene').click();await page.locator('#museum-focus').click();await page.locator('#city-tab-target').click();await page.locator('#city-target-page .city-settings-nav').getByRole('button',{name:'位置',exact:true}).click();
- await page.locator('#city-target-pick').click();const viewport=await page.locator('#viewport').boundingBox();
- for(const [x,y] of [[.5,.5],[.6,.55],[.45,.6],[.65,.65]]){
-  await page.mouse.click(viewport.x+viewport.width*x,viewport.y+viewport.height*y);
-  if(!await page.locator('#city-window').evaluate(node=>node.classList.contains('is-minimized')))break;
- }
- assert.equal(await page.locator('#city-window').evaluate(node=>node.classList.contains('is-minimized')),false);
- const x=Number(await page.locator('#city-target-east').inputValue());await page.locator('#city-target-apply').click();assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position[0]),x);
+ assert.equal(await page.locator('#city-target-page .city-settings-nav').getByRole('button',{name:'位置',exact:true}).count(),0);
+ assert.equal(await page.locator('#city-target-pick').count(),0);
+ assert.deepEqual(await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position),target.position);
+ await page.locator('#city-tab-environment').click();
+ assert.equal(await page.locator('#city-tab-environment').innerText(),'环境情况');
+ assert.deepEqual(await page.locator('#city-environment-page .city-settings-nav button').allTextContents(),['气象环境','噪声环境','电磁环境','传播衰减']);
+ await page.locator('#city-environment-file').setInputFiles({name:'environment.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({environment:{rainMmH:9,trafficDb:46}}))});
+ await page.waitForFunction(()=>document.querySelector('#city-environment-message').textContent==='已导入，待应用');
+ assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rainMmH),12);
+ await page.locator('#city-environment-apply').click();
+ assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rainMmH),9);
+ await page.locator('#city-environment-file').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({rainMmH:-1}))});
+ await page.waitForFunction(()=>document.querySelector('#city-environment-message').textContent.startsWith('导入失败：'));
+ assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rainMmH),9);
  await page.locator('#city-window-close').click();await page.setViewportSize({width:390,height:844});await page.locator('#toggle-sensors').click();await page.locator('#equipment-tab-radar').click();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'artifacts/equipment-manager/mobile.png'});
  assert.ok(await page.locator('#equipment-profile-save').evaluate(node=>{const r=node.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'mobile save button remains reachable');
