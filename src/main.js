@@ -473,15 +473,17 @@ try {
     el('imagery').disabled=mode==='recon'?!imageryMaterial:!siteParts[mode]?.ground?.userData.textureMaterial;
   }
   function applyModeUI(next){
-    if(next==='recon'){el('count').textContent=city.metadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=city.metadata.maxHeight;}
+    // Restore the metadata before rendering the panel: switching back to recon
+    // used to read the previous site metadata because this assignment came later.
+    if(next==='recon')city.metadata=reconCityMetadata;
+    else if(siteMeta[next])city.metadata=siteAnalysisMetadata(siteMeta[next],SITES[next]);
+    if(next==='recon'){el('count').textContent=reconCityMetadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=reconCityMetadata.maxHeight;}
     else{const meta=siteMeta[next];el('count').textContent=(meta?.buildingCount??0).toLocaleString('zh-CN');el('height').textContent=meta?.maxHeight??'—';}
     for(const id of ['toggle-sensors','toggle-task3','toggle-deployment']){const button=el(id);if(button)button.disabled=false;}
     const museum=el('museum-focus');if(museum)museum.hidden=next!=='recon';
     landmarks?.setActive?.(next==='recon');
     setCoreForMode(next);
     applyModeLayers();
-    if(next==='recon'){city.metadata=reconCityMetadata;}
-    else if(siteMeta[next]){city.metadata=siteAnalysisMetadata(siteMeta[next],SITES[next]);}
     planning?.setScene?.(activeSiteDescriptor());
     task3?.setScene?.(activeSiteDescriptor());
   }

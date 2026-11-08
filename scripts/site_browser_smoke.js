@@ -38,6 +38,11 @@ try{
   await openSceneMenu(page,'scene');
   console.log(`${site}:`,model,'core:',core);
  }
+ // Switching back to the reconstructed Zhengzhou model must restore its own statistics.
+ await page.selectOption('#model-select','recon');
+ await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='recon'&&!document.querySelector('#model-select').disabled,null,{timeout:120000});
+ assert.equal(await page.locator('#count').innerText(),'15,889');
+ assert.equal(await page.locator('#height').innerText(),'136');
  assert.deepEqual(errors,[]);
  console.log('GBA site browser smoke passed:',await page.evaluate(()=>window.cityDiagnostics));
 }finally{await browser.close();}
