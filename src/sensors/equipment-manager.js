@@ -12,7 +12,7 @@ const icons={
  fivega:svg('<path d="m8 20 4-15 4 15M9.5 15h5M10.5 11h3M5 5a10 10 0 0 0 0 8M19 5a10 10 0 0 1 0 8"/><circle cx="12" cy="4" r="1"/>'),
  electrostatic:svg('<path d="m13 2-7 11h5l-1 9 8-13h-5zM3 5h3M4.5 3.5v3M18 19h3"/>'),
 };
-export function mountEquipmentManager(panel,{demo}={}){
+export function mountEquipmentManager(panel,{demo,onSelectionChange}={}){
  let storage;try{storage=localStorage;}catch{}
  const store=createCatalogStore(storage),drafts=new Map(store.getSnapshot().profiles.map(p=>[p.presetId,p]));
  const remembered=Object.fromEntries(order.map(type=>[type,CATALOG_MODELS.find(p=>p.type===type).id]));
@@ -46,6 +46,10 @@ export function mountEquipmentManager(panel,{demo}={}){
  <div class="equipment-editor"><nav class="equipment-group-nav" aria-label="参数分组"></nav><form id="equipment-profile-form" novalidate><div id="equipment-profile-fields"></div></form></div>
  <div class="equipment-editor-footer"><div><button type="button" id="equipment-profile-reset">恢复默认</button><button type="button" id="equipment-profile-import">导入</button><button type="button" id="equipment-profile-template">模板</button><input id="equipment-profile-file" type="file" accept=".json,application/json" hidden><button type="button" id="equipment-profile-export">导出</button></div><div><span id="equipment-profile-message" role="status"></span><button type="button" id="equipment-profile-save" class="primary">保存参数</button></div></div>`;
  panel.prepend(root);panel.classList.add('catalog-mode');
+ const demoDetails=document.createElement('button');
+ demoDetails.type='button';demoDetails.id='equipment-demo-details';demoDetails.className='equipment-demo-details';demoDetails.textContent='仿真详情';
+ demoDetails.onclick=()=>root.dispatchEvent(new CustomEvent('equipment-demo-details',{bubbles:true}));
+ root.querySelector('.equipment-profile-heading').append(demoDetails);
  const $=id=>root.querySelector('#'+id),tabs=root.querySelector('.equipment-type-tabs'),nav=root.querySelector('.equipment-group-nav');
  const menu=document.createElement('div');menu.id='equipment-model-menu';menu.className='equipment-model-menu';menu.setAttribute('popover','manual');menu.setAttribute('role','menu');menu.hidden=true;document.body.append(menu);
  const profile=()=>drafts.get(presetId),dirty=()=>JSON.stringify(profile())!==JSON.stringify(store.get(presetId));
@@ -55,7 +59,7 @@ export function mountEquipmentManager(panel,{demo}={}){
   if(!menuType)return;try{if(menu.matches(':popover-open'))menu.hidePopover();}catch{}
   menu.hidden=true;menuType=null;menuTrigger?.setAttribute('aria-expanded','false');if(restore)menuTrigger?.focus();menuTrigger=null;
  }
-function choose(nextType,id=remembered[nextType]){savePending();const selectionChanged=remembered[nextType]!==id;closeMenu();demo?.stop();const inDemo=groupName==='演示';type=nextType;presetId=id;remembered[type]=id;persistSelection();groupName=inDemo?'演示':null;tell('');render();if(selectionChanged)publishSelection();}
+function choose(nextType,id=remembered[nextType]){savePending();const selectionChanged=remembered[nextType]!==id;closeMenu();demo?.stop();const inDemo=groupName==='设备仿真';type=nextType;presetId=id;remembered[type]=id;persistSelection();groupName=inDemo?'设备仿真':null;tell('');render();if(selectionChanged)publishSelection();onSelectionChange?.({type:nextType,presetId:id,selectionChanged});}
  function openMenu(nextType,trigger){
   if(menuType===nextType){closeMenu(true);return;}closeMenu();menuType=nextType;menuTrigger=trigger;menu.replaceChildren();
   const label=document.createElement('div');label.className='model-menu-title';label.textContent=`${CATALOG_TYPES[nextType]}型号`;menu.append(label);
@@ -94,12 +98,12 @@ function choose(nextType,id=remembered[nextType]){savePending();const selectionC
  document.querySelector('#equipment-window').addEventListener('close',()=>closeMenu());
  document.querySelector('#equipment-window-minimize').addEventListener('click',()=>closeMenu());
  function renderFields(){
-const {groups,advanced}=profileGroups(presetId),available=[...(demo?[{name:'演示',keys:[]}]:[]),...groups,...(advanced.length?[{name:'高级参数',keys:advanced}]:[])];
+const {groups,advanced}=profileGroups(presetId),available=[...groups,...(advanced.length?[{name:'高级参数',keys:advanced}]:[]),...(demo?[{name:'设备仿真',keys:[]}]:[])];
   if(!available.some(g=>g.name===groupName))groupName=groups[0].name;
-  root.dataset.demo=String(groupName==='演示');
-  nav.replaceChildren();for(const group of available){const button=document.createElement('button');button.type='button';button.textContent=group.name;if(group.name==='演示')button.className='equipment-demo-entry';button.setAttribute('aria-current',String(group.name===groupName));button.onclick=()=>{groupName=group.name;tell('');renderFields();status();};nav.append(button);}
+  root.dataset.demo=String(groupName==='设备仿真');
+  nav.replaceChildren();for(const group of available){const button=document.createElement('button');button.type='button';button.textContent=group.name;if(group.name==='设备仿真')button.className='equipment-demo-entry';button.setAttribute('aria-current',String(group.name===groupName));button.onclick=()=>{groupName=group.name;tell('');renderFields();status();};nav.append(button);}
   const box=$('equipment-profile-fields');box.replaceChildren();
-  if(groupName==='演示'){demo.mount(box,{getProfile:profile});return;}
+  if(groupName==='设备仿真'){demo.mount(box,{getProfile:profile});return;}
   const heading=document.createElement('h3');heading.textContent=groupName;box.append(heading);
   const selected=available.find(g=>g.name===groupName);
   const grid=document.createElement('div');grid.className='profile-field-grid';box.append(grid);const defs=catalogFields(presetId);
@@ -137,7 +141,7 @@ demo?.profileChanged();updateQualifier();tell('');status();scheduleSave();
   root.querySelector('.equipment-type-icon').innerHTML=icons[type];root.querySelector('.equipment-type-label').textContent=CATALOG_TYPES[type];$('equipment-model-name').textContent=profile().name;
   $('equipment-profile-form').setAttribute('aria-labelledby',`equipment-tab-${type}`);renderFields();status();
  }
-$('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='演示')demo?.start();else $('equipment-profile-save').click();};
+$('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='设备仿真')demo?.start();else $('equipment-profile-save').click();};
 $('equipment-profile-save').onclick=()=>{try{store.save(profile());persistSelection();tell('已保存');status();}catch(error){if(error.field){const {groups,advanced}=profileGroups(presetId);groupName=error.field==='name'?groups[0].name:groups.find(group=>group.keys.includes(error.field))?.name??(advanced.includes(error.field)?'高级参数':groupName);renderFields();const input=$(`profile-${error.field.replace('.','-')}`);input?.focus();}tell(error.message);const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();}};
 $('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile(presetId);if(catalogModel(presetId).basePresetId)next.name=profile().name;drafts.set(presetId,next);tell('');render();scheduleSave();};
  $('equipment-profile-import').onclick=()=>$('equipment-profile-file').click();
@@ -153,7 +157,7 @@ $('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile
  $('equipment-profile-export').onclick=()=>{
   try{const data=store.export(profile()),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`${presetId}-参数.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);tell('已导出');}catch(error){tell(error.message);}
  };
-demo?.setOpenSettings(()=>{groupName='演示';renderFields();status();});
+demo?.setOpenSettings(()=>{groupName='设备仿真';renderFields();status();});
 render();if(store.readError)tell('已恢复有效参数，部分不兼容型号使用默认值');
 return {refresh:()=>{closeMenu();render();},closeMenu,getSnapshot,subscribe(listener){const unsubscribe=store.subscribe(()=>listener(getSnapshot()));selectionListeners.add(listener);return()=>{unsubscribe();selectionListeners.delete(listener);};}};
 }

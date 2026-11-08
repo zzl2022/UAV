@@ -1,0 +1,13 @@
+# Windows batch launchers must stay CRLF so ZIP downloads work.
+*.bat -text
+*.cmd -text
+*.ps1 text eol=crlf
+
+# Binaries
+*.glb binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.tiff binary

@@ -17,7 +17,7 @@ export function validateReport(report,city){
    if(plan.metrics[c]?.covered!==covered||Math.abs(plan.metrics[c].coverageRate-covered/n)>1e-10)throw Error('覆盖率与采样结果不一致');
   }
  }
- if(!report.route?.points?.length||!report.flight?.frames?.length)throw Error('缺少已验证的飞行轨迹与警报帧');
+ if(!report.route?.points?.length||!report.flight?.frames?.length)throw Error('缺少已验证的飞行轨迹与报警帧');
  let previous=-1;for(const point of report.route.points){validatePosition(point.position);if(!Number.isFinite(point.time)||point.time<previous)throw Error('轨迹时间无效');previous=point.time;}
  if(Math.abs(report.route.duration-previous)>1e-6)throw Error('轨迹时长不一致');
  return report;

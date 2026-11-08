@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    116.3691,
+    39.855,
+    116.746,
+    39.9535
+  ],
+  "zoom": 15,
+  "tileRange": [
+    26976,
+    12410,
+    27010,
+    12422
+  ],
+  "tileCount": 455,
+  "image": "railway-imagery.jpg",
+  "width": 4096,
+  "height": 1395,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

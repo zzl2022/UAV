@@ -29,7 +29,7 @@ export function mountHeatmap({panel,scene,model,getState,getSelected,isActive,ge
  document.querySelector('main').append(legend);
  legend.querySelector('#detection-colorbar').style.background=`linear-gradient(to right,${Array.from({length:64},(_,i)=>`rgb(${rampColor(i/63).map(v=>Math.round(v*255)).join(',')})`).join(',')})`;
  const group=new THREE.Group();group.name='Effective_Detection_Volume';group.visible=false;scene.add(group);
- const bounds=model.ground.geometry.boundingBox;
+ let sourceModel=model,bounds=model.ground.geometry.boundingBox;
  let volume=null,field=null,generation=0,timer,region=null,summary=null,worker=null,pending=null,overview=null,ranges={};
  const status=text=>{$('detection-progress').textContent=text;};
  const diagnostics=value=>{window.detectionDiagnostics=value;};
@@ -90,11 +90,11 @@ export function mountHeatmap({panel,scene,model,getState,getSelected,isActive,ge
  $('detection-metric').onchange=()=>configure(true);for(const id of ['detection-floor','detection-density','detection-clip'])$(id).oninput=()=>configure();for(const id of ['detection-style','detection-autoscale'])$(id).onchange=()=>configure();
  $('detection-refresh').onclick=schedule;$('detection-nominal').onchange=()=>onNominalChange($('detection-nominal').checked);
  $('detection-export').onclick=()=>{
-  if(!summary||!field)return;const payload={coordinateSystem:'Local ENU [east, up, -north], meters',origin:model.group.userData.origin,ecefTransform:model.group.userData.ecefTransform,visualization:summary,channels:['marginDb','snrDb','signalPd','mask'],indexing:'x + nx * (y + ny * z); values[index*4+channel]; winners[index*3+metric] for margin/SNR/Pd',mask:{0:'unknown',1:'signal',2:'hard-failure',3:'solid',4:'above-analysis-height'},values:Array.from(field.values),winners:Array.from(field.winners),meaning:'Model samples; Float32 scalar field. Interpolation preserves hard masks. Best single device per metric, not fused probabilities.'};
+  if(!summary||!field)return;const payload={coordinateSystem:'Local ENU [east, up, -north], meters',origin:sourceModel.group?.userData?.origin??null,ecefTransform:sourceModel.group?.userData?.ecefTransform??null,visualization:summary,channels:['marginDb','snrDb','signalPd','mask'],indexing:'x + nx * (y + ny * z); values[index*4+channel]; winners[index*3+metric] for margin/SNR/Pd',mask:{0:'unknown',1:'signal',2:'hard-failure',3:'solid',4:'above-analysis-height'},values:Array.from(field.values),winners:Array.from(field.winners),meaning:'Model samples; Float32 scalar field. Interpolation preserves hard masks. Best single device per metric, not fused probabilities.'};
   const url=URL.createObjectURL(new Blob([JSON.stringify(payload)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='detection-volume.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  };
  configure(true);
- return {schedule,hide,nominalVisible:()=>$('detection-nominal').checked,render:(renderer,scene,camera)=>volume?.render(renderer,scene,camera)??false,
+ return {schedule,hide,setModel(next){sourceModel=next;next.ground.geometry.computeBoundingBox?.();bounds=next.ground.geometry.boundingBox;invalidate();},nominalVisible:()=>$('detection-nominal').checked,render:(renderer,scene,camera)=>volume?.render(renderer,scene,camera)??false,
   setOverview(callback){overview=callback;$('detection-overview').onclick=()=>{if(summary)callback(region,[summary.height],false);};$('detection-oblique').onclick=()=>{if(summary)callback(region,[summary.height],true);};},
   probe(ray){if(!volume||!group.visible)return null;const hit=volume.probe(ray);if(!hit)return null;const i=hit.sample.index,channel={margin:0,snr:1,pd:2}[$('detection-metric').value],deviceId=field.deviceIds[field.winners[i*3+channel]],position=hit.point.toArray(),ground=getQuery(false).groundAt(position[0],position[2]);return {...hit,cell:{position,deviceId,height:ground===null?null:position[1]-ground,volume:true,interpolatedValue:hit.sample.value,metric:$('detection-metric').value}};}};
 }

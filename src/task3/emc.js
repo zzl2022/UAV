@@ -54,7 +54,7 @@ export function emcAnalysis(devices){
   }
   for(const [tx,rx,txs,rxs] of [[a,b,sa,sb],[b,a,sb,sa]]){
    const hit=hitReceiver(txs.emissionGHz,rxs);
-   // 只有明确的发射机→接收机关系且处于工程耦合距离内才判 fail；远距频段重叠不再无差别警报。
+   // 只有明确的发射机→接收机关系且处于工程耦合距离内才判 fail；远距频段重叠不再无差别报警。
    if(hit!==undefined&&distance<EMC_RULES.receiverOverlapMinDistanceM)
     conflicts.push(conflict(tx,rx,'receiver-overlap','fail',distance,{detailGHz:hit,recommendation:`接收机与带内发射源换频或拉距至 ≥${EMC_RULES.receiverOverlapMinDistanceM} m`}));
    if((txs.powerW??0)>=EMC_RULES.frontendBlockPowerW&&rx.type==='radio'&&distance<EMC_RULES.frontendBlockDistanceM)

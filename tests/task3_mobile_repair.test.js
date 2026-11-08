@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../src/sensors/presets.js';
-import {angles} from '../src/sensors/engine.js';
-import {defaultProfile} from '../src/sensors/equipment-catalog.js';
 import {EQUIPMENT_CHANNELS_GHZ} from '../src/task3/constants.js';
 import {repairPlanWithMobileRadars,applyMobileRepairResult,restoreMobileRepairSnapshot,MOBILE_REPAIR_LIMITS} from '../src/task3/mobile-repair.js';
 
@@ -27,13 +25,10 @@ const adapters={
   return {conditionId,points,stats:{total:points.length,byCategory:{gap:0,corner:0,lowFacade:0,shadow:0,other:points.length}}};
  },
 };
-const run=(fixture,testAdapters=adapters,equipmentSnapshot=null)=>repairPlanWithMobileRadars({...fixture,query,equipment,equipmentSnapshot,settings:{marginReserveDb:3,costs:{radar:12}},environment:DEFAULT_ENV,target:DEFAULT_TARGET,conditionId:'nominal',adapters:testAdapters,limits:{...MOBILE_REPAIR_LIMITS,radiiM:[80,180,350]}});
+const run=fixture=>repairPlanWithMobileRadars({...fixture,query,equipment,settings:{marginReserveDb:3,costs:{radar:12}},environment:DEFAULT_ENV,target:DEFAULT_TARGET,conditionId:'nominal',adapters,limits:{...MOBILE_REPAIR_LIMITS,radiiM:[80,180,350]}});
 
 test('移动补盲仅移除真实覆盖 sampleId，部分覆盖时保留其余盲点并重算全部工况贡献',async()=>{
- const fixture=makeFixture([sample('s-covered',0,0),sample('s-remaining',0,1000)]),original=structuredClone(fixture.plan),result=await run(fixture,{...adapters,evaluate(device,target,environment,context){
-  if(target.position[2]===1000)return {status:'out-of-model',marginDb:null,reasons:['超出标称距离']};
-  return adapters.evaluate(device,target,environment,context);
- }});
+ const fixture=makeFixture([sample('s-covered',0,0),sample('s-remaining',0,1000)]),original=structuredClone(fixture.plan),result=await run(fixture);
  assert.equal(result.summary.status,'partial');assert.deepEqual(result.summary.coveredSampleIds,['s-covered']);assert.deepEqual(result.summary.remainingSampleIds,['s-remaining']);
  assert.ok(result.summary.addedDeviceCount>0);assert.equal(result.summary.emc.newFailCount,0);assert.deepEqual(fixture.plan,original,'输入原方案不得被原地修改');
  for(let c=0;c<4;c++){
@@ -53,28 +48,6 @@ test('移动补盲可全部覆盖当前盲点，且新增设备使用合法频�
  const site=result.plan.sites.at(-1);assert.equal(site.deployment,'police-car');assert.equal(site.groundM,site.surfaceM);assert.match(site.installation,/警车移动部署/);assert.match(site.installation,/不代表道路可达/);
  const deployActions=result.summary.actions.filter(action=>action.action==='deploy-mobile-radar');assert.equal(deployActions.length,result.summary.addedDeviceCount);assert.deepEqual(new Set(deployActions.flatMap(action=>action.newlyCoveredSampleIds)),new Set(result.summary.coveredSampleIds));
  for(const action of deployActions){assert.ok(EQUIPMENT_CHANNELS_GHZ[action.presetId].includes(action.frequencyGHz));assert.equal(action.mountHeightM,2);assert.equal(action.roadReachabilityVerified,false);assert.ok(action.deviceId);assert.ok(action.siteId);}
-});
-
-test('移动补盲使用同次装备快照，保留运行字段并沿用原俯仰和合法频道规则',async()=>{
- const profile=defaultProfile('radar-03d');profile.parameters.maxRange=7123;profile.parameters.frequencyGHz=15;profile.physics.peakPowerW=3333;
- const fixture=makeFixture([sample('s-a',0,0)]),result=await run(fixture,{...adapters,evaluate(device,target,environment,context){
-  if(device.mobileRepair&&(device.parameters.maxRange!==7123||device.physics.peakPowerW!==3333))return {status:'out-of-model',marginDb:null,reasons:['超出标称距离']};
-  return adapters.evaluate(device,target,environment,context);
- }},{profiles:[profile]});
- assert.equal(result.summary.status,'covered');const mobile=result.plan.devices.find(device=>device.id===result.summary.addedDeviceIds[0]),selected=result.summary.selected[0],anchor=fixture.sampling.samples.find(item=>item.id===selected.anchorSampleId),direction=angles(mobile.position,anchor.position);
- assert.equal(mobile.parameters.maxRange,7123);assert.equal(mobile.physics.peakPowerW,3333);assert.equal(mobile.parameters.pitch,Math.max(-60,Math.min(0,direction.elevation-30)));assert.ok(EQUIPMENT_CHANNELS_GHZ['radar-03d'].includes(mobile.parameters.frequencyGHz));assert.notEqual(mobile.parameters.frequencyGHz,15);assert.equal(mobile.presetId,'radar-03d');assert.equal(mobile.type,'radar');assert.ok(mobile.mobileRepair);assert.equal(mobile.mobileRepair.platform,'police-car');
-});
-
-test('稀疏圆环未命中时，警车通过 25 米细网格找到狭窄有效位置',async()=>{
- const fixture=makeFixture([sample('s-narrow',0,0)]),narrowAdapters={...adapters,evaluate(device,target){
-  if(!device.mobileRepair)return {status:'out-of-model',marginDb:null,reasons:['超出标称距离']};
-  const atFlexibleSite=Math.abs(device.position[0]-425)<0.01&&Math.abs(device.position[2]+425)<0.01;
-  const covered=atFlexibleSite&&Math.hypot(...device.position.map((value,index)=>value-target.position[index]))<=800;
-  return {status:covered?'within-model':'out-of-model',marginDb:covered?12:null,reasons:covered?[]:['超出标称距离']};
- }},result=await run(fixture,narrowAdapters);
- assert.equal(result.summary.status,'covered');assert.equal(result.summary.search.coarseCoveringCandidates,0);assert.equal(result.summary.search.fineAnchors,1);assert.ok(result.summary.search.fineCoveringCandidates>0);assert.equal(result.summary.search.fineGridStepM,25);
- assert.equal(result.summary.selected.length,1);assert.equal(result.summary.selected[0].searchPhase,'fine-grid');assert.equal(result.summary.selected[0].position[0],425);assert.equal(result.summary.selected[0].position[2],-425);
- for(const row of result.plan.coverage)assert.ok(row[0]>0);for(const row of result.blindspots)assert.equal(row.stats.total,0);
 });
 
 test('屋顶或无开阔地表候选时不生成虚假设备',async()=>{

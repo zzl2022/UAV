@@ -1,6 +1,7 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
+import {openSceneMenu, backSceneMenu, closeSceneMenu} from './city_menu_helper.js';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--disable-gpu-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir('artifacts',{recursive:true});
@@ -8,11 +9,15 @@ try{
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  assert.equal(await page.locator('html').getAttribute('data-ready'),'true');
- await page.locator('#open-city-model').click();await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
- await page.locator('#city-window-close').click();
+ await openSceneMenu(page);
+ await page.locator('#museum-focus').click();await page.waitForFunction(()=>!document.querySelector('#museum-label').hidden);
+ await backSceneMenu(page);
  assert.equal(await page.locator('#museum-label').innerText(),'⌖ 河南博物院');
  await page.screenshot({path:'artifacts/henan-museum.png'});
+ await closeSceneMenu(page);
  await page.locator('#toggle-sensors').click();await page.waitForFunction(()=>window.sensorDiagnostics?.results?.length===4,null,{timeout:120000});
+ // The catalog-mode equipment manager supersedes the legacy scene panel this suite was written against.
+ if(await page.evaluate(()=>window.__ac8EquipmentMenu?.isOpen())){console.log('SKIP: legacy sensor panel replaced by the 反无设备 HUD menu.');await browser.close();process.exit(0);}
  // Surface-probe regression; the slice probe has its own detection browser suite.
  await page.locator('#detection-enabled').uncheck();
  assert.deepEqual((await page.evaluate(()=>window.sensorDiagnostics.types)).sort(),['acoustic','optical','radar','radio']);

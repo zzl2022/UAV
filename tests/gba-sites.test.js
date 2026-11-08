@@ -5,8 +5,12 @@ import {fileURLToPath} from 'node:url';
 const root=new URL('../',import.meta.url);
 const sitePath=fileURLToPath(new URL('public/data/sites/',root));
 const sites=[
+ {id:'beijing',dir:'../beijing/',base:'beijing-gba',imagery:'beijing-imagery',name:/故宫/},
  {id:'daxing',dir:'daxing/',base:'daxing-gba',imagery:'daxing-imagery',name:/大兴/},
+ {id:'hangzhou',dir:'hangzhou/',base:'hangzhou-gba',imagery:'hangzhou-imagery',name:/杭州|萧山/},
  {id:'nuclear',dir:'nuclear/',base:'nuclear-gba',imagery:'nuclear-imagery',name:/核/},
+ {id:'changjiang',dir:'changjiang/',base:'changjiang-gba',imagery:'changjiang-imagery',name:/昌江|核电/},
+ {id:'shenzhen',dir:'shenzhen/',base:'shenzhen-gba',imagery:'shenzhen-imagery',name:/深圳|交流/},
  {id:'railway',dir:'railway/',base:'railway-gba',imagery:'railway-imagery',name:/铁路/},
 ];
 for(const site of sites){
@@ -58,7 +62,7 @@ for(const site of sites){
    const gltf=JSON.parse(chunk.toString('utf8'));
    assert.equal(gltf.asset.version,'2.0');
    assert.equal(gltf.meshes.length,1);
-   assert.equal(gltf.accessors[0].count,meta.mesh.vertices);
+   const primitive=gltf.meshes[0].primitives[0];assert.equal(gltf.accessors[primitive.attributes.POSITION].count,meta.mesh.vertices);
   }finally{closeSync(fd);}
  });
 }

@@ -178,7 +178,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const threatConfigs=Object.fromEntries(['single','multi','swarm'].map(key=>[key,normalizeThreatConfig(key,rawThreatConfigs?.[key])]));
  settings={...settings,threatConfigs};
  validatePresetIds(presetIds);validateTarget(target);validateEnvironment(environment);
- const landmark=museumLandmark(city);if(!landmark)throw Error('缺少河南博物院核心区定位');
+ const landmark=museumLandmark(city);if(!landmark)throw Error('缺少当前场景核心建筑定位');
  const start=Date.now(),run=createRun({label:'task3-pipeline',settings:structuredClone(settings),weights,equipment:presetIds,environment,target,origin:city.metadata.origin,inputHashes:city.metadata.sources});
  // ① 候选方案生成（含采样与覆盖矩阵评估）
  progress({stage:'candidates',completed:0,total:1});

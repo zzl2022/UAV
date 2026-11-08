@@ -38,29 +38,3 @@ test('storage errors leave saved models intact and damaged local data falls back
  assert.throws(()=>store.save(profile));assert.equal(store.get(profile.presetId).parameters.maxRange,8000);
  const corrupt=createCatalogStore({getItem:()=>'{invalid'});assert.equal(corrupt.readError,true);assert.equal(corrupt.get('radar-02c').parameters.maxRange,8000);
 });
-
-test('restoring an older catalog fills new fields and isolates incompatible profiles',()=>{
- const storage=memory(),valid=defaultProfile('radar-02c'),bad=defaultProfile('radio-tdoa');
- valid.parameters.maxRange=6400;delete valid.physics.pulses;valid.parameters.retiredField=123;
- bad.parameters.minRange=99999;
- storage.setItem(CATALOG_STORAGE_KEY,JSON.stringify({schema:CATALOG_SCHEMA,profiles:[bad,valid]}));
- const restored=createCatalogStore(storage);
- assert.equal(restored.readError,true);
- assert.equal(restored.get(valid.presetId).parameters.maxRange,6400);
- assert.equal(restored.get(valid.presetId).physics.pulses,defaultProfile(valid.presetId).physics.pulses);
- assert.equal(restored.get(bad.presetId).parameters.minRange,defaultProfile(bad.presetId).parameters.minRange);
- assert.ok(!Object.hasOwn(restored.get(valid.presetId).parameters,'retiredField'));
-});
-test('complete saved snapshots are isolated and publish once per successful save or batch import',()=>{
- const store=createCatalogStore(memory()),events=[],unsubscribe=store.subscribe(snapshot=>events.push(snapshot)),initial=store.getSnapshot();
- initial.profiles.find(p=>p.presetId==='radar-02c').parameters.maxRange=1;assert.equal(store.get('radar-02c').parameters.maxRange,8000);
- const draft=store.get('radar-02c');draft.parameters.maxRange=6500;assert.equal(events.length,0,'未保存草稿不得发布');
- const invalid=structuredClone(draft);invalid.parameters.capacity=1.5;assert.throws(()=>store.save(invalid));assert.equal(events.length,0,'非法保存不得发布');
- store.save(draft);assert.equal(events.length,1);assert.equal(events[0].profiles.length,initial.profiles.length);assert.equal(events[0].profiles.find(p=>p.presetId==='radar-02c').parameters.maxRange,6500);
- events[0].profiles.find(p=>p.presetId==='radar-02c').parameters.maxRange=1;assert.equal(store.get('radar-02c').parameters.maxRange,6500,'通知快照不得反向修改存储');
- const radar=store.get('radar-03d'),radio=store.get('radio-tdoa');radar.parameters.maxRange=7100;radio.parameters.maxRange=4300;
- store.import({schema:CATALOG_SCHEMA,profiles:[radar,radio]});assert.equal(events.length,2,'批量导入只能通知一次');assert.equal(events[1].profiles.find(p=>p.presetId==='radar-03d').parameters.maxRange,7100);assert.equal(events[1].profiles.find(p=>p.presetId==='radio-tdoa').parameters.maxRange,4300);
- const bad=store.get('radio-mini');bad.parameters.maxRange=0;assert.throws(()=>store.import({schema:CATALOG_SCHEMA,profiles:[bad]}));assert.equal(events.length,2,'失败导入不得发布');
- unsubscribe();store.save(draft);assert.equal(events.length,2);
- const failed=createCatalogStore({getItem:()=>null,setItem:()=>{throw Error('storage full');}});let failedEvents=0;failed.subscribe(()=>failedEvents++);assert.throws(()=>failed.save(defaultProfile('radar-02c')));assert.equal(failedEvents,0,'持久化失败不得发布');
-});

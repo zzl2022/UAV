@@ -1,4 +1,4 @@
-import {ENV_FIELDS,DEFAULT_ENV} from './presets.js';
+import {ENV_FIELDS,DEFAULT_ENV,DEFAULT_TARGET} from './presets.js';
 import {validateEnvironment} from './engine.js';
 import {DRONE_TARGET_PRESETS,TARGET_EDITOR_FIELDS,targetDraft,targetFromDraft,importTargetDraft,selectTargetPreset} from './target-profiles.js';
 
@@ -8,22 +8,29 @@ const environmentGroups=[
  ['电磁环境',['emNoiseDb','cochannelDb','crosstalkDb']],
  ['传播衰减',['cloudDbKm','refractionDb']],
 ];
-const targetFields=TARGET_EDITOR_FIELDS;
-const targetGroups=[['基本属性',['size','width_m','height_m','rcs','speed','count','thermalContrast']],['无线电',['emitting','fhss','frequencyGHz','eirpDbm']],['声学',['sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh']]];
-export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
+const extra=(label,unit,min,max,value,options={})=>({label,unit,min,max,value,step:'any',...options});
+const targetFields={...TARGET_EDITOR_FIELDS,
+ east:extra('东坐标','m',-30000,30000,0),north:extra('北坐标','m',-30000,30000,0),up:extra('上坐标','m',-20000,20000,100),
+};
+const targetGroups=[['基本属性',['size','width_m','height_m','rcs','speed','count','thermalContrast']],['无线电',['emitting','fhss','frequencyGHz','eirpDbm']],['声学',['sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh']],['位置',['east','north','up']]];
+const draftTarget=target=>({...targetDraft(target),east:target.position[0],north:-target.position[2],up:target.position[1]});
+export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPickTarget}){
  const scene=document.createElement('div');scene.id='city-scene-page';scene.className='city-page';scene.append(...panel.childNodes);
  const tabs=document.createElement('div');tabs.className='city-mode-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','城市建模');
  const pages=new Map([['scene',scene]]);let active='scene';
  const editors={
   environment:{name:'环境情况',groups:environmentGroups,fields:ENV_FIELDS,draft:structuredClone(getState().environment),dirty:false,group:'气象环境'},
-  target:{name:'侦测目标',groups:targetGroups,fields:targetFields,draft:targetDraft(getState().target),dirty:false,group:'基本属性'},
+  target:{name:'侦测目标',groups:targetGroups,fields:targetFields,draft:draftTarget(getState().target),dirty:false,group:'基本属性'},
  };
  function commitTarget(editor){
-  try{onTarget(targetFromDraft(getState().target,editor.draft));editor.dirty=false;editor.message.textContent='';return true;}
-  catch(error){editor.message.textContent=error.message;return false;}
+  try{
+   const next=targetFromDraft(getState().target,editor.draft);
+   next.position=[editor.draft.east,editor.draft.up,-editor.draft.north];
+   onTarget(next);editor.dirty=false;editor.message.textContent='';return true;
+  }catch(error){editor.message.textContent=error.message;return false;}
  }
  function activate(id){active=id;for(const [name,page] of pages)page.hidden=name!==id;for(const button of tabs.children){const selected=button.dataset.page===id;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;}}
- for(const [id,name] of [['scene','区域设置'],['environment','环境情况'],['target','侦测目标']]){
+ for(const [id,name] of [['scene','区域选择'],['environment','环境情况'],['target','侦测目标']]){
   const button=document.createElement('button');button.id=`city-tab-${id}`;button.type='button';button.dataset.page=id;button.textContent=name;button.setAttribute('role','tab');button.setAttribute('aria-controls',id==='scene'?scene.id:`city-${id}-page`);button.onclick=()=>activate(id);tabs.append(button);
  }
  panel.append(tabs,scene);scene.setAttribute('role','tabpanel');scene.setAttribute('aria-labelledby','city-tab-scene');
@@ -33,7 +40,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
   const content=document.createElement('div');content.className='city-settings-editor';const nav=document.createElement('nav');nav.className='city-settings-nav';nav.setAttribute('aria-label',editor.name);
   const form=document.createElement('form');form.className='city-settings-form';form.noValidate=true;
   const footer=document.createElement('div');footer.className='city-settings-footer';const reset=document.createElement('button');reset.type='button';reset.textContent='恢复默认';reset.id=`city-${id}-reset`;
-  const message=document.createElement('span');message.id=`city-${id}-message`;message.setAttribute('role','status');const apply=document.createElement('button');apply.type='button';apply.className='primary';apply.textContent='应用';apply.id=`city-${id}-apply`;apply.disabled=true;if(id==='environment')footer.append(reset);footer.append(message);if(id==='environment')footer.append(apply);
+  const message=document.createElement('span');message.id=`city-${id}-message`;message.setAttribute('role','status');const apply=document.createElement('button');apply.type='button';apply.className='primary';apply.textContent='应用';apply.id=`city-${id}-apply`;apply.disabled=true;footer.append(reset,message,apply);
   content.append(nav,form);page.append(title,content,footer);panel.append(page);pages.set(id,page);Object.assign(editor,{page,nav,form,message,apply});
   if(id==='environment'){
    const load=document.createElement('button');load.type='button';load.id='city-environment-import';load.textContent='导入';
@@ -110,6 +117,10 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
   apply.onclick=applyValues;form.onsubmit=event=>{event.preventDefault();applyValues();};
   reset.onclick=()=>{
    if(id==='environment')for(const [,keys] of environmentGroups)for(const key of keys)editor.draft[key]=DEFAULT_ENV[key];
+   else if(id==='target'){
+    const position=[editor.draft.east,editor.draft.up,editor.draft.north];
+    editor.draft={...draftTarget(structuredClone(DEFAULT_TARGET)),east:position[0],north:position[2],up:position[1]};
+   }
    editor.dirty=true;editor.apply.disabled=false;editor.message.textContent='未应用';renderEditor(id);
   };
   renderEditor(id);
@@ -122,6 +133,10 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
   }
   [...editor.nav.children].forEach(button=>button.setAttribute('aria-current',String(button.textContent===editor.group)));
   editor.form.replaceChildren();const heading=document.createElement('h3');heading.textContent=editor.group;const grid=document.createElement('div');grid.className='profile-field-grid';editor.form.append(heading,grid);
+  if(id==='target'&&editor.group==='位置'){
+   const pick=document.createElement('button');pick.type='button';pick.id='city-target-pick';pick.textContent='地图选点';
+   pick.onclick=()=>{editor.message.textContent='请选择目标位置';onPickTarget?.();};editor.form.append(pick);
+  }
   for(const key of editor.groups.find(([name])=>name===editor.group)[1]){
    if(id==='target'&&['bandLow','bandHigh'].includes(key)&&!editor.draft.check_band)continue;
    const spec=editor.fields[key],label=document.createElement('label');label.className=`profile-field${spec.boolean?' profile-switch':''}`;
@@ -147,7 +162,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
  });
  activate('scene');
  return {
-  refresh(){if(!editors.environment.dirty)editors.environment.draft=structuredClone(getState().environment);if(!editors.target.dirty)editors.target.draft=targetDraft(getState().target);for(const id of Object.keys(editors))renderEditor(id);},
-
+  refresh(){if(!editors.environment.dirty)editors.environment.draft=structuredClone(getState().environment);if(!editors.target.dirty)editors.target.draft=draftTarget(getState().target);for(const id of Object.keys(editors))renderEditor(id);},
+  setTargetPosition(position){const editor=editors.target;Object.assign(editor.draft,{east:position[0],up:position[1],north:-position[2]});editor.group='位置';editor.dirty=true;editor.apply.disabled=false;editor.message.textContent='未应用';activate('target');renderEditor('target');},
  };
 }

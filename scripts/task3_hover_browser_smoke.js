@@ -2,7 +2,7 @@ import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 
-const executablePath=process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium');
+const executablePath=process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe':'/usr/bin/chromium');
 const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir('artifacts/task3',{recursive:true});
@@ -10,13 +10,19 @@ try{
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173',{timeout:120000});
  await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
  await page.waitForFunction(()=>window.task3Diagnostics,null,{timeout:60000});
- await page.locator('#toggle-task3').click();await page.locator('#task3-open-input').click();await page.locator('#task3-run').click();
+ await page.locator('#toggle-deployment').click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
+ await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:'推演输入'}).click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+ await page.locator('#task3-run').click();
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
- await page.locator('#task3-window-input .task3-floating-close').click();await page.locator('#task3-window-minimize').click();
  const downloadEvent=page.waitForEvent('download');await page.locator('#task3-export').evaluate(button=>button.click());const download=await downloadEvent;
  const exported=JSON.parse(await readFile(await download.path(),'utf8')),report=exported.report,plan=report.plans.find(item=>item.id===exported.activePlanId);
  const diag=await page.evaluate(()=>window.task3Diagnostics),viewport=await page.locator('#viewport').boundingBox();
  assert.equal(diag.deviceMarkers.length,plan.devices.length);assert.ok(diag.deviceMarkers.every(marker=>marker.visible),'全部固定设备应位于当前地图视口');
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isOpen(),null,{timeout:3000});
+ await page.evaluate(()=>document.querySelector('#app').dispatchEvent(new CustomEvent('view-change',{detail:'task3'})));
  const displayById=new Map(exported.deviceDisplay.map(entry=>[entry.internalId,entry]));
  const hover=page.locator('#task3-device-hover');
  const show=async marker=>{
@@ -48,10 +54,11 @@ try{
  await page.locator('#task3-plan').evaluate((select,value)=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));},other);
  await page.waitForFunction(()=>document.querySelector('#task3-device-hover').hidden);
  const switched=await page.evaluate(()=>window.task3Diagnostics);await show(switched.deviceMarkers[0]);
- await page.locator('#task3-back').evaluate(button=>button.click());await page.waitForFunction(()=>document.querySelector('#task3-device-hover').hidden);
- await page.locator('#toggle-task3').click();await page.locator('#task3-window-minimize').click();const reopened=await page.evaluate(()=>window.task3Diagnostics);await show(reopened.deviceMarkers[0]);
- await page.locator('#task3-window-minimize').click();await page.locator('#task3-open-input').click();await page.locator('#task3-run').evaluate(button=>button.click());await page.waitForFunction(()=>window.task3Diagnostics.busy&&document.querySelector('#task3-device-hover').hidden);
+ await page.evaluate(()=>document.querySelector('#app').dispatchEvent(new CustomEvent('view-change',{detail:'scene'})));
+ await page.waitForFunction(()=>document.querySelector('#task3-device-hover').hidden);
+ await page.locator('#toggle-task3').evaluate(button=>button.click());const reopened=await page.evaluate(()=>window.task3Diagnostics);await show(reopened.deviceMarkers[0]);
+ await page.locator('#task3-run').evaluate(button=>button.click());await page.waitForFunction(()=>window.task3Diagnostics.busy&&document.querySelector('#task3-device-hover').hidden);
  await page.locator('#task3-cancel').evaluate(button=>button.click());await page.waitForFunction(()=>!window.task3Diagnostics.busy);
  assert.deepEqual(errors,[]);
- console.log(`Task3 hover browser passed: ${diag.deviceMarkers.length} fixed devices picked and checked against real report; viewport clamp, pointer-events, condition/plan/return/rerun cleanup verified.`);
+ console.log(`Task3 hover browser passed: ${diag.deviceMarkers.length} fixed devices picked and checked against real report; viewport clamp, pointer-events, condition/plan/view-switch/rerun cleanup verified.`);
 }finally{await browser.close();}

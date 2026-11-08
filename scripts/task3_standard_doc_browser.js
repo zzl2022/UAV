@@ -30,12 +30,15 @@ const results={default:{runId:source.runId,cases:defaultModel.cases.length,rules
 try{
  const page=await browser.newPage({viewport:{width:1500,height:1000},acceptDownloads:true}),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173',{timeout:120000});await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});await page.waitForFunction(()=>window.task3Diagnostics,null,{timeout:60000});
- await page.locator('#toggle-task3').click();await page.locator('#task3-panel .task3-io summary').click();
+ await page.locator('#toggle-deployment').click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
+ await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:'推演输入'}).click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
  assert.equal(await page.locator('#task3-export-default-doc').isEnabled(),true,'默认文档未推演也可下载');assert.equal(await page.locator('#task3-export-current-doc').isDisabled(),true,'未推演时当前文档不可伪造');
  let event=page.waitForEvent('download');await page.locator('#task3-export-default-doc').click();let download=await event;const defaultPath=`${out}/任务三标准布设方案.html`;await download.saveAs(defaultPath);
  assert.equal(await readFile(defaultPath,'utf8'),staticHtml,'页面默认下载必须逐字等于真实脚本产物');await page.screenshot({path:'artifacts/task3/doc-download-entry.png'});
  // 自定义矩形范围，其他设置保持标准网格；下载时以页面当前 report/run 为准。
- await page.locator('#task3-open-input').click();await page.locator('#task3-scope-width').fill('2200');await page.locator('#task3-scope-depth').fill('2100');await page.locator('#task3-run').click();
+ await page.locator('#task3-scope-width').fill('2200');await page.locator('#task3-scope-depth').fill('2100');await page.locator('#task3-run').click();
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
  const downloadJson=async(id,path)=>{const pending=page.waitForEvent('download');await page.locator(id).click();const item=await pending;await item.saveAs(path);return readJson(path);};
  const customExport=await downloadJson('#task3-export',`${out}/custom-report.json`),customRun=await downloadJson('#task3-export-run',`${out}/custom-run.json`);

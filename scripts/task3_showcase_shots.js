@@ -1,30 +1,63 @@
-// 输出 artifacts/task3/showcase/*.png，供三个离线 HTML 内嵌。全部为当前页面真实运行画面。
+// 任务三成果展示截图采集：对运行中的 dev server（默认 5173）逐面板真实操作并截屏。
+// 输出 artifacts/task3/showcase/*.png，供 HTML 展示文档内嵌使用。全部为真实运行画面。
 import {chromium} from 'playwright-core';
-import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 const out='artifacts/task3/showcase';
-const executablePath=process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium');
-const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir(out,{recursive:true});
- const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
- page.on('pageerror',error=>errors.push(error.message));
+ const page=await browser.newPage({viewport:{width:1500,height:1000}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173',{timeout:120000});
- await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:120000});
- const shot=async name=>{await page.screenshot({path:`${out}/${name}.png`});console.log(`${name}.png`);};
- await page.waitForTimeout(800);await shot('home');
- await page.locator('#toggle-sensors').click();await page.waitForFunction(()=>window.equipmentCapabilityDiagnostics?.results?.length===2);await shot('sensors');await page.locator('#equipment-back').click();
- await page.locator('#toggle-task3').click();await page.locator('#task3-open-input').click();await page.locator('#task3-run').click();
- await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics.busy,null,{timeout:600000});await page.locator('#task3-window-input .task3-floating-close').click();await shot('task3-run');
- await page.locator('#task3-open-plans').click();await page.locator('#task3-plans-table').scrollIntoViewIfNeeded();await shot('task3-plans');await page.locator('#task3-window-plans .task3-floating-close').click();
- await page.locator('#task3-panel > details').filter({hasText:'盲区分布'}).locator(':scope > summary').click();await page.locator('#task3-condition').selectOption('interference');await shot('task3-coverage');
- await page.locator('#task3-blind-legend').scrollIntoViewIfNeeded();await shot('task3-blindspots');
- await page.locator('#task3-panel > details').filter({hasText:'威胁推演'}).locator(':scope > summary').click();
- for(const [key,waitMs] of [['single',2500],['multi',2500],['swarm',3000]]){
-  await page.locator('#task3-threat').selectOption(key);await page.locator('#task3-threat-play').click();await page.waitForTimeout(waitMs);await shot(`task3-threat-${key}`);await page.locator('#task3-threat-play').click();
+ await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
+ const openModule=async label=>{
+  if(await page.evaluate(()=>window.__ac8DeploymentMenu?.isDetail())){
+   await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+   await page.waitForTimeout(500);
+  }
+  await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:label}).click();
+  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+  await page.waitForTimeout(400);
+ };
+ // 1 首页：城市三维建模（河南博物院片区）
+ await page.waitForTimeout(1200);await page.screenshot({path:`${out}/home.png`});console.log('home.png');
+ // 2 装备建模（子任务二）
+ await page.locator('#toggle-sensors').click();await page.waitForTimeout(1500);
+ await page.screenshot({path:`${out}/sensors.png`});await page.locator('#equipment-back').click();console.log('sensors.png');
+ // 3 部署与飞行（既有模块）
+ await page.locator('#toggle-deployment').click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
+ await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:'飞行演示'}).click();
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+ await page.locator('#task3-panel .task3-subnav-btn',{hasText:'单机飞行警报'}).click();await page.waitForFunction(()=>window.planningDiagnostics?.ready,null,{timeout:120000});
+ await page.waitForTimeout(800);await page.screenshot({path:`${out}/planning.png`});console.log('planning.png');
+ // 4 任务三：推演完成态
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+ await openModule('推演输入');
+ await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
+ await page.locator('#task3-run').click();
+ await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
+ await page.waitForTimeout(600);
+ await page.locator('#task3-panel').evaluate(n=>n.scrollTop=0);await page.screenshot({path:`${out}/task3-run.png`});console.log('task3-run.png');
+ // 5 方案对比 + 三维点位（全域视角）
+ await openModule('方案对比');await page.locator('#task3-plans-table').scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/task3-plans.png`});console.log('task3-plans.png');
+ // 6 覆盖效果：推荐方案点位 + 核心圈 + 盲区（切换电磁干扰工况，盲区类别最全）
+ await openModule('盲区分布');await page.locator('#task3-condition').selectOption('interference');await page.waitForTimeout(600);
+ await page.evaluate(()=>{const v=document.querySelector('#viewport');v.scrollIntoView();});
+ await page.screenshot({path:`${out}/task3-coverage.png`});console.log('task3-coverage.png');
+ // 7 四类盲区分布（图例+成因列表）
+ await openModule('盲区分布');await page.locator('#task3-blind-legend').scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/task3-blindspots.png`});console.log('task3-blindspots.png');
+ // 8 三类威胁推演播放中画面
+ await openModule('飞行演示');await page.locator('#task3-panel .task3-subnav-btn',{hasText:'威胁推演'}).click();
+ for(const [key,waitMs] of [['single',3500],['multi',3000],['swarm',3000]]){
+  await page.locator('#task3-threat-view').selectOption(key);await page.waitForTimeout(400);
+  await page.locator('#task3-threat-play').click();await page.waitForTimeout(waitMs);
+  await page.screenshot({path:`${out}/task3-threat-${key}.png`});
+  await page.locator('#task3-threat-play').click();console.log(`task3-threat-${key}.png`);
  }
- await page.locator('#task3-open-emc').click();await page.locator('#task3-emc').scrollIntoViewIfNeeded();await shot('task3-emc');await page.locator('#task3-window-emc .task3-floating-close').click();
- await page.locator('#task3-open-flight').click();await page.waitForFunction(()=>window.planningDiagnostics?.ready&&!window.planningDiagnostics.busy&&window.planningDiagnostics.droneShape==='Quadcopter_Drone',null,{timeout:240000});await shot('planning');
- await page.locator('#task3-window-simulation .task3-floating-close').click();await page.locator('#task3-window-minimize').click();await page.locator('#task3-open-alarms').click();await page.locator('#flight-events-section').scrollIntoViewIfNeeded();await shot('alarms');
- assert.deepEqual(errors,[]);console.log('showcase screenshots done:',out);
+ // 9 EMC 校核结论
+ await openModule('电磁兼容');await page.locator('#task3-emc').scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/task3-emc.png`});console.log('task3-emc.png');
+ if(errors.length)throw new Error('页面报错：'+errors.join('; '));
+ console.log('showcase screenshots done:',out);
 }finally{await browser.close();}

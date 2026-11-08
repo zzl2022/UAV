@@ -1,0 +1,159 @@
+{
+  "name": "北京 · 故宫 5 km · GBA LoD1",
+  "route": null,
+  "source": "GlobalBuildingAtlas LoD1 (per-building footprints + heights)",
+  "sourceUrl": "https://huggingface.co/datasets/zhu-xlab/GBA.LoD1",
+  "license": "CC BY-NC 4.0",
+  "attribution": "GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors",
+  "center": [
+    116.3972,
+    39.9163
+  ],
+  "radiusMeters": 5000,
+  "bbox": [
+    116.33864,
+    39.87108,
+    116.45576,
+    39.96152
+  ],
+  "featureBounds": [
+    116.336689,
+    39.870446,
+    116.456756,
+    39.96233
+  ],
+  "coverageMargins": {
+    "west": -0.001951,
+    "south": -0.000634,
+    "east": -0.000996,
+    "north": -0.00081
+  },
+  "localBounds": [
+    -5010.06,
+    5010.06,
+    -5022.58,
+    5019.25
+  ],
+  "buildingCount": 74083,
+  "blockCount": 74083,
+  "minHeight": 3,
+  "maxHeight": 158.36,
+  "filters": {
+    "minHeight": 3,
+    "maxHeight": 300,
+    "minAreaMeters2": 20
+  },
+  "skipped": {
+    "height": 23521,
+    "area": 14500,
+    "geometry": 0,
+    "duplicate": 0
+  },
+  "coreBuilding": {
+    "id": "gba-osm-122576272-0",
+    "name": "太和殿",
+    "shortName": "太和殿",
+    "height": 15.77,
+    "areaM2": 2649.5,
+    "center": [
+      -546,
+      44.88
+    ],
+    "distanceFromCenterMeters": 547.8,
+    "rings": [
+      [
+        [
+          -578.95,
+          0,
+          65.55
+        ],
+        [
+          -557.38,
+          0,
+          64.98
+        ],
+        [
+          -545.35,
+          0,
+          64.67
+        ],
+        [
+          -536.05,
+          0,
+          64.41
+        ],
+        [
+          -511.99,
+          0,
+          63.78
+        ],
+        [
+          -512.18,
+          0,
+          56.6
+        ],
+        [
+          -512.24,
+          0,
+          54.46
+        ],
+        [
+          -513.04,
+          0,
+          24.21
+        ],
+        [
+          -546.54,
+          0,
+          25.1
+        ],
+        [
+          -580,
+          0,
+          25.97
+        ],
+        [
+          -579.18,
+          0,
+          57
+        ],
+        [
+          -579.13,
+          0,
+          58.69
+        ],
+        [
+          -578.95,
+          0,
+          65.55
+        ]
+      ]
+    ],
+    "selection": "tallest within 150 m of target 116.390700,39.916500"
+  },
+  "sourceCounts": {
+    "osm": 17167,
+    "3dglobfp": 71416
+  },
+  "heightSource": "GBA LoD1 heights (3D-GloBFP/OSM fusion)",
+  "baseElevation": 0,
+  "rawSha256": "50f2898ff1691f401100e229868ea679b2cb169d6fefaa1dcda9cfe684eb23c7",
+  "coordinateSystem": "local metric [east, up, -north]; origin at center; local_tmerc",
+  "limitations": [
+    "GBA LoD1 is a model product; heights are not surveyed.",
+    "License is CC BY-NC 4.0: non-commercial use with attribution.",
+    "Base is flat (no DEM); absolute elevations are not represented.",
+    "Low/tiny structures are filtered; roads are left to the imagery basemap."
+  ],
+  "metricProjection": "local_tmerc",
+  "glb": {
+    "file": "beijing-gba.glb",
+    "bytes": 81629312,
+    "sha256": "1a58aa272e906f10de94b87dd3db71f72b47cfc1a21ab5d6436d1cb225bdf6e1"
+  },
+  "mesh": {
+    "vertices": 3401100,
+    "triangles": 1133700,
+    "drawCalls": 1
+  }
+}

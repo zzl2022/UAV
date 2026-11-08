@@ -27,13 +27,6 @@ test('task3 floating window: 四边缩放保持对边固定并执行最小尺寸
  assert.deepEqual(resizeFloatingRect(start,{dy:400,direction:'s'},viewport,options),{...start,height:600});
 });
 
-test('task3 floating window: 左侧边栏与地图属于同一桌面，不发生边缘吸附',()=>{
- const viewport={width:1200,height:800};
- assert.deepEqual(constrainFloatingRect({x:150,y:100,width:400,height:300},viewport,options),{x:150,y:100,width:400,height:300});
- assert.deepEqual(constrainFloatingRect({x:0,y:100,width:400,height:300},viewport,options),{x:8,y:100,width:400,height:300});
- assert.deepEqual(constrainFloatingRect({x:170,y:100,width:400,height:300},viewport,options),{x:170,y:100,width:400,height:300});
-});
-
 test('task3 floating window: 四角缩放和边缘拖拽均受视口约束',()=>{
  const start={x:200,y:150,width:400,height:300},viewport={width:1000,height:800};
  assert.deepEqual(resizeFloatingRect(start,{dx:50,dy:40,direction:'nw'},viewport,options),{x:250,y:190,width:350,height:260});

@@ -47,7 +47,7 @@ export function buildFlightRoute(query,bounds,{speed=15,clearance=25,cruiseAgl=6
  for(let pass=0;pass<3;pass++){let changed=false;for(let i=1;i<positions.length;i++){const result=query.trace(positions[i-1],positions[i]);if(result.blocked){const lift=Math.max(5,result.clearance+clearance);positions[i-1][1]+=lift;positions[i][1]+=lift;changed=true;repairs++;}}if(!changed)break;slopeEnvelope();}
  for(let i=1;i<positions.length;i++){const c=query.trace(positions[i-1],positions[i]);if(c.blocked||!c.known)throw Error('轨迹未通过建筑/地形连续线段检查');}
  let length=0;const points=positions.map((position,i)=>{if(i)length+=distance(position,positions[i-1]);return {position,time:length/speed};});
- return {id:'museum-west-east',name:'西侧进入 → 河南博物院周边 → 东侧离开',points,duration:length/speed,length,speed,maxVerticalSpeed:speed/Math.sqrt(10),clearance,cruiseAgl,repairs,geometryVerified:true,notes:'在有效 DEM 连通域内寻路并抬升避开 LoD1 建筑；不是航空运行许可或真实导航方案。'};
+ return {id:'museum-west-east',name:'西侧进入 → 核心区 → 东侧离开',points,duration:length/speed,length,speed,maxVerticalSpeed:speed/Math.sqrt(10),clearance,cruiseAgl,repairs,geometryVerified:true,notes:'在有效 DEM 连通域内寻路并抬升避开 LoD1 建筑；不是航空运行许可或真实导航方案。'};
 }
 export async function simulateFlight({query,devices,route,target,environment,core,coreRadius=700,interval=2,progress=()=>{},yieldTask=async()=>{}}){
  const emc=emcCheck(devices),frames=[];const times=[];for(let t=0;t<route.duration;t+=interval)times.push(t);times.push(route.duration);
@@ -65,12 +65,12 @@ export async function simulateFlight({query,devices,route,target,environment,cor
   if(index%12===0){progress({stage:'flight',completed:index,total:times.length});await yieldTask();}
  }
  const tracker=new AlarmTracker();for(const frame of frames)tracker.accept(frame);
- return {interval,frames,events:tracker.events,summary:{samples:frames.length,detectedSamples:frames.filter(f=>f.detections.length).length,detectedFraction:frames.filter(f=>f.detections.length).length/frames.length,firstDetectionTime:frames.find(f=>f.detections.length)?.time??null,lossEvents:tracker.events.filter(e=>e.kind==='lost').length},notes:'警报按离散模型帧更新，运动按轨迹插值；不保证帧间始终可探测。'};
+ return {interval,frames,events:tracker.events,summary:{samples:frames.length,detectedSamples:frames.filter(f=>f.detections.length).length,detectedFraction:frames.filter(f=>f.detections.length).length/frames.length,firstDetectionTime:frames.find(f=>f.detections.length)?.time??null,lossEvents:tracker.events.filter(e=>e.kind==='lost').length},notes:'报警按离散模型帧更新，运动按轨迹插值；不保证帧间始终可探测。'};
 }
 export class AlarmTracker{
  constructor(){this.events=[];this.active=false;this.ever=false;this.misses=0;this.insideCore=false;this.lastTime=-1;this.status='clear';}
  accept(frame){
-  if(frame.time<this.lastTime)throw Error('倒放或跳转前需要重建警报状态');this.lastTime=frame.time;
+  if(frame.time<this.lastTime)throw Error('倒放或跳转前需要重建报警状态');this.lastTime=frame.time;
   if(frame.insideCore!==this.insideCore){this.events.push({time:frame.time,kind:frame.insideCore?'enter-core':'leave-core',message:frame.insideCore?'无人机进入核心区':'无人机离开核心区'});this.insideCore=frame.insideCore;}
   if(frame.detections.length){
    if(!this.active)this.events.push({time:frame.time,kind:this.ever?'reacquired':'detected',message:this.ever?'重新发现无人机':'首次发现无人机',deviceIds:frame.detections.map(d=>d.id)});

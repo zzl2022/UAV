@@ -80,3 +80,25 @@
 #task3-panel .task3-footer{margin-top:14px;padding-top:14px;border-top:1px solid #23404d;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #task3-panel .task3-footer button{width:100%;font-size:11px}
 #task3-panel .task3-footer #task3-restore-defaults{grid-column:1/-1;border-color:#756748;color:#ffe2a4;background:#2a2519;font-size:12px}
+
+/* ===== 嵌入“优化推演”窗口后的布局（沿用平台 AC8 深色风格） ===== */
+#task3-panel .task3-runbar{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:9px 14px;margin:0 0 14px;padding:10px 0 12px;border-bottom:1px solid #23404d;background:linear-gradient(180deg,rgba(7,21,29,.97),rgba(7,21,29,.86));-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+#task3-panel .task3-runbar .buttons{flex:0 0 auto;margin:0}
+#task3-panel .task3-runbar .buttons button{min-width:104px;padding:8px 14px;white-space:nowrap}
+#task3-panel .task3-runbar progress{flex:1 1 160px;width:auto;height:6px;margin:0}
+#task3-panel .task3-runbar #task3-status{flex:1 1 100%;margin:0;font-size:12px;line-height:1.5}
+#task3-panel .task3-pane #planning-panel{width:100%;max-width:860px;margin:0;padding:0}
+#task3-panel .task3-pane #planning-panel>section:first-child{border-top:0;margin-top:0}
+#task3-panel .task3-flight-pane{padding-top:2px}
+#task3-panel .task3-tabs{position:sticky;top:0;z-index:4;background:linear-gradient(180deg,rgba(7,21,29,.98),rgba(7,21,29,.9));padding-top:2px}
+@media(max-width:850px){
+ #task3-panel .task3-tabs{gap:5px}
+ #task3-panel .task3-tabs button{padding:8px 4px;font-size:12px}
+ #task3-panel .task3-subnav{width:112px;flex-basis:112px;padding-right:8px}
+ #task3-panel .task3-subnav-btn{padding:8px 8px;font-size:12px}
+}
+/* 装备型号摘要压缩为两行芯片，给推演输入留出首屏空间 */
+#task3-panel .task3-selected-equipment{padding:8px 10px;margin-bottom:10px}
+#task3-panel .task3-selected-equipment h3{margin:0 0 5px;font-size:12px}
+#task3-panel .task3-selected-equipment .task3-equip{display:inline-block;margin:2px 14px 2px 0;padding:1px 0;border:0;font-size:12px;line-height:1.5}
+#task3-panel .task3-selected-equipment .hint{margin:5px 0 0;font-size:11px;line-height:1.45}

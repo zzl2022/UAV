@@ -11,7 +11,7 @@ import hashlib
 import json
 import math
 
-from pyproj import Transformer
+from pyproj import CRS, Transformer
 from shapely.geometry import Polygon
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +29,7 @@ SITE_NAMES = {
 }
 CORE_CONFIG = {
     'daxing': {'name': '大兴机场航站楼', 'short': '机场航站楼', 'radius': 1800},
-    'nuclear': {'name': '核设施核心建筑（推测）', 'short': '核设施核心', 'radius': 800},
+    'nuclear': {'name': '房山核设施', 'short': '房山核设施', 'radius': 800},
     'railway': {'name': '北京站', 'short': '北京站', 'radius': 5000,
                 'target': (116.4271, 39.9029), 'target_radius': 300},
     'default': {'name': '太和殿', 'short': '太和殿', 'radius': 600,
@@ -107,16 +107,32 @@ def main():
                         help='max missing margin per bbox edge in degrees')
     parser.add_argument('--allow-partial', action='store_true',
                         help='accept a raw file that does not cover the bbox')
+    parser.add_argument('--projection', choices=('utm', 'local'), default='local',
+                        help='metric frame: local transverse Mercator centered '
+                             'on the site (default) or the UTM zone of center')
     args = parser.parse_args()
     if not args.raw.exists():
         raise SystemExit(f'GBA raw GeoJSON not found: {args.raw}')
 
     west, south, east, north = args.bbox
-    to_utm = Transformer.from_crs(4326, 32650, always_xy=True)
-    origin_x, origin_y = to_utm.transform(*args.center)
-    west_x, south_y = to_utm.transform(west, south)
-    east_x, _ = to_utm.transform(east, south)
-    _, north_y = to_utm.transform(west, north)
+    if args.projection == 'local':
+        # A local TM centered on the site keeps grid north aligned with the
+        # north-up imagery.  UTM at a zone edge would rotate footprints
+        # against the image and can put buildings on runways.
+        metric_crs = CRS.from_proj4(
+            f'+proj=tmerc +lat_0={args.center[1]} +lon_0={args.center[0]} '
+            f'+k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+        projection_label = 'local_tmerc'
+    else:
+        zone = int((args.center[0] + 180.0) / 6.0) + 1
+        epsg = (32600 if args.center[1] >= 0 else 32700) + zone
+        metric_crs = CRS.from_epsg(epsg)
+        projection_label = f'utm_{epsg}'
+    to_metric = Transformer.from_crs(4326, metric_crs, always_xy=True)
+    origin_x, origin_y = to_metric.transform(*args.center)
+    west_x, south_y = to_metric.transform(west, south)
+    east_x, _ = to_metric.transform(east, south)
+    _, north_y = to_metric.transform(west, north)
     local_x0, local_x1 = west_x - origin_x, east_x - origin_x
     local_z0, local_z1 = -(north_y - origin_y), -(south_y - origin_y)
 
@@ -183,7 +199,7 @@ def main():
             for ring in rings_wgs84:
                 converted = []
                 for lon, lat in ring:
-                    x, y = to_utm.transform(lon, lat)
+                    x, y = to_metric.transform(lon, lat)
                     converted.append([x - origin_x, y - origin_y])
                 rings_utm.append(converted)
             poly = Polygon(rings_utm[0], rings_utm[1:])
@@ -218,7 +234,7 @@ def main():
                      if args.core_target_radius is not None
                      else core_cfg.get('target_radius', 150))
     if target:
-        target_x, target_y = to_utm.transform(*target)
+        target_x, target_y = to_metric.transform(*target)
         target_x -= origin_x
         target_z = -(target_y - origin_y)
         search_x, search_z, search_radius = target_x, target_z, target_radius
@@ -268,7 +284,7 @@ def main():
         route_payload = json.loads(args.route.read_text(encoding='utf-8'))
         route_points = []
         for lon, lat in route_payload.get('points', []):
-            x, y = to_utm.transform(lon, lat)
+            x, y = to_metric.transform(lon, lat)
             route_points.append([round(x - origin_x, 2),
                                  round(-(y - origin_y), 2)])
         route = {
@@ -302,7 +318,8 @@ def main():
         'heightSource': 'GBA LoD1 heights (3D-GloBFP/OSM fusion)',
         'baseElevation': 0,
         'rawSha256': sha256(args.raw),
-        'coordinateSystem': 'local metric [east, up, -north]; origin at center',
+        'metricProjection': projection_label,
+        'coordinateSystem': f'local metric [east, up, -north]; origin at center; {projection_label}',
         'limitations': [
             'GBA LoD1 is a model product; heights are not surveyed.',
             'License is CC BY-NC 4.0: non-commercial use with attribution.',

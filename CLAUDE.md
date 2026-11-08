@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 反无人机（低空防御）部署仿真平台，基于上游 `zzl2022/UAV`（提交 `f684c3b9feac`）的本地整合版本。核心能力分三层：
 
-1. **三维城市场景**：用郑州河南博物院片区真实建筑 Shapefile + DEM + 正射影像生成可浏览、可导出的 Three.js 城市模型（LoD1），另内置 4 个北京 GBA 站点模型。
+1. **三维城市场景**：用郑州河南博物院片区真实建筑 Shapefile + DEM + 正射影像生成可浏览、可导出的 Three.js 城市模型（LoD1），另内置 7 个 GBA 站点模型（北京故宫、深圳、杭州、昌江、大兴、房山核设施、北京—通州铁路）。
 2. **感知装备建模（子任务二）**：雷达 / 光电 / 无线电 / 声学 / 5G-A / 静电六类设备的能力特性建模。
 3. **部署优化与飞行报警（子任务三）**：全域采样部署优化、多威胁验证、电磁兼容、盲区消除与无人机飞行推演。
 
@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **前端**：`index.html` → `src/main.js`（入口）。`main.js` 初始化 Three.js 场景，并挂载三个 UI 子系统：
   - `src/sensors/` — 设备建模面板与 JS 物理仿真（雷达/无线电/光电/声学的“假设参数·环境仿真”模式），含体场渲染、热力图、场景遮挡查询（`createSceneQuery.trace`）。
   - `src/planning/` — “部署与飞行”：覆盖优化、飞行推演、遥测、语音报警（`optimizer.js`/`flight.js`/`worker.js`）。
-  - `src/task3/` — “综合推演”：盲区、EMC、多威胁验证、部署文档生成等（动态 import 挂载）。
+  - `src/task3/` — “优化推演”：推演输入、方案对比、盲区分布、电磁兼容、飞行演示五个子模块（动态 import 挂载）。
   - `src/student-capabilities/` — 装备建模统一入口的 API 客户端，通过 `/api/capabilities` 调 Python。
   - `src/workspace.js` — 基于 `<dialog>` 的浮动窗口管理（拖动/缩放/收起）。
 - **后端**：`backend/server.py` 是仅回环（127.0.0.1:8765）的标准库 HTTP 服务，`backend/capabilities.py` 的 `CapabilityService` 加载 `equipment_models/` 下的两套 Python 模型包，提供 `dataset_only` 模式的资料基础评估。Vite 在开发态把 `/api/capabilities` 代理到 8765（见 `vite.config.js`）。
@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Three.js 用 `[东, 上, -北]`（米）；Python 模型用 `[东, 北, 上]`。转换集中在 `backend/capabilities.py::to_enu`。
 - 数据管线：`scripts/prepare_data.py` 读取 `创意二文件/创意二数据集/区域数据/`（SHP 建筑轮廓、DEM、影像、白模），产出 `public/data/`（`city.json`、`terrain.json`、`buildings.geojson`、`report.json` 等）。
-- `public/data/`、`dist/`、`artifacts/` 是可再生产物，**不提交到 Git**；`创意二文件/` 是比赛原始数据，也不打包进仓库。
+- `public/data/` 已随仓库提交（包含基础场景和全部站点模型，保证下载后可直接运行）；`dist/`、`artifacts/` 是可再生产物，不提交；`创意二文件/` 是比赛原始数据，不打包，只有重新生成数据时才需要它。
 
 ### 其他目录
 
@@ -48,14 +48,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 首次安装
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-integration.txt
-npm.cmd ci
-.\.venv\Scripts\python.exe scripts/prepare_data.py
-```
+Windows 直接双击仓库根目录的 `启动平台.bat`（或 `启动平台.cmd`）。启动器会自动创建 `.venv`、安装 `requirements-integration.txt` 的 Python 依赖、执行 `npm ci`，然后启动 5173 页面与 8765 Python 服务；仓库已包含 `public/data`，无需运行 `prepare_data.py`。
 
-> 注意：`package.json` 里的 `prepare:data` 脚本写的是 Unix 路径 `.venv/bin/python`，Windows 上请直接运行上面的 Python 命令，不要 `npm run prepare:data`。
+手动安装（macOS / Linux）：
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-integration.txt
+npm ci
+.venv/bin/python scripts/start_integrated.py
+```
 
 ### 运行
 

@@ -8,17 +8,17 @@ import {nominalCoverage} from './coverage.js';
 import {defaultScenario} from './scenario.js';
 import {mountHeatmap} from './heatmap-ui.js';
 import {mountCapabilityAssessment} from './capability-ui.js';
+import {createEquipmentDemo} from './equipment-demo.js';
 import {assessmentSummary} from './capability-data.js';
 import {mountEquipmentManager} from './equipment-manager.js';
 import {mountCityConditions} from './city-conditions.js';
-import {createEquipmentDemo} from './equipment-demo.js';
 
 const COLORS={radar:0x70d6ff,optical:0xffd783,radio:0xb89aff,acoustic:0x69e2bd};
 const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2)):'—';
 const TYPE_METRICS={rangeMeters:'距离误差 / m',azimuthDegrees:'方位误差 / °',elevationDegrees:'俯仰误差 / °',multipathBiasDegrees:'多径角偏差指标 / °',networkLocalizationMeters:'三维站网定位误差估计 / m',angularPixelDegrees:'单像素角度 / °'};
 const LOSS_NAMES={facadeReflection:'Facade reflection',rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
 
-export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace}){
+export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera}){
  const panel=document.createElement('div');panel.id='equipment-panel';panel.hidden=true;
  panel.innerHTML=`
  <section><h2>当前装备</h2><select id="equipment-device" aria-label="当前装备"></select><div class="sensor-add"><select id="equipment-preset" aria-label="添加型号"></select><button id="equipment-add">＋ 添加</button></div><div class="buttons"><button id="equipment-remove">删除当前</button><button id="equipment-focus">聚焦点位</button></div><button id="equipment-reset" class="clear-devices">清空设备</button></section>
@@ -32,7 +32,11 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  <div id="equipment-message" role="status" class="sensor-message"></div>
  <section class="sensor-io"><button id="equipment-export" class="primary">导出参数与评估报告 · JSON ↓</button><label class="sensor-import">导入参数方案<input id="equipment-import" type="file" accept=".json,application/json"></label><details><summary>示例方案</summary><button id="equipment-defaults">载入四类示例设备</button></details></section>`;
  const sceneControls=document.createElement('div');sceneControls.id='equipment-scene-controls';sceneControls.hidden=true;sceneControls.append(...panel.childNodes);panel.append(sceneControls);
-workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back',onClose:()=>workspace.activateSidebar()});
+ const scenePanelVisible=()=>!sceneControls.hidden;
+ workspace.mountWindow('equipment','反无设备',panel,{closeId:'equipment-back',onClose:()=>{
+  panel.hidden=true;layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();capabilities?.invalidate();
+  app.classList.remove('equipment-window-open');
+ }});
  const physicalSection=document.createElement('details');physicalSection.id='equipment-physics-section';physicalSection.innerHTML='<summary>雷达 / 无线电物理链路参数</summary><div id="equipment-physics" class="sensor-fields"></div>';
  panel.querySelector('.sensor-io').before(physicalSection);
  const hopping=document.createElement('label');hopping.innerHTML='跳频目标 <input id="equipment-fhss" type="checkbox">';panel.querySelector('#equipment-emitting').parentElement.after(hopping);
@@ -40,10 +44,20 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
  const $=id=>panel.querySelector('#'+id);
  const layer=new THREE.Group();layer.name='Sensor_Modeling';layer.visible=false;scene.add(layer);
  let query,state,selectedId,pickMode=null,results=[],serial=4,lastContexts=new Map(),capabilities;
- let markerMeshes=[],drag=null,dragTimer,hoverTimer,lastPointer=null,probeHeight=50,valid=true;
+ let markerMeshes=[],drag=null,dragTimer,probeHeight=50,valid=true,heatQuery,demo=null,demoQueries={};
  const defaultState=()=>defaultScenario(city);
  state=defaultState();selectedId=state.devices[0].id;
- const spawnPosition=[...state.devices[0].position];
+ const homeModel=model,homeOrigin=[...state.origin],homeAnchor=[...state.devices[0].position];
+ let activeMode='recon',activeModel=homeModel,activeOrigin=[...homeOrigin],activeAnchor=[...homeAnchor],activeMeta=null;
+ function sceneDefaultState(){
+  const next=defaultState();
+  if(activeMode==='recon')return next;
+  const shift=activeAnchor.map((value,index)=>value-homeAnchor[index]);
+  for(const device of next.devices)device.position=device.position.map((value,index)=>value+shift[index]);
+  next.target.position=next.target.position.map((value,index)=>value+shift[index]);
+  next.origin=[...activeOrigin];
+  return next;
+ }
  const selected=()=>state.devices.find(d=>d.id===selectedId);
  for(const p of PRESETS){const option=new Option(`${TYPES[p.type]} · ${p.name}`,p.id);$('equipment-preset').add(option);}
  function message(text){$('equipment-message').textContent=text;}
@@ -134,21 +148,106 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
    results=state.devices.map(device=>{const key=JSON.stringify([device.position,state.target.position]);let context=contexts.get(key);if(!context){context=query.trace(device.position,state.target.position);contexts.set(key,context);}lastContexts.set(device.id,context);return evaluate(device,state.target,state.environment,context);});
    valid=true;renderResults();draw();message(state.devices.length>12?'仅显示当前设备的标称范围。':'');$('equipment-export').disabled=false;
    window.sensorDiagnostics={modelVersion:MODEL_VERSION,deviceCount:state.devices.length,types:state.devices.map(d=>d.type),results:structuredClone(results),selectedId,devicePositions:state.devices.map(d=>({id:d.id,position:[...d.position]})),targetPosition:[...state.target.position],coverage:layer.children.filter(o=>o.userData.kind==='nominal-range-shade').map(o=>({deviceId:o.userData.deviceId,...o.geometry.userData}))};
-   updateMarkerScreens();refreshProbe();heat.schedule();capabilities?.refresh();
+   updateMarkerScreens();
+   if(scenePanelVisible()){heat.schedule();capabilities?.refresh();}else heat.hide();
   }catch(error){capabilities?.invalidate();valid=false;hideProbe();heat.hide();message(`无法计算：${error.message}`);$('equipment-results').replaceChildren();$('equipment-breakdown').replaceChildren();$('equipment-export').disabled=true;window.sensorDiagnostics={error:error.message};}
  }
  function focus(){if(!selected())return;const p=new THREE.Vector3(...selected().position),t=new THREE.Vector3(...state.target.position),center=p.clone().add(t).multiplyScalar(0.5),span=Math.max(200,p.distanceTo(t)*1.5);controls.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(span*.65,span*.65,span*.85));controls.update();updateMarkerScreens();}
- function show(){
-  workspace.activateView('sensors');workspace.showWindow('equipment');manager.refresh();
-  layer.visible=!sceneControls.hidden;
-  if(sceneControls.hidden){heat.hide();hideProbe();return;}
-  if(!query){message('正在建立建筑/地形空间索引…');query=createSceneQuery(model,{reflections:true});}
-  compute();focus();
+ function setActiveScene(next,context){
+  const nextModel=next==='recon'?homeModel:context?.model;
+  if(!nextModel||(next===activeMode&&nextModel===activeModel))return;
+  const nextOrigin=next==='recon'?homeOrigin:context.origin;
+  const nextAnchor=next==='recon'?homeAnchor:context.anchor;
+  const delta=nextAnchor.map((value,index)=>value-activeAnchor[index]);
+  for(const device of state.devices)device.position=device.position.map((value,index)=>value+delta[index]);
+  state.target.position=state.target.position.map((value,index)=>value+delta[index]);
+  state.origin=[...nextOrigin];
+  activeMode=next;activeModel=nextModel;activeOrigin=[...nextOrigin];activeAnchor=[...nextAnchor];activeMeta=next==='recon'?null:context?.meta??null;
+  demo?.stop();demoQueries={};query=null;heatQuery=null;lastContexts.clear();
+  heat.setModel(activeModel);capabilities?.invalidate();renderForm();
+  if(!panel.hidden){if(!query)query=createSceneQuery(activeModel,{reflections:true});compute();}
  }
+ function show(){
+  panel.hidden=false;
+  app.classList.add('equipment-window-open');
+  workspace.showWindow('equipment');manager.refresh();
+  if(!query){message(`正在建立${activeMode==='recon'?'建筑/地形':'当前站点'}空间索引…`);query=createSceneQuery(activeModel,{reflections:true});}
+  layer.visible=true;renderForm();compute();focus();
+ }
+ // HUD-menu entry: show the scene equipment markers without opening the old
+ // floating window and without moving the camera (the map stays in 全域视角).
+ function activate(){
+  panel.hidden=false;
+  app.classList.add('equipment-window-open');
+  manager.refresh();
+  if(!query){message(`正在建立${activeMode==='recon'?'建筑/地形':'当前站点'}空间索引…`);query=createSceneQuery(activeModel,{reflections:true});}
+  layer.visible=true;renderForm();compute();
+ }
+ function deactivate(){
+  endDrag();hideProbe();pickMode=null;layer.visible=false;capabilities?.invalidate();
+  app.classList.remove('equipment-window-open');
+ }
+ // Keep the scenario selection aligned with the catalog type: if the current
+ // device already has this type, keep it (so model changes stay on the same
+ // physical device); otherwise pick the first device of that type.
+ function ensureDevice(type){
+  let device=selected();
+  if(!device||device.type!==type){
+   device=state.devices.find(item=>item.type===type)??null;
+   if(device){selectedId=device.id;renderForm();}
+  }
+  return device;
+ }
+ function centerPoint(){
+  const ground=activeModel.ground;ground.geometry.computeBoundingBox?.();
+  const bounds=ground.geometry.boundingBox??{min:{x:-5000,z:-5000},max:{x:5000,z:5000}};
+  const x=(bounds.min.x+bounds.max.x)/2,z=(bounds.min.z+bounds.max.z)/2;
+  const y=(query?.groundAt(x,z)??0)+50;
+  return [x,y,z];
+ }
+ // Frame the model center with the demo's working radius so the volume and the
+ // surrounding city stay legible; the HUD panel offset keeps the focus clear.
+ function focusCenter(point,type){
+  const radius={radar:1500,radio:1000,optical:400,acoustic:500,fivega:1500,electrostatic:100}[type]??600;
+  const span=Math.max(700,radius*2);
+  const center=new THREE.Vector3(...(point??centerPoint()));
+  const position=center.clone().add(new THREE.Vector3(span*.7,span*.62,span*.95));
+  if(tweenCamera)tweenCamera(position,center,1100);
+  else{camera.position.copy(position);controls.target.copy(center);controls.update();}
+  updateMarkerScreens();
+ }
+ function focusType(type){focusCenter(centerPoint(),type);}
+ function startDemo(type){
+  if(new URLSearchParams(location.search).get('demo')==='0')return null;
+  const entry=panel.querySelector('.equipment-demo-entry');
+  if(entry&&!panel.querySelector('.equipment-demo-settings'))entry.click();
+  const center=demo?.setCenter?.()??centerPoint();
+  demo?.start?.({hud:false});
+  // Keep the catalog parameters in view; the demo runs independently of this panel.
+  const firstGroup=[...panel.querySelectorAll('.equipment-group-nav button')].find(button=>!button.classList.contains('equipment-demo-entry'));
+  firstGroup?.click();
+  return center;
+ }
+ function followDevice(type){
+  ensureDevice(type);
+  const center=startDemo(type)??centerPoint();
+  focusCenter(center,type);
+ }
+ // Selecting a device (dropdown, result row or map marker) syncs the catalog
+ // type and lets the manager selection callback restart the demo and refocus.
+ function followSelected(){
+  const device=selected();
+  if(!device)return;
+  const tab=panel.querySelector(`#equipment-tab-${device.type}`);
+  tab?.click();
+ }
+ function showDemoHud(){return demo?.showHud?.()??false;}
+ function hideDemoHud(){demo?.hideHud?.();}
+ function stopDemo(){demo?.stop?.();}
  toggle.onclick=show;
- $('equipment-device').onchange=()=>{selectedId=$('equipment-device').value;renderForm();compute();};
- $('equipment-results').onclick=e=>{const id=e.target.closest('[data-select]')?.dataset.select;if(id){selectedId=id;renderForm();compute();}};
- $('equipment-add').onclick=()=>{if(state.devices.length>=64){message('最多添加 64 个设备。');return;}const device=createDevice($('equipment-preset').value,`sensor-${++serial}`,selected()?.position??spawnPosition);state.devices.push(device);selectedId=device.id;renderForm();compute();};
+ $('equipment-device').onchange=()=>{selectedId=$('equipment-device').value;renderForm();compute();followSelected();};
+ $('equipment-results').onclick=e=>{const id=e.target.closest('[data-select]')?.dataset.select;if(id){selectedId=id;renderForm();compute();followSelected();}};
+ $('equipment-add').onclick=()=>{if(state.devices.length>=64){message('最多添加 64 个设备。');return;}const device=createDevice($('equipment-preset').value,`sensor-${++serial}`,selected()?.position??activeAnchor);state.devices.push(device);selectedId=device.id;renderForm();compute();followSelected();};
  $('equipment-remove').onclick=()=>{if(!selected())return;endDrag();state.devices=state.devices.filter(d=>d.id!==selectedId);selectedId=state.devices[0]?.id??null;renderForm();compute();};
  $('equipment-focus').onclick=()=>{focus();workspace.minimizeWindow('equipment');};
  let editTimer;
@@ -168,59 +267,40 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
  $('equipment-optical-mode').onchange=()=>{state.target.opticalMode=$('equipment-optical-mode').value;compute();};
  $('equipment-pick-device').onclick=()=>{pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');workspace.minimizeWindow('equipment');};
  $('equipment-pick-target').onclick=()=>{pickMode='target';message('请点击城市地面或建筑表面设置目标位置。');workspace.minimizeWindow('equipment');};
- const viewport=renderer.domElement.parentElement;
- const hud=document.createElement('div');hud.id='signal-probe';hud.hidden=true;hud.setAttribute('role','status');
- hud.innerHTML='<strong>鼠标位置 · 信号估计</strong><div id="signal-caption"></div><div id="signal-value"></div><div id="signal-state"></div><small id="signal-position"></small>';
- viewport.parentElement.append(hud);
- const probeMarker=new THREE.Mesh(new THREE.SphereGeometry(5,8,6),new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false}));probeMarker.visible=false;probeMarker.renderOrder=11;scene.add(probeMarker);
- let heatQuery;
- const heat=mountHeatmap({panel,scene,model,getState:()=>state,getSelected:()=>selectedId,isActive:()=>!sceneControls.hidden&&!panel.hidden&&valid&&!['optical','acoustic'].includes(selected()?.type),
-  getQuery:reflections=>reflections?query:(heatQuery??=createSceneQuery(model)),
-  onNominalChange:visible=>{for(const child of layer.children)if(child.userData.kind==='nominal-range-shade')child.visible=visible;},onProbeChange:refreshProbe});
+ const heat=mountHeatmap({panel,scene,model:activeModel,getState:()=>state,getSelected:()=>selectedId,isActive:()=>scenePanelVisible()&&!panel.hidden&&valid&&!['optical','acoustic'].includes(selected()?.type),
+  getQuery:reflections=>reflections?query:(heatQuery??=createSceneQuery(activeModel)),
+  onNominalChange:visible=>{for(const child of layer.children)if(child.userData.kind==='nominal-range-shade')child.visible=visible;},onProbeChange:()=>{}});
  heat.setOverview((region,heights,oblique)=>{
   const x=(region.west+region.east)/2,z=(region.south+region.north)/2,y=(query.groundAt(x,z)??0)+Math.max(...heights)*.5,span=Math.max(region.east-region.west,region.north-region.south);
   controls.target.set(x,y,z);camera.position.set(x+(oblique?span*.65:0),y+span*(oblique?.85:1.7),z+span*(oblique?.9:.02));controls.update();updateMarkerScreens();
  });
- function hideProbe(){renderer.domElement.style.cursor='';clearTimeout(hoverTimer);hud.hidden=true;probeMarker.visible=false;lastPointer=null;if(window.sensorDiagnostics)delete window.sensorDiagnostics.probe;}
+ function hideProbe(){renderer.domElement.style.cursor='';if(window.sensorDiagnostics)delete window.sensorDiagnostics.probe;}
  function screenRay(clientX,clientY){const rect=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),camera);ray.firstHitOnly=true;return ray;}
- function surfaceAt(clientX,clientY){return screenRay(clientX,clientY).intersectObjects([model.buildings,model.ground])[0];}
+ function surfaceAt(clientX,clientY){return screenRay(clientX,clientY).intersectObjects([activeModel.buildings,activeModel.ground])[0];}
  function markerAt(clientX,clientY){return screenRay(clientX,clientY).intersectObjects(markerMeshes)[0]?.object;}
- function supportAt(position){const ray=new THREE.Raycaster(new THREE.Vector3(position[0],20000,position[2]),new THREE.Vector3(0,-1,0),0,40000);ray.firstHitOnly=true;return ray.intersectObjects([model.buildings,model.ground])[0]?.point.y;}
+ function supportAt(position){const ray=new THREE.Raycaster(new THREE.Vector3(position[0],20000,position[2]),new THREE.Vector3(0,-1,0),0,40000);ray.firstHitOnly=true;return ray.intersectObjects([activeModel.buildings,activeModel.ground])[0]?.point.y;}
  function updateMarkerScreens(){
   if(!window.sensorDiagnostics)return;window.sensorDiagnostics.cameraControlsEnabled=controls.enabled;window.sensorDiagnostics.cameraPosition=camera.position.toArray();camera.updateMatrixWorld();const rect=renderer.domElement.getBoundingClientRect();
   window.sensorDiagnostics.markerScreens=markerMeshes.map(mesh=>{const p=mesh.position.clone().project(camera);return {...mesh.userData,x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,visible:p.z>=-1&&p.z<=1&&Math.abs(p.x)<=1&&Math.abs(p.y)<=1};});
  }
  controls.addEventListener('change',updateMarkerScreens);
- function refreshProbe(){
-  if(!lastPointer||panel.hidden||sceneControls.hidden||drag||!valid)return;
-  const surface=surfaceAt(lastPointer.x,lastPointer.y),heatHit=heat.probe(screenRay(lastPointer.x,lastPointer.y));
-  const cell=heatHit&&(!surface||heatHit.distance<=surface.distance+0.1)?heatHit.cell:null;
-  const hit=surface,device=cell?state.devices.find(d=>d.id===cell.deviceId):selected();hud.hidden=false;
-  if((!hit&&!cell)||!device){hud.querySelector('#signal-caption').textContent=!device?'暂无设备，请先添加':'此处没有模型表面';for(const id of ['signal-value','signal-state','signal-position'])hud.querySelector('#'+id).textContent='';probeMarker.visible=false;if(window.sensorDiagnostics)delete window.sensorDiagnostics.probe;return;}
+ // Signal estimate at the demo probe point, rendered inside the demo readout.
+ function signalProbeRows(position){
+  const device=selected(),demoType=window.equipmentDemoDiagnostics?.type;
+  if(!device)return {rows:[['场景设备','暂无设备，请先添加']]};
+  if(demoType&&device.type!==demoType)return {rows:[['场景设备',`${TYPES[device.type]} · ${device.name}`],['信号估计','当前仿真类型暂无场景信号模型']]};
+  if(!query)return {rows:[['信号估计','空间索引尚未就绪']]};
   try{
-   const position=cell?[...cell.position]:hit.point.toArray();if(!cell)position[1]+=probeHeight;
    const context=query.trace(device.position,position);
-   if(capabilities.isDataset(device)){
-    hud.querySelector('strong').textContent='鼠标位置 · 空间路径';
-    hud.querySelector('#signal-caption').textContent=`${TYPES[device.type]} · 空间路径查询`;
-    hud.querySelector('#signal-value').textContent=`空间距离 ${format(Math.hypot(...position.map((v,i)=>v-device.position[i])))} m`;
-    hud.querySelector('#signal-state').textContent=context.blocked?'直达路径受阻':context.known?'直达路径畅通':'';
-    hud.querySelector('#signal-position').textContent=`东 ${position[0].toFixed(1)} / 北 ${(-position[2]).toFixed(1)} / 上 ${position[1].toFixed(1)} m`;
-    probeMarker.position.fromArray(position);probeMarker.visible=true;window.sensorDiagnostics.probe={position,deviceId:device.id,mode:'dataset_only',context};return;
-   }
+   if(capabilities.isDataset(device))return {rows:[['场景设备',`${TYPES[device.type]} · ${device.name}`],['空间距离',`${format(Math.hypot(...position.map((v,i)=>v-device.position[i])))} m`],['直达路径',context.blocked?'受阻':context.known?'畅通':'—']]};
    const result=evaluate(device,{...state.target,position},state.environment,context);
-   hud.querySelector('strong').textContent='鼠标位置 · 信号估计';
-   hud.querySelector('#signal-caption').textContent=`${TYPES[device.type]} · ${device.name} · ${cell?`三维探测场 · 离地 ${cell.height?.toFixed(1)??'—'}`:`表面上方 ${probeHeight}`} m`;
    const hardBlocked=result.geometry.blocked&&['radar','optical'].includes(device.type);
-   hud.querySelector('#signal-value').textContent=hardBlocked?'直达信号被实体遮挡':device.type==='optical'?`有效像素 ${format(result.extras.effectivePixels)} px`:device.type==='acoustic'?`声压 ${format(result.extras.receivedSoundDb)} dB SPL · 信噪比 ${format(result.snrDb)} dB`:`估计信噪比 ${format(result.snrDb)} dB`;
-   if(cell?.volume)hud.querySelector('#signal-value').textContent=`体场插值 · ${{margin:'裕量',snr:'SNR',pd:'模型 Pd'}[cell.metric]} ${format(cell.interpolatedValue)} ${cell.metric==='pd'?'':'dB'}`;
-   hud.querySelector('#signal-state').textContent=`${hardBlocked?'未截断参考裕量':'裕量'} ${format(result.marginDb)} dB · ${result.status==='within-model'?'模型内可感知':result.status==='uncertain'?'地形覆盖不足':result.reasons.join('；')}`;
-   hud.querySelector('#signal-position').textContent=`东 ${position[0].toFixed(1)} / 北 ${(-position[2]).toFixed(1)} / 上 ${position[1].toFixed(1)} m`;
-   probeMarker.position.fromArray(position);probeMarker.visible=true;
-   window.sensorDiagnostics.probe={position,heightAboveSurface:cell?cell.height:probeHeight,source:cell?'detection-volume':'surface',deviceId:device.id,result};
-  }catch(error){hud.querySelector('#signal-value').textContent=`无法查询：${error.message}`;probeMarker.visible=false;}
+   const value=hardBlocked?'直达信号被实体遮挡':device.type==='optical'?`有效像素 ${format(result.extras.effectivePixels)} px`:device.type==='acoustic'?`声压 ${format(result.extras.receivedSoundDb)} dB SPL · 信噪比 ${format(result.snrDb)} dB`:`估计信噪比 ${format(result.snrDb)} dB`;
+   const status=`${hardBlocked?'未截断参考裕量':'裕量'} ${format(result.marginDb)} dB · ${result.status==='within-model'?'模型内可感知':result.status==='uncertain'?'地形覆盖不足':result.reasons.join('；')}`;
+   return {rows:[['场景设备',`${TYPES[device.type]} · ${device.name}`],['信号估计',value],['裕量 / 状态',status]]};
+  }catch(error){return {rows:[['信号估计',`无法查询：${error.message}`]]};}
  }
- $('equipment-probe-height').oninput=()=>{const input=$('equipment-probe-height'),value=Number(input.value);if(input.value.trim()&&Number.isFinite(value)&&value>=0&&value<=2000){probeHeight=value;refreshProbe();}else hideProbe();};
+ $('equipment-probe-height').oninput=()=>{const input=$('equipment-probe-height'),value=Number(input.value);if(input.value.trim()&&Number.isFinite(value)&&value>=0&&value<=2000)probeHeight=value;};
  function endDrag(){
   if(!drag)return;const pointerId=drag.pointerId,wasDamping=drag.damping;drag=null;clearTimeout(dragTimer);controls.enabled=true;controls.enableDamping=wasDamping;renderer.domElement.style.cursor='';
   if(renderer.domElement.hasPointerCapture(pointerId))renderer.domElement.releasePointerCapture(pointerId);
@@ -243,11 +323,10 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
    if(drag.kind==='device'){const device=state.devices.find(d=>d.id===drag.deviceId);if(device)device.position=position;}else state.target.position=position;
    if(!dragTimer)dragTimer=setTimeout(()=>{dragTimer=null;compute();},60);return;
   }
-  lastPointer={x:event.clientX,y:event.clientY};renderer.domElement.style.cursor=markerAt(event.clientX,event.clientY)?'grab':'';
-  clearTimeout(hoverTimer);hoverTimer=setTimeout(refreshProbe,80);
+  renderer.domElement.style.cursor=markerAt(event.clientX,event.clientY)?'grab':'';
  },true);
  renderer.domElement.addEventListener('pointerup',event=>{
-  if(drag){event.stopImmediatePropagation();endDrag();renderForm();compute();workspace.restoreWindow('equipment');return;}
+  if(drag){event.stopImmediatePropagation();endDrag();renderForm();compute();workspace.restoreWindow('equipment');followSelected();return;}
   if(!pickMode||panel.hidden||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
   const hit=surfaceAt(event.clientX,event.clientY);if(!hit){message('未选中模型表面，请点击建筑或地形。');return;}
   const p=hit.point.toArray();p[1]+=pickMode==='device'?2:50;
@@ -258,7 +337,7 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
  renderer.domElement.addEventListener('pointerleave',()=>{if(!drag){hideProbe();renderer.domElement.style.cursor='';}});
  $('equipment-export').onclick=()=>{
   if(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData()){message('请完成本次评估后再导出。');return;}
-  const payload={...state,equipmentSource:EQUIPMENT_SOURCE,parameterProvenance:Object.fromEntries(state.devices.map(device=>[device.id,Object.fromEntries(Object.entries(PRESETS.find(p=>p.id===device.presetId).provenance).map(([key,source])=>[key,device.parameters[key]===PRESETS.find(p=>p.id===device.presetId).parameters[key]?source:'用户调整']))])),sourceHashes:city.metadata.sources,ecefTransform:city.metadata.ecefTransform,results,contexts:Object.fromEntries(lastContexts),physicsSources:['radar/core/radar_snr.m','radar/config/radar_02C.m','radar/config/radar_03D.m','rf/core/sensitivity_solve.m','rf/core/rx_power_dbm.m','rf/core/rx_noise_dbm.m'],modelNotes:'Approximate uncalibrated sensor models; scores are not detection probabilities.'};
+  const payload={...state,equipmentSource:EQUIPMENT_SOURCE,parameterProvenance:Object.fromEntries(state.devices.map(device=>[device.id,Object.fromEntries(Object.entries(PRESETS.find(p=>p.id===device.presetId).provenance).map(([key,source])=>[key,device.parameters[key]===PRESETS.find(p=>p.id===device.presetId).parameters[key]?source:'用户调整']))])),sourceHashes:activeMode==='recon'?city.metadata.sources:activeMeta?.source??null,ecefTransform:activeMode==='recon'?city.metadata.ecefTransform:null,results,contexts:Object.fromEntries(lastContexts),physicsSources:['radar/core/radar_snr.m','radar/config/radar_02C.m','radar/config/radar_03D.m','rf/core/sensitivity_solve.m','rf/core/rx_power_dbm.m','rf/core/rx_noise_dbm.m'],modelNotes:'Approximate uncalibrated sensor models; scores are not detection probabilities.'};
   payload.results=results.filter(r=>!capabilities.isDataset(state.devices.find(d=>d.id===r.id)));
   payload.capabilityAssessment=capabilities.exportData();payload.assessmentMode=capabilities.exportMode();
   payload.modelNotes='基础评估使用比赛设备配置与场景几何；假设仿真采用可调整系数，评分用于趋势比较。';
@@ -266,28 +345,38 @@ workspace.mountWindow('equipment','装备建模',panel,{closeId:'equipment-back'
  };
  $('equipment-import').onchange=async()=>{
   const file=$('equipment-import').files[0];if(!file)return;
-  try{if(file.size>1024*1024)throw Error('参数文件不能大于 1 MB');const next=validateScenario(JSON.parse(await file.text()),city.metadata.origin);endDrag();hideProbe();state=next;selectedId=state.devices[0]?.id??null;serial=Math.max(serial,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();compute();focus();message('方案导入成功，已根据当前城市网格重新计算。');}catch(error){message(`导入失败：${error.message}`);}finally{$('equipment-import').value='';}
+  try{if(file.size>1024*1024)throw Error('参数文件不能大于 1 MB');const next=validateScenario(JSON.parse(await file.text()),activeOrigin);endDrag();hideProbe();state=next;selectedId=state.devices[0]?.id??null;serial=Math.max(serial,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();compute();focus();message('方案导入成功，已根据当前城市网格重新计算。');}catch(error){message(`导入失败：${error.message}`);}finally{$('equipment-import').value='';}
  };
  $('equipment-reset').onclick=()=>{endDrag();hideProbe();state.devices=[];selectedId=null;pickMode=null;renderForm();compute();message('已删除所有设备与范围阴影。选择型号后可重新添加。');};
- $('equipment-defaults').onclick=()=>{endDrag();hideProbe();state=defaultState();selectedId=state.devices[0].id;serial=4;renderForm();compute();focus();};
- capabilities=mountCapabilityAssessment({panel,city,getState:()=>state,getSelected:()=>selectedId,getQuery:()=>query,isVisible:()=>!panel.hidden,onChange:(reform=false)=>{if(reform)renderForm();compute();},onUpdate:()=>{renderResults();$('equipment-export').disabled=!valid||(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData());}});
+ $('equipment-defaults').onclick=()=>{endDrag();hideProbe();state=sceneDefaultState();selectedId=state.devices[0].id;serial=4;renderForm();compute();focus();};
+ capabilities=mountCapabilityAssessment({panel,city,getState:()=>state,getSelected:()=>selectedId,getQuery:()=>query,isVisible:()=>!panel.hidden,sceneMatches:()=>activeMode==='recon',onChange:(reform=false)=>{if(reform)renderForm();compute();},onUpdate:()=>{renderResults();$('equipment-export').disabled=!valid||(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData());}});
  renderForm();toggle.disabled=false;
-const demoQueries={};
- const demo=createEquipmentDemo({app,scene,camera,controls,renderer,model,workspace,getScenario:()=>state,
-  getQuery:reflections=>demoQueries[reflections?'reflections':'direct']??=(createSceneQuery(model,{reflections})),
+ const demoModel={get buildings(){return activeModel.buildings;},get ground(){return activeModel.ground;}};
+ demo=createEquipmentDemo({app,scene,camera,controls,renderer,model:demoModel,workspace,getScenario:()=>state,
+  getQuery:reflections=>demoQueries[reflections?'reflections':'direct']??=(createSceneQuery(activeModel,{reflections})),
+  getSignalProbe:position=>signalProbeRows(position),
   onStart:()=>{heat.hide();layer.visible=false;hideProbe();},
  });
- const manager=mountEquipmentManager(panel,{demo});
- const scenarioListeners=new Set(),getScenario=()=>structuredClone(state);
+ const manager=mountEquipmentManager(panel,{demo,onSelectionChange:({type})=>followDevice(type)});
+ const scenarioListeners=new Set(),getScenarioSnapshot=()=>structuredClone(state);
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
- const publishScenario=()=>{publishConfiguration();const snapshot=getScenario();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
+ const publishScenario=()=>{publishConfiguration();const snapshot=getScenarioSnapshot();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
+ let cityTargetPick=false;
  const cityConditions=mountCityConditions({panel:app.querySelector('#city-panel'),getState:()=>state,
   onEnvironment:value=>{state.environment=structuredClone(value);capabilities.invalidate();publishScenario();},
   onTarget:value=>{state.target=structuredClone(value);capabilities.invalidate();publishScenario();},
+  onPickTarget:()=>{cityTargetPick=true;workspace.minimizeWindow('city');window.__ac8SceneMenu?.minimize();},
  });
  publishConfiguration();
  app.querySelector('#open-city-model').addEventListener('click',()=>cityConditions.refresh());
-
+ renderer.domElement.addEventListener('pointerup',event=>{
+  if(!cityTargetPick)return;
+  const cityWindowNode=app.querySelector('#city-window');
+  if(!cityWindowNode?.open&&!window.__ac8SceneMenu?.isOpen()){cityTargetPick=false;return;}
+  if(!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
+  const hit=surfaceAt(event.clientX,event.clientY);if(!hit)return;
+  event.stopImmediatePropagation();cityTargetPick=false;const position=hit.point.toArray();position[1]+=50;cityConditions.setTargetPosition(position);workspace.restoreWindow('city');window.__ac8SceneMenu?.restore();
+ },true);
  app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
-return {panel,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario,getScenarioSnapshot:getScenario,getEquipmentSnapshot:manager.getSnapshot,subscribeEquipmentChanges:manager.subscribe,subscribeScenarioChanges(listener){scenarioListeners.add(listener);return()=>scenarioListeners.delete(listener);},applyScenario(value){demo.stop();state=validateScenario(value,city.metadata.origin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();show();}};
+ return {panel,activate,deactivate,focusType,startDemo,showDemoHud,hideDemoHud,stopDemo,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario:getScenarioSnapshot,getScenarioSnapshot,getEquipmentSnapshot:manager.getSnapshot,subscribeEquipmentChanges:manager.subscribe,subscribeScenarioChanges(listener){scenarioListeners.add(listener);return()=>scenarioListeners.delete(listener);},setActiveScene,applyScenario(value){demo.stop();state=validateScenario(value,activeOrigin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();app.dataset.activeView='sensors';if(window.__ac8EquipmentMenu?.openDetail)window.__ac8EquipmentMenu.openDetail('radar');else show();}};
 }

@@ -2,21 +2,18 @@ node_modules/
 dist/
 *.log
 .venv/
-public/data/
 artifacts/
+创意二文件/
 
 __pycache__/
 *.pyc
 .trae/
 .idea/
 
+.env.local
 .npm-cache/
 .python-deps/
 .integration-runtime/
 equipment_models/*/outputs/*
 !equipment_models/optical/outputs/optical_demo.json
 !equipment_models/acoustic/outputs/acoustic_demo.json
-
-# MATLAB 城市缓存不提交，预处理源码保留
-radar/data/
-!radar/data/preprocess_city.m

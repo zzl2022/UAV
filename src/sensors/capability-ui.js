@@ -3,7 +3,7 @@ import {supported,ensureSettings,requestForScenario,availableMetrics,parameterRo
  displayStatus,pathLabel,assessmentSummary,resultExplanation,comparisonHTML,reportHTML} from './capability-data.js';
 
 // Shares equipment, target, coordinate frame and scene query with mountSensorUI.
-export function mountCapabilityAssessment({panel,city,getState,getSelected,getQuery,isVisible,onChange,onUpdate}){
+export function mountCapabilityAssessment({panel,city,getState,getSelected,getQuery,isVisible,onChange,onUpdate,sceneMatches=()=>true}){
  const workspace=document.createElement('section');workspace.id='capability-workspace';
  workspace.innerHTML=`<h2>评估设置</h2><label>评估方式<select id="capability-mode" title="资料基础评估核对设备参数与场景几何；假设仿真用于环境条件比较。"><option value="dataset">资料基础评估</option><option value="simulation">假设环境仿真</option></select></label><label id="capability-nominal-row" hidden><input id="capability-nominal" type="checkbox">显示标称范围示意（假设）</label><div id="capability-settings"></div><div class="buttons"><button id="capability-reload">刷新设备资料</button><button id="capability-aim">朝向当前目标</button></div><p id="capability-message" role="status" class="hint"></p>`;
  panel.querySelector('details').before(workspace);
@@ -61,7 +61,7 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
  async function load(){
   if(loading)return loading;
   loading=requestJSON('/api/capabilities/catalog').then(value=>{
-   if(JSON.stringify(value.scene.origin)!==JSON.stringify(city.metadata.origin))throw Error('场景版本不一致，请重新启动平台。');
+   if(sceneMatches()&&JSON.stringify(value.scene.origin)!==JSON.stringify(city.metadata.origin))throw Error('场景版本不一致，请重新启动平台。');
    catalog=value;return value;
   }).finally(()=>loading=null);return loading;
  }

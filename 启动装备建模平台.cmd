@@ -1,9 +1,4 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0"
-if exist ".venv\Scripts\python.exe" (
-  ".venv\Scripts\python.exe" scripts\start_integrated.py
-) else (
-  python scripts\start_integrated.py
-)
-pause
+rem 统一使用“启动平台.bat”的自动安装与启动逻辑。
+call "%~dp0启动平台.bat"
