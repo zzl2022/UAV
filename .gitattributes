@@ -3,6 +3,9 @@
 *.cmd -text
 *.ps1 text eol=crlf
 
+# Raw competition data must stay byte-identical (source hashes).
+创意二文件/** -text
+
 # Binaries
 *.glb binary
 *.docx binary
