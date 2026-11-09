@@ -72,6 +72,25 @@ export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,se
  const runbar=document.createElement('div');runbar.className='task3-runbar';runbar.innerHTML=`<div class="buttons"><button id="task3-run" class="primary">▶ 开始推演</button><button id="task3-cancel" disabled>取消</button></div><progress id="task3-progress" max="1" value="0"></progress><div id="task3-status" role="status">待命</div>`;
  panel.insertBefore(runbar,panel.querySelector('.task3-body'));
  const $=id=>app.querySelector('#'+id);
+ // Additional run controls inside the left-bottom scene info bar. They mirror
+ // the settings-panel runbar so the same run can be started/observed without
+ // opening the deployment menu; the panel bar stays available as before.
+ const sceneInfo=app.querySelector('.ac8-scene-info');
+ if(sceneInfo){
+  const sideRun=document.createElement('div');sideRun.className='ac8-info-runbar';sideRun.innerHTML=`<div class="ac8-info-run-head"><span class="ac8-info-label">[推演]</span><span id="task3-status-side" class="ac8-info-run-status" role="status">待命</span></div><div class="ac8-info-run-actions"><button id="task3-run-side" type="button" class="ac8-info-run-primary">▶ 开始推演</button><button id="task3-cancel-side" type="button" disabled>取消</button></div><progress id="task3-progress-side" max="1" value="0"></progress>`;
+  sceneInfo.append(sideRun);
+  $('task3-run-side').onclick=()=>$('task3-run').click();
+  $('task3-cancel-side').onclick=()=>$('task3-cancel').click();
+ }
+ function syncRunbar(){
+  const sideRun=$('task3-run-side'),sideCancel=$('task3-cancel-side'),sideProgress=$('task3-progress-side'),sideStatus=$('task3-status-side');
+  if(!sideRun)return;
+  sideRun.disabled=$('task3-run').disabled;
+  sideCancel.disabled=$('task3-cancel').disabled;
+  sideProgress.value=$('task3-progress').value;
+  sideStatus.textContent=$('task3-status').textContent;
+  sideStatus.dataset.tone=$('task3-status').dataset.tone||'';
+ }
  const button=app.querySelector('#toggle-task3');button.disabled=false;
  const layer=new THREE.Group();layer.name='Task3_Pipeline';layer.visible=false;scene.add(layer);
  const view=renderer.domElement.parentElement;
@@ -146,7 +165,7 @@ export function mountTask3UI({app,city,terrain,scene,camera,controls,renderer,se
  }
  for(const btn of panel.querySelectorAll('.task3-tabs button'))btn.onclick=()=>{activeTab=btn.dataset.tab;activeSub=TABS[activeTab].subs[0]?.[0]??null;applyTab();};
  subnav.addEventListener('click',event=>{const b=event.target.closest('[data-sub]');if(!b)return;activeSub=b.dataset.sub;applyTab();});
- const setStatus=(text,tone='')=>{const status=$('task3-status');status.textContent=text;status.dataset.tone=tone;};
+ const setStatus=(text,tone='')=>{const status=$('task3-status');status.textContent=text;status.dataset.tone=tone;syncRunbar();};
  function renderEquipmentSelection(equipmentSnapshot=sensors.getEquipmentSnapshot()){
   const presetIds=resolveTask3EquipmentSelection(equipmentSnapshot);
   $('task3-equipment').replaceChildren(...presetIds.map(id=>{const preset=PRESETS.find(p=>p.id===id),row=document.createElement('div');row.className='task3-equip';row.dataset.presetId=id;row.textContent=`${TYPES[preset.type]} · ${preset.name}`;return row;}));
@@ -392,6 +411,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   $('task3-mobile-repair').disabled=busy||!report;
   const threatReady=!busy&&!!report?.threats?.[threatKey()]?.frames?.length;
   $('task3-threat-play').disabled=!threatReady;$('task3-threat-reset').disabled=!threatReady;$('task3-threat-view').disabled=!report;
+  syncRunbar();
  }
  function mobileFail(text){worker?.terminate();worker=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;$('task3-mobile-repair').checked=false;restoreMobileRepair();setMobileStatus(`移动补盲失败：${text}`,'error');setStatus('移动补盲未完成，已保留原方案。','error');controlsEnabled();renderAll();publishSimulation();}
  function clearMobileRepairState(){

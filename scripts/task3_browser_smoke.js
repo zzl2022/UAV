@@ -16,9 +16,13 @@ try{
  await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:'推演输入'}).click();
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
  await page.locator('#task3-panel').waitFor({state:'visible',timeout:10000});
+ assert.equal(await page.locator('.ac8-scene-info #task3-run-side').count(),1,'左下信息栏应提供开始推演按钮');
+ assert.equal(await page.locator('.ac8-scene-info #task3-progress-side').count(),1,'左下信息栏应提供推演进度条');
  await page.locator('#task3-run').click();
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
  const diag=await page.evaluate(()=>window.task3Diagnostics);
+ assert.match(await page.locator('#task3-status-side').innerText(),/推演完成/,'左下信息栏状态应同步');
+ assert.equal(await page.locator('#task3-progress-side').getAttribute('value'),'1','左下信息栏进度应同步');
  // ≥3 套差异化方案并自动择优
  assert.equal(diag.plans.length,3);
  assert.ok(new Set(diag.plans.map(p=>p.devices)).size>=2,'方案设备数应有差异');
