@@ -36,7 +36,7 @@ try{
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
  await openModule('推演输入');
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
- await page.locator('#task3-run').click();
+ await page.locator('#task3-run-side').evaluate(button=>button.click());
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
  await page.waitForTimeout(600);
  await page.locator('#task3-panel').evaluate(n=>n.scrollTop=0);await page.screenshot({path:`${out}/task3-run.png`});console.log('task3-run.png');

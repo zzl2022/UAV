@@ -38,6 +38,7 @@
     "test:sites:browser": "node scripts/site_browser_smoke.js"
   },
   "dependencies": {
+    "pdfmake": "^0.3.14",
     "three": "0.186.1",
     "three-mesh-bvh": "0.9.16"
   },

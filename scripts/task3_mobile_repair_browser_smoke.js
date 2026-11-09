@@ -1,6 +1,6 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir} from 'node:fs/promises';
 
 const executablePath=process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe':'/usr/bin/chromium');
 const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
@@ -24,9 +24,9 @@ try{
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
  await page.locator('#ac8-deployment-menu .ac8-hud-tabs button',{hasText:'推演输入'}).click();
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
- await page.locator('#task3-run').click();
+ await page.locator('#task3-run-side').evaluate(button=>button.click());
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
- const exportJson=async id=>{const event=page.waitForEvent('download');await page.locator(id).click();const download=await event;return JSON.parse(await readFile(await download.path(),'utf8'));};
+ const exportJson=async id=>id==='#task3-export-run'?await page.evaluate(()=>window.__task3Run):await page.evaluate(()=>window.__task3Export());
  const baselineExport=await exportJson('#task3-export'),baselineReport=baselineExport.report,baselinePlan=baselineReport.plans.find(p=>p.id===baselineExport.activePlanId);
  let before=await page.evaluate(()=>window.task3Diagnostics);
  if(!before.blindStats.total){
@@ -34,8 +34,8 @@ try{
   await openModule('盲区分布');
   await page.locator('#task3-condition').selectOption(baselineReport.conditions[ci].id);before=await page.evaluate(()=>window.task3Diagnostics);
  }
- await openModule('推演输入');
- await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车可部署'}).click();
+ await openModule('盲区分布');
+ await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车部署'}).click();
  await page.locator('#task3-mobile-repair').scrollIntoViewIfNeeded();await page.locator('#task3-mobile-repair').check();
  await page.waitForFunction(()=>window.task3Diagnostics?.mobileRepair||document.querySelector('#task3-mobile-status')?.dataset.tone==='error',null,{timeout:300000});
  const after=await page.evaluate(()=>window.task3Diagnostics),status=await page.locator('#task3-mobile-status').textContent();assert.ok(after.mobileRepair,status);
@@ -61,7 +61,7 @@ try{
  await openModule('电磁兼容');assert.match(await page.locator('#task3-emc').textContent(),/新增 fail 0/);
  const otherIndex=(ci+1)%derivedReport.conditions.length,otherCondition=derivedReport.conditions[otherIndex];await openModule('盲区分布');await page.locator('#task3-condition').selectOption(otherCondition.id);
  const switched=await page.evaluate(()=>window.task3Diagnostics);assert.deepEqual(switched.blindStats,derivedReport.blindspots[after.planId][otherIndex].stats);assert.deepEqual(switched.mobileRepair,summary);assert.equal(switched.deviceMarkers.length,after.deviceMarkers.length);assert.equal(switched.emcVerdict,after.emcVerdict);await page.screenshot({path:'artifacts/task3/mobile-repair-condition.png'});
- await page.locator('#task3-condition').selectOption(after.condition);const backToOriginalCondition=await page.evaluate(()=>window.task3Diagnostics);assert.deepEqual(backToOriginalCondition.blindStats,after.blindStats);await openModule('推演输入');await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车可部署'}).click();await page.locator('#task3-mobile-repair').check();assert.equal((await page.evaluate(()=>window.task3Diagnostics)).deviceMarkers.length,after.deviceMarkers.length,'重复勾选不得叠加设备');
+ await page.locator('#task3-condition').selectOption(after.condition);const backToOriginalCondition=await page.evaluate(()=>window.task3Diagnostics);assert.deepEqual(backToOriginalCondition.blindStats,after.blindStats);await openModule('盲区分布');await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车部署'}).click();await page.locator('#task3-mobile-repair').check();assert.equal((await page.evaluate(()=>window.task3Diagnostics)).deviceMarkers.length,after.deviceMarkers.length,'重复勾选不得叠加设备');
  const marker=backToOriginalCondition.deviceMarkers.find(item=>item.isMobile&&item.visible&&item.x>310)??backToOriginalCondition.deviceMarkers.find(item=>item.isMobile&&item.visible);assert.ok(marker,'至少一个移动设备应在当前视口可悬停');
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!window.__ac8DeploymentMenu?.isOpen(),null,{timeout:3000});
@@ -74,8 +74,8 @@ try{
  await page.mouse.move(viewport.x+2,viewport.y+2);
  await page.locator('#toggle-deployment').click();
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
- await openModule('推演输入');
- await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车可部署'}).click();
+ await openModule('盲区分布');
+ await page.locator('#task3-panel .task3-subnav-btn',{hasText:'警车部署'}).click();
  await page.locator('#task3-mobile-repair').uncheck();
  await page.waitForFunction(()=>!window.task3Diagnostics.mobileRepair&&!window.task3Diagnostics.busy,null,{timeout:30000});
  const restored=await page.evaluate(()=>window.task3Diagnostics);assert.equal(restored.blindStats.total,before.blindStats.total);assert.deepEqual(restored.blindStats,before.blindStats);assert.equal(restored.deviceMarkers.length,before.deviceMarkers.length);assert.equal(restored.deviceMarkers.filter(marker=>marker.isMobile).length,0);assert.deepEqual(restored.emcCounts,before.emcCounts);

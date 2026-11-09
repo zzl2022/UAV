@@ -1,6 +1,6 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir} from 'node:fs/promises';
 
 const executablePath=process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe':'/usr/bin/chromium');
 const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
@@ -38,12 +38,12 @@ try{
  await page.setViewportSize({width:1500,height:1000});
  await openModule('推演输入');
 
- const exportReport=async path=>{const pending=page.waitForEvent('download');await page.locator('#task3-export').click();const download=await pending;await download.saveAs(path);return JSON.parse(await readFile(path,'utf8'));};
- const run=async()=>{await page.locator('#task3-run').click();await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});};
+ const exportReport=async()=>await page.evaluate(()=>window.__task3Export());
+ const run=async()=>{await page.locator('#task3-run-side').evaluate(button=>button.click());await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});};
  await openModule('推演输入');
  assert.equal(await page.locator('#task3-scope-width').inputValue(),'2400');assert.equal(await page.locator('#task3-scope-depth').inputValue(),'2400');
  await run();
- const defaultExport=await exportReport(`${out}/acceptance-default-report.json`),defaultReport=defaultExport.report,defaultPlan=defaultReport.plans.find(item=>item.id===defaultExport.activePlanId);
+ const defaultExport=await exportReport(),defaultReport=defaultExport.report,defaultPlan=defaultReport.plans.find(item=>item.id===defaultExport.activePlanId);
  assert.equal(defaultReport.settings.scope,'core');assert.equal(defaultReport.scope.widthM,2400);assert.equal(defaultReport.scope.depthM,2400);assert.equal(defaultReport.scope.clipped,false);
  assert.match(await page.locator('#task3-scope-status').textContent(),/本次范围：东西 2400 m × 南北 2400 m/);
  await openModule('方案对比');
@@ -67,7 +67,7 @@ try{
  
 
  await openModule('推演输入');await page.locator('#task3-scope-width').fill('10000');await page.locator('#task3-scope-depth').fill('10000');await page.locator('#task3-spacing').fill('700');await run();
- const clippedExport=await exportReport(`${out}/acceptance-clipped-report.json`),clipped=clippedExport.report.scope;
+ const clippedExport=await exportReport(),clipped=clippedExport.report.scope;
  assert.equal(clippedExport.report.settings.scope,'custom');assert.equal(clippedExport.report.settings.scopeWidthM,10000);assert.equal(clippedExport.report.settings.scopeDepthM,10000);assert.equal(clipped.clipped,true);assert.match(clipped.note,/DEM 数据裁切/);
  const effectiveWidth=clipped.effectiveBounds.east-clipped.effectiveBounds.west,effectiveDepth=clipped.effectiveBounds.north-clipped.effectiveBounds.south;
  assert.ok(effectiveWidth<10000&&effectiveDepth<10000);assert.match(await page.locator('#task3-scope-status').textContent(),/已按有效区域裁切.*不外推覆盖/);
