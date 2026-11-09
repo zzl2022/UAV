@@ -16,7 +16,9 @@ import {mountSceneMenu} from './scene-menu.js';
 import {mountHudMenu} from './hud-menu.js';
 import {flightTelemetry} from './planning/telemetry.js';
 import logoFullUrl from './assets/logo-full.png';
+import {initLicenseGate} from './license.js';
 
+initLicenseGate();
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
   <div class="topbar-brand">
