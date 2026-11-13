@@ -1,5 +1,6 @@
 // 部署方案布设文档数据模型：所有数值直接来自 report/run，规则来自真实多轮过程数据，供 PDF 导出复用。
 import {TYPES} from '../sensors/presets.js';
+import {THREAT_SCENARIOS} from './constants.js';
 import {createDeviceDisplayMap} from './device-display.js';
 
 export const DEPLOYMENT_DOC_SCHEMA='task3-deployment-doc/1.0';
@@ -49,16 +50,112 @@ function representativeCases(report,plan,conditionId,maxCases=4){
  return {condition:{...condition},cases};
 }
 
-export function createDeploymentDocument({report,run,activePlanId=report?.recommendedId,rules=[],conditionId='nominal',documentKind='current',generatedAt=new Date().toISOString()}){
- if(!report||!run?.runId)throw Error('生成布设文档需要完整 report 和带 runId 的 run');
- const plan=report.plans.find(item=>item.id===activePlanId);
- if(!plan)throw Error(`当前方案 ${activePlanId} 不在报告中`);
- if(!Array.isArray(plan.devices)||!plan.devices.length)throw Error('当前方案没有可解释的设备点位');
+// 当前方案全部设备点位：PDF“部署方案设计”逐台列出，不截断。
+function planDevices(plan){
+ const display=createDeviceDisplayMap(plan.devices);
+ return plan.devices.map((device,index)=>{
+  const entry=display.details(device.id),site=plan.sites?.[index]??(typeof device.deployment==='object'?device.deployment:null)??{};
+  return {
+   id:device.id,displayName:entry?.displayName??device.id,type:device.type,
+   typeName:entry?.typeName??TYPES[device.type]??device.type,modelName:entry?.modelName??device.name??device.presetId??'未提供',
+   presetId:device.presetId??null,position:[...device.position],
+   siteName:site?.name??'流水线实际候选点',installation:site?.installation??'流水线实际候选点安装代理',
+   mobile:device.mobileRepair?.platform==='police-car'||site?.deployment==='police-car',
+  };
+ });
+}
+
+// 多方案比较：排名、四指标、EMC 结论、综合得分，直接复用 pipeline 的 comparison/scoring 结果。
+function comparisonModel(report,selectedPlanId){
+ const scoringRows=Array.isArray(report.scoring?.plans)?report.scoring.plans:[],byId=new Map(scoringRows.map(row=>[row.id,row]));
+ const source=Array.isArray(report.comparison?.rows)?report.comparison.rows:scoringRows.map(row=>({
+  rank:row.rank,id:row.id,name:row.name??row.id,deviceCount:row.deviceCount,
+  coverage:row.indicators?.coverage,blindRatio:row.indicators?.blindRatio,
+  cost:row.indicators?.cost,feasibility:row.indicators?.feasibility,score:row.score,
+ }));
+ const rows=source.map(row=>({
+  rank:row.rank,id:row.id,name:row.name??row.id,deviceCount:row.deviceCount,
+  coverage:row.coverage,blindRatio:row.blindRatio,cost:row.cost,feasibility:row.feasibility,score:row.score,
+  emcVerdict:byId.get(row.id)?.emcVerdict??report.emc?.[row.id]?.verdict??null,
+  selected:row.id===selectedPlanId,recommended:row.id===report.recommendedId,
+ }));
+ const recommended=(report.plans??[]).find(item=>item.id===report.recommendedId);
+ return {
+  recommendedId:report.recommendedId??null,recommendedName:recommended?.name??null,
+  recommendationStatus:report.deploymentStatus??report.scoring?.recommendationStatus??null,
+  method:report.scoring?.method??report.comparison?.method??null,
+  weights:{...(report.weights??report.comparison?.weights??{})},rows,
+ };
+}
+
+// 威胁场景验证结果：优先读取按方案缓存的 threatsByPlan；旧报告仅推荐方案有 threats 时如实标记可用性。
+function threatModel(report,run,plan){
+ const derived=Boolean(plan.derivation),threatPlanId=derived?plan.derivation.basePlanId:plan.id;
+ const source=report.threatsByPlan?.[threatPlanId]??(threatPlanId===report.recommendedId?report.threats:null)??run?.threatsByPlan?.[threatPlanId]??(threatPlanId===report.recommendedId?run?.threats:null)??{};
+ const scenarios=Object.entries(source).map(([key,value])=>{
+  const config=value?.config??{},perTarget=Array.isArray(value?.perTarget)?value.perTarget:[];
+  return {
+   key,name:THREAT_SCENARIOS[key]?.name??key,
+   targetCount:value?.summary?.targetCount??config.count??0,
+   detectedCount:perTarget.filter(item=>item.firstDetectionTime!==null).length,
+   meanFirstDetectionTime:value?.summary?.meanFirstDetectionTime??null,
+   meanDetectedFraction:value?.summary?.meanDetectedFraction??null,
+   minDetectedFraction:value?.summary?.minDetectedFraction??null,
+   overflowEvents:value?.summary?.overflowEvents??null,overflowedTargets:value?.summary?.overflowedTargets??null,
+   config:{count:config.count??null,directions:config.directions??null,azimuthsDeg:Array.isArray(config.azimuthsDeg)?[...config.azimuthsDeg]:[],
+    aglM:Array.isArray(config.aglM)?[...config.aglM]:[],speedMps:config.speedMps??null,simultaneous:Boolean(config.simultaneous)},
+   perTarget:perTarget.map(item=>({id:item.id??item.routeId,firstDetectionTime:item.firstDetectionTime??null,detectedFraction:item.detectedFraction??null,lossEvents:item.lossEvents??null})),
+   text:value?.text??null,
+  };
+ });
+ return {planId:plan.id,planName:plan.name,sourcePlanId:threatPlanId,derived,available:scenarios.length>0,note:derived?'当前为警车移动补盲派生方案；威胁结果来自原方案，未对派生方案重新计算。':null,scenarios};
+}
+
+// 覆盖效果：工况指标 + 盲区四分类 + 单高度层面积估计，全部来自真实离散采样。
+function coverageModel(report,plan){
+ const blindRows=Array.isArray(report.blindspots?.[plan.id])?report.blindspots[plan.id]:[];
+ const conditions=(report.conditions??[]).map((condition,index)=>{
+  const metric=plan.metrics?.[index]??{},blind=blindRows.find(row=>row?.conditionId===condition.id)??blindRows[index]??null;
+  const areaEstimates=(plan.areaEstimates?.[condition.id]??[]).map(item=>({
+   height:item.height,validGridCells:item.validGridCells,blindGridCells:item.blindGridCells,
+   approximateBlindAreaMeters2:item.approximateBlindAreaMeters2,
+  }));
+  return {
+   condition:condition.id,name:condition.name,
+   covered:metric.covered,total:metric.total,coverageRate:metric.coverageRate,blindRate:metric.blindRate,
+   redundant:metric.redundant,coreCoverageRate:metric.coreCoverageRate,coreRedundantRate:metric.coreRedundantRate,
+   blindTotal:blind?.stats?.total??null,byCategory:{...(blind?.stats?.byCategory??{})},areaEstimates,
+  };
+ });
+ const coreSamples=Array.isArray(report.sampling?.samples)?report.sampling.samples.filter(sample=>sample.core).length:null;
+ const core={
+  radiusM:report.settings?.coreRadius??null,sampleCount:coreSamples,
+  coverageRate:plan.metrics?.[0]?.coreCoverageRate??null,redundantRate:plan.metrics?.[0]?.coreRedundantRate??null,
+ };
+ return {conditions,core};
+}
+
+function emcModel(emc){
+ return {
+  text:emc.text??null,notes:Array.isArray(emc.notes)?[...emc.notes]:[],source:emc.source??null,
+  conflicts:Array.isArray(emc.conflicts)?emc.conflicts.map(conflict=>({...conflict})):[],
+  remediation:emc.remediation?{
+   status:emc.remediation.status??null,deployable:Boolean(emc.remediation.deployable),
+   actionCount:Array.isArray(emc.remediation.actions)?emc.remediation.actions.length:0,
+   actions:Array.isArray(emc.remediation.actions)?emc.remediation.actions.map(action=>({...action})):[],
+   unresolvedCount:Array.isArray(emc.remediation.unresolved)?emc.remediation.unresolved.length:0,
+  }:null,
+ };
+}
+
+function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId}){
+ if(!Array.isArray(plan.devices)||!plan.devices.length)throw Error(`方案 ${plan.id} 没有可解释的设备点位`);
  const {condition,cases}=representativeCases(report,plan,conditionId);
  const scope=report.scope??report.sampling.dataCoverage??{};
  const settings=report.settings,derived=Boolean(plan.derivation),emc=report.emc[plan.id];
  if(!emc)throw Error(`方案 ${plan.id} 缺少 EMC 结果`);
  const scoring=report.scoring?.plans?.find(item=>item.id===plan.id);
+ const coverage=coverageModel(report,plan);
  const usableRules=(Array.isArray(rules)?rules:rules.rules??[]).filter(rule=>rule?.evidence?.samples>0&&rule.evidence.runIds&&rule.evidence.method).map(rule=>({id:rule.id,title:rule.title,text:rule.text,evidence:{samples:rule.evidence.samples,runIds:rule.evidence.runIds,method:rule.evidence.method}}));
  const limitations=[...report.limitations];
  if(derived){
@@ -70,10 +167,38 @@ export function createDeploymentDocument({report,run,activePlanId=report?.recomm
   scope:{widthM:scope.widthM??settings.scopeWidthM,depthM:scope.depthM??settings.scopeDepthM,clipped:Boolean(scope.clipped),note:scope.note??'采样仅使用实际 GIS/DEM 数据，不外推无数据区域覆盖。'},
   grid:{spacingM:settings.spacing,siteSpacingM:settings.siteSpacing,heightsM:[...settings.heights],sampleCount:report.sampling.samples.length,candidateCount:report.candidateCount,siteCount:report.siteCount,marginReserveDb:settings.marginReserveDb,excluded:{...report.sampling.excluded}},
   plan:{id:plan.id,name:plan.name,deviceCount:plan.devices.length,cost:plan.cost,typeCounts:{...plan.typeCounts},recommended:plan.id===report.recommendedId,derived},
-  metrics:{conditions:plan.metrics.map(metric=>({...metric})),averageBlindRate:plan.metrics.reduce((sum,metric)=>sum+metric.blindRate,0)/plan.metrics.length,weakestConditionId:[...plan.metrics].sort((a,b)=>a.coverageRate-b.coverageRate)[0].condition,...(scoring?{originalScore:scoring.score,originalRank:scoring.rank}:{})},
-  emc:{verdict:emc.verdict,counts:{...emc.counts}},rules:usableRules,caseCondition:condition,cases,
+  devices:planDevices(plan),
+  metrics:{conditions:coverage.conditions,averageBlindRate:coverage.conditions.reduce((sum,metric)=>sum+(metric.blindRate??0),0)/Math.max(1,coverage.conditions.length),weakestConditionId:[...coverage.conditions].sort((a,b)=>(a.coverageRate??0)-(b.coverageRate??0))[0]?.condition??null,...(scoring?{originalScore:scoring.score,originalRank:scoring.rank}:{})},
+  coverage:{core:coverage.core,conditions:coverage.conditions},
+  comparison:comparisonModel(report,selectedPlanId??plan.id),
+  threats:threatModel(report,run,plan),
+  emc:{verdict:emc.verdict,counts:{...emc.counts},...emcModel(emc)},
+  rules:usableRules,caseCondition:condition,cases,
   mobileRepair:derived?{enabled:true,basePlanId:plan.derivation.basePlanId,addedDeviceCount:plan.derivation.addedDeviceCount,conditionId:plan.derivation.conditionId,status:plan.derivation.status}:{enabled:false},
   limitations,
  };
 }
 
+export function createDeploymentDocument({report,run,activePlanId=report?.recommendedId,rules=[],conditionId='nominal',documentKind='current',generatedAt=new Date().toISOString()}){
+ if(!report||!run?.runId)throw Error('生成布设文档需要完整 report 和带 runId 的 run');
+ const plan=report.plans.find(item=>item.id===activePlanId);
+ if(!plan)throw Error(`当前方案 ${activePlanId} 不在报告中`);
+ return buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId:plan.id});
+}
+
+// 三套方案合并文档：一次导出覆盖经济型、均衡型、增强型；每套方案均含部署、覆盖、威胁与 EMC 数据。
+export function createDeploymentDocumentAll({report,run,rules=[],conditionId='nominal',documentKind='all',generatedAt=new Date().toISOString(),activePlanId=report?.recommendedId}){
+ if(!report||!run?.runId)throw Error('生成布设文档需要完整 report 和带 runId 的 run');
+ const plans=Array.isArray(report.plans)?report.plans:[];
+ if(!plans.length)throw Error('报告中没有任何布设方案');
+ const selectedPlanId=plans.some(item=>item.id===activePlanId)?activePlanId:report.recommendedId;
+ const comparison=comparisonModel(report,selectedPlanId);
+ const models=plans.map(plan=>buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId}));
+ for(const model of models)model.comparison=comparison;
+ return {
+  schema:DEPLOYMENT_DOC_SCHEMA,documentKind,generatedAt,
+  source:{runId:run.runId,runCreatedAt:run.createdAt,reportCreatedAt:report.createdAt,activePlanId:selectedPlanId,recommendedId:report.recommendedId,planIds:plans.map(plan=>plan.id),origin:report.origin,inputHashes:report.inputHashes},
+  comparison,plans:models,
+  limitations:[...new Set(models.flatMap(model=>model.limitations))],
+ };
+}

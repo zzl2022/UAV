@@ -55,10 +55,14 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   info.className = 'ac8-scene-info';
   info.setAttribute('aria-label', '当前场景信息');
   info.innerHTML = `
-    <div class="ac8-info-row"><span class="ac8-info-label">[区域]</span><span class="ac8-info-value" data-info="area">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[坐标]</span><span class="ac8-info-value" data-info="coordinates">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[采用装备]</span><span class="ac8-info-value" data-info="equipment">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[采用方案]</span><span class="ac8-info-value" data-info="plan">—</span></div>`;
+    <div class="ac8-info-row"><span class="ac8-info-label">[当前场景]</span><span class="ac8-info-value" data-info="scene">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[装备建模]</span><span class="ac8-info-value" data-info="equipmentConfig">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[部署配置]</span><span class="ac8-info-value" data-info="deploymentConfig">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[方案状态]</span><span class="ac8-info-value" data-info="planStatus">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[覆盖质量]</span><span class="ac8-info-value" data-info="coverage">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[盲区风险]</span><span class="ac8-info-value" data-info="blindRisk">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[EMC 校核]</span><span class="ac8-info-value" data-info="emc">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[威胁验证]</span><span class="ac8-info-value" data-info="threat">—</span></div>`;
   const sidebar = launchers.parentElement;
   sidebar.appendChild(info);
   const mainToggleButton = app.querySelector('#ac8-main-menu-toggle');
@@ -76,10 +80,14 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   window.addEventListener('resize', positionInfo);
   window.addEventListener('scroll', positionInfo, true);
   const infoValues = {
-    area: info.querySelector('[data-info="area"]'),
-    coordinates: info.querySelector('[data-info="coordinates"]'),
-    equipment: info.querySelector('[data-info="equipment"]'),
-    plan: info.querySelector('[data-info="plan"]'),
+    scene: info.querySelector('[data-info="scene"]'),
+    equipmentConfig: info.querySelector('[data-info="equipmentConfig"]'),
+    deploymentConfig: info.querySelector('[data-info="deploymentConfig"]'),
+    planStatus: info.querySelector('[data-info="planStatus"]'),
+    coverage: info.querySelector('[data-info="coverage"]'),
+    blindRisk: info.querySelector('[data-info="blindRisk"]'),
+    emc: info.querySelector('[data-info="emc"]'),
+    threat: info.querySelector('[data-info="threat"]'),
   };
   function refreshInfo() {
     if (!getInfo) return;

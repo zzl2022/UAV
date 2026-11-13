@@ -20,7 +20,7 @@ self.onmessage=async({data})=>{
   await ensureScene(data);
   const progress=value=>self.postMessage({type:'progress',requestId:data.requestId??null,value});
   if(data.type==='pipeline'){
-   const {report,run}=await runTask3Pipeline({city,query,settings:data.settings,environment:data.environment,target:data.target,weights:data.weights,presetIds:data.presetIds,equipmentSnapshot:data.equipmentSnapshot,progress,yieldTask});
+   const {report,run}=await runTask3Pipeline({city,query,settings:data.settings,environment:data.environment,target:data.target,weights:data.weights,presetIds:data.presetIds,equipmentSnapshot:data.equipmentSnapshot,planTypes:data.planTypes,progress,yieldTask});
    self.postMessage({type:'report',requestId:data.requestId,report,run});
   }else if(data.type==='mobile-repair'){
    const result=await repairPlanWithMobileRadars({city,query,...data.input,equipmentSnapshot:data.equipmentSnapshot??data.input.equipmentSnapshot,progress:value=>self.postMessage({type:'mobile-progress',requestId:data.requestId,value}),yieldTask});

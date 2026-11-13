@@ -9,6 +9,16 @@
 #task3-panel .hint{color:#8daab7;line-height:1.65;font-size:12px;margin:8px 0}
 #task3-panel .task3-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin:10px 0}
 #task3-panel .task3-inputs label{display:flex;flex-direction:column;align-items:stretch;gap:5px;color:#a9c3cf;margin:0}
+#task3-panel .task3-group-title{margin:16px 0 6px;padding-bottom:5px;border-bottom:1px solid #2b4350;color:#dff3ef;font-size:15px;font-weight:700;letter-spacing:.04em}
+/* 权重成本：前四项为主要决策权重，后四项为设备成本系数，形成主次层级 */
+#task3-panel #task3-weights{padding:10px 10px 8px;border:1px solid #2f5555;border-left:3px solid #69e2bd;border-radius:6px;background:rgba(105,226,189,.07)}
+#task3-panel #task3-weights label{color:#e2f5f0;font-weight:600}
+#task3-panel #task3-weights input[type=number]{border-color:#3f6f6a;background:#102a2d}
+#task3-panel #task3-costs{margin-top:14px;padding-top:10px;border-top:1px dashed #2b4350}
+#task3-panel #task3-costs label{color:#7f99a5;font-size:12px;font-weight:400}
+#task3-panel #task3-costs input[type=number]{background:#0f1d25;border-color:#2b4350;color:#a9c3cf}
+#task3-panel #task3-costs:focus-within label{color:#a9c3cf}
+#task3-panel #task3-costs input[type=number]:focus{border-color:#69e2bd;color:#dcebf2}
 #task3-panel .task3-threat-config{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin:10px 0}
 #task3-panel .task3-threat-config label{display:flex;flex-direction:column;gap:5px;color:#a9c3cf;font-size:12px}
 #task3-panel .task3-threat-config input[type=text]{background:#12242f;color:#dcebf2;border:1px solid #385766;border-radius:4px;padding:6px 8px;width:100%;min-height:32px;box-sizing:border-box}
@@ -28,6 +38,9 @@
 #task3-panel .task3-table th,#task3-panel .task3-table td{border-bottom:1px solid #23404d;padding:7px 6px;text-align:left;vertical-align:top;line-height:1.45}
 #task3-panel .task3-table th{color:#91afbc;font-weight:500;white-space:nowrap}
 #task3-panel .task3-table tr.recommended td{color:#69e2bd}
+#task3-panel .task3-table tr.selected-plan td{background:rgba(105,226,189,.08);color:#e4f4f0;font-weight:600}
+#task3-panel .task3-blind-compare{margin:8px 0;overflow-x:auto}
+#task3-panel .task3-blind-compare-table{min-width:420px;font-size:12px}
 #task3-plans-table,#task3-emc,#task3-device-list{max-width:100%;overflow-x:auto}
 #task3-plans-table .task3-table{min-width:690px}
 #task3-emc .task3-table{min-width:590px}
@@ -49,6 +62,12 @@
 #task3-panel .task3-mobile-toggle:has(input:disabled){opacity:.6;cursor:wait}
 #task3-mobile-status{padding:7px 8px;border-left:3px solid #527180;color:#b8d4df;line-height:1.55;font-size:12px}
 #task3-mobile-status[data-tone=warning],#task3-mobile-status[data-tone=error]{border-left-color:#ff9f5a;color:#ffd2ae}
+#task3-panel .task3-plan-types{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin:10px 0}
+#task3-panel .task3-plan-types label{display:flex;align-items:center;gap:7px;padding:8px 9px;border:1px solid #35505b;border-radius:5px;background:#132a34;color:#a9c3cf;font-size:13px;cursor:pointer}
+#task3-panel .task3-plan-types label:has(input:checked){border-color:#69e2bd;background:#183a3a;color:#dff3ef;font-weight:600}
+#task3-panel .task3-plan-types input{accent-color:#69e2bd}
+#task3-panel #task3-status-side{margin-top:8px;line-height:1.55;color:#a9c3cf}
+#task3-panel #task3-status-side[data-tone=error]{color:#ff9b93}
 .task3-device-hover{position:absolute;z-index:12;box-sizing:border-box;width:max-content;max-width:min(340px,calc(100% - 16px));max-height:calc(100% - 16px);overflow:hidden;padding:12px 14px;background:rgba(10,24,32,.96);border:1px solid #527180;border-radius:7px;box-shadow:0 8px 26px rgba(0,0,0,.42);color:#dcebf2;font-size:12px;line-height:1.45;pointer-events:none;user-select:none;backdrop-filter:blur(8px)}
 .task3-device-hover[hidden]{display:none}
 .task3-device-hover-title{margin:0 0 8px;color:#ffd783;font-size:14px;font-weight:650}

@@ -4,9 +4,9 @@ function deepFreeze(value){
  return Object.freeze(value);
 }
 
-export function createTask3RequestSnapshot({settings,weights,presetIds,equipmentSnapshot,scenarioSnapshot}){
+export function createTask3RequestSnapshot({settings,weights,presetIds,equipmentSnapshot,scenarioSnapshot,planTypes=[]}){
  return deepFreeze(structuredClone({
-  settings,weights,presetIds,equipmentSnapshot,
+  settings,weights,presetIds,equipmentSnapshot,planTypes,
   environment:scenarioSnapshot.environment,target:scenarioSnapshot.target,
  }));
 }

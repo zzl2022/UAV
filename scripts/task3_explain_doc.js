@@ -250,7 +250,7 @@ ${Object.entries(S.blindCase.reasonCounts).map(([k,v])=>`<tr><td>${k}</td><td>${
 <p>候选池 ${S.greedy.candidateCount} 个（真实屋顶 × 装备型号 × 雷达俯仰姿态 + 残余盲点邻近补点）。以下插桩重放均衡型（预算 ${S.greedy.policy.budget}、上限 ${S.greedy.policy.maxDevices}）的真实前 6 步：</p>
 <div class="table-wrap"><table><thead><tr><th>步骤</th><th>选中装备</th><th>新增覆盖权重 Σwⱼ</th><th>成本</th><th>增益/成本</th><th>累计权重覆盖</th></tr></thead><tbody>${greedyRows}</tbody></table></div>
 <figure>${greedyChart}<figcaption>图 3 · 前 6 步的增益/成本比：第一步 TDOA-X1B 以 69.07 的绝对优势入选（无线电单台覆盖广、成本低），随后雷达/声学按边际收益依次进入——贪心的"先买性价比"过程完全透明</figcaption></figure>
-<div class="callout"><strong>三套方案如何产生差异</strong>：经济型仅用雷达+无线电（长距低价）、均衡型全类型 3/4 预算、冗余增强型全预算且对核心区样本追加第二重覆盖（增益 ×0.5 继续选点，pipeline.js L134–149）。同预算下贪心自然饱和是真实现象，差异来自候选池与冗余目标而非人为指定。</div>
+<div class="callout"><strong>三套方案如何产生差异</strong>：经济型仅用雷达+无线电（长距低价）、均衡型全类型 3/4 预算、增强型全预算且对核心区样本追加第二重覆盖（增益 ×0.5 继续选点，pipeline.js L134–149）。同预算下贪心自然饱和是真实现象，差异来自候选池与冗余目标而非人为指定。</div>
 <div class="callout"><strong>选后换频</strong>：方案选定后，对其中的雷达按频道组做图着色式分配（同频冲突权重 ×10、邻频 ×1，pipeline.js L152–163），把"EMC 建议"自动落到参数上；仍残余的冲突才进入 EMC 报告。</div>
 </div>
 
@@ -281,7 +281,7 @@ ${Object.entries(S.blindCase.reasonCounts).map(([k,v])=>`<tr><td>${k}</td><td>${
 <h4>五条校核规则 <span class="en">EMC rules</span></h4>
 <div class="formula">① 同频：双方均发射 且 min|Δf|&lt;0.1 GHz 且 d&lt;600 m → penalty = 6×(1−d/600) dB，判 fail<br>② 邻频：min|Δf|&lt;0.5 GHz 且 d&lt;300 m → warning<br>③ 发射→接收耦合：发射频点落入接收频段(±0.02 GHz) → fail<br>④ 前端阻塞：发射功率 ≥1000 W 且距无源接收机 &lt;50 m → warning<br>⑤ 共址过密：至少一方发射 且 d&lt;10 m → warning<span class="src">代码：task3/emc.js L24–52；判定结论：有 fail→不通过，仅 warning→降额，否则通过</span></div>
 <div class="subst"><strong>真实代入 · 提示例</strong>（推荐方案）：${S.emc.exampleWarning.a} ↔ ${S.emc.exampleWarning.b}，${S.emc.exampleWarning.kind}，距离 ${S.emc.exampleWarning.distanceM} m →「${S.emc.exampleWarning.recommendation}」。推荐方案合计 <strong>0 严重 / ${S.emc.recommendedCounts.warning} 提示 → 结论：降额</strong>。</div>
-<div class="subst"><strong>真实代入 · 严重例</strong>（冗余增强型）：${S.emc.exampleFail.a} ↔ ${S.emc.exampleFail.b}，同屋顶 d=0 m、Δf=0 GHz → penalty=6×(1−0/600)=<strong>6 dB</strong>，判 fail。<strong>后果</strong>：该方案综合得分 ×0.85² 降权（择优公式见下节），从第一名掉到第三名——EMC 结论真实改变了推荐结果。</div>
+<div class="subst"><strong>真实代入 · 严重例</strong>（增强型）：${S.emc.exampleFail.a} ↔ ${S.emc.exampleFail.b}，同屋顶 d=0 m、Δf=0 GHz → penalty=6×(1−0/600)=<strong>6 dB</strong>，判 fail。<strong>后果</strong>：该方案综合得分 ×0.85² 降权（择优公式见下节），从第一名掉到第三名——EMC 结论真实改变了推荐结果。</div>
 </div>
 
 <!-- ================= 择优与规则 ================= -->

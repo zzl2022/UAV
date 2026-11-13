@@ -25,6 +25,15 @@ test('task3 pipeline: 一键串联产出 ≥3 套差异化方案、盲区分类�
  // 三威胁场景
  for(const key of ['single','multi','swarm']){const th=report.threats[key];assert.ok(th.summary.targetCount>0);assert.ok(th.frames.length>0);assert.ok(th.summary.meanDetectedFraction>=0&&th.summary.meanDetectedFraction<=1);}
  assert.equal(report.threats.swarm.summary.targetCount,42);
+ // 三套方案分别拥有三类威胁结果，供合并 PDF 逐方案导出
+ assert.ok(report.threatsByPlan,'应提供按方案缓存的威胁结果');
+ for(const plan of report.plans){
+  for(const key of ['single','multi','swarm']){
+   const threat=report.threatsByPlan[plan.id]?.[key];
+   assert.ok(threat?.summary,`方案 ${plan.id} 缺少 ${key} 威胁汇总`);
+   assert.ok(threat.summary.targetCount>0);assert.ok(threat.perTarget.length>0);
+  }
+ }
  // 标准默认 500 m 网格：处置后推荐方案必须无 fail，记录和覆盖复核完整
  assert.equal(report.settings.spacing,500);assert.equal(report.deploymentStatus,'deployable');
  assert.equal(report.emc[report.recommendedId].counts.fail,0);
@@ -48,4 +57,17 @@ test('task3 pipeline: 装备选择注入生效，非法预设被拒',async()=>{
  const {report}=await runTask3Pipeline({city,query,settings:{scope:'core',spacing:700,siteSpacing:500,heights:[30,60,100],maxSites:192,maxDevices:32,budget:300,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3},presetIds:['radar-03d','radio-tdoa'],weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask,withThreatFrames:false});
  const types=new Set(report.plans.flatMap(p=>p.devices.map(d=>d.presetId)));
  assert.deepEqual([...types].sort(),['radar-03d','radio-tdoa'].sort());
+});
+
+test('task3 pipeline: 方案生成仅包含勾选的方案类型',async()=>{
+ const base={city,query,weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask};
+ const only=await runTask3Pipeline({...base,planTypes:['economy']});
+ assert.deepEqual(only.report.plans.map(plan=>plan.id),['economy']);
+ assert.equal(only.report.recommendedId,'economy');
+ assert.deepEqual(Object.keys(only.report.threatsByPlan),['economy']);
+ assert.deepEqual(only.report.comparison.rows.map(row=>row.id),['economy']);
+ const two=await runTask3Pipeline({...base,planTypes:['enhanced','economy']});
+ assert.deepEqual(two.report.plans.map(plan=>plan.id),['economy','enhanced'],'方案按固定顺序输出');
+ assert.deepEqual(Object.keys(two.report.threatsByPlan).sort(),['economy','enhanced']);
+ await assert.rejects(()=>runTask3Pipeline({...base,planTypes:['unknown']}),/至少选择一套方案/);
 });

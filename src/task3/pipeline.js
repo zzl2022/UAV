@@ -170,7 +170,7 @@ export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=nu
  return {...current,before,after,actions,status:result.counts.fail?'unresolved':'resolved',deployable:!result.counts.fail,unresolved,...(!result.counts.fail?{}:{reason:'合法换频和既有候选点局部移位后仍有 fail 级冲突，需人工调整装备或点位。'})};
 }
 
-export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},weights={...METRIC_WEIGHTS},presetIds=PRESETS.map(p=>p.id),equipmentSnapshot=null,progress=()=>{},yieldTask=async()=>{},withThreatFrames=true}){
+export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},weights={...METRIC_WEIGHTS},presetIds=PRESETS.map(p=>p.id),equipmentSnapshot=null,progress=()=>{},yieldTask=async()=>{},withThreatFrames=true,planTypes=null}){
  const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot);
  settings=resolveTask3Settings(settings);
  const rawThreatConfigs=settings.threatConfigs;
@@ -215,13 +215,16 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   if(repairSites)progress({stage:'coverage',completed:candidates.length,total:candidates.length,samples:n});
  }
  // 三套差异化策略：经济型（仅雷达+无线电长距装备、半预算）、均衡型（全类型、3/4 预算）、
- // 冗余增强型（全类型、全预算，饱和后对核心区样本追加二重覆盖）。类型组合/点位/预算均不同。
+ // 增强型（全类型、全预算，饱和后对核心区样本追加二重覆盖）。类型组合/点位/预算均不同。
  const radarRadio=presetIds.filter(id=>['radar','radio'].includes(PRESETS.find(p=>p.id===id)?.type));
- const policies=[
+ const allPolicies=[
   {id:'economy',name:'经济型 · 雷达+无线电',presetSubset:radarRadio.length?radarRadio:presetIds,budget:Math.round(settings.budget*0.5),maxDevices:Math.max(1,Math.round(settings.maxDevices*0.5)),redundancy:0},
   {id:'balanced',name:'均衡型 · 全类型',presetSubset:presetIds,budget:Math.round(settings.budget*0.75),maxDevices:Math.max(1,Math.round(settings.maxDevices*0.75)),redundancy:0},
-  {id:'enhanced',name:'冗余增强型 · 全类型+核心双覆盖',presetSubset:presetIds,budget:settings.budget,maxDevices:settings.maxDevices,redundancy:0.5},
+  {id:'enhanced',name:'增强型 · 全类型+核心双覆盖',presetSubset:presetIds,budget:settings.budget,maxDevices:settings.maxDevices,redundancy:0.5},
  ];
+ const selectedPlanTypes=Array.isArray(planTypes)&&planTypes.length?planTypes:allPolicies.map(policy=>policy.id);
+ const policies=allPolicies.filter(policy=>selectedPlanTypes.includes(policy.id));
+ if(!policies.length)throw Error('请至少选择一套方案（经济型/均衡型/增强型）');
  // 冗余增强：饱和后继续按“第二重覆盖增益 ×redundancy / 成本”补选，直至预算/设备上限。
  function chooseWithRedundancy(pool,policy){
   const chosen=chooseGreedy(pool,weights1,policy);if(!policy.redundancy)return chosen;
@@ -310,20 +313,25 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  scoring=applyEmcToScoring(scoring,emcByPlan);
  const table=comparisonTable(scoring,conditions);
  progress({stage:'scoring',completed:1,total:1});
- // ④ 三类威胁场景验证（对推荐方案）
- progress({stage:'threats',completed:0,total:3});
- const recommended=plans.find(p=>p.id===scoring.recommendedId),threats={};
+ // ④ 三类威胁场景验证：三套方案分别计算，推荐方案结果同时保留在 report.threats 兼容既有界面。
+ const threatKeys=['single','multi','swarm'];
+ progress({stage:'threats',completed:0,total:plans.length*threatKeys.length});
+ const threatsByPlan=Object.fromEntries(plans.map(plan=>[plan.id,{}]));
  const scenarioEnv=conditions[0].environment,scenarioTarget={...target,...conditions[0].target};
  let ti=0;
- for(const key of ['single','multi','swarm']){
+ for(const key of threatKeys){
   const config=settings.threatConfigs[key],routes=buildThreatRoutes(query,sampling.bounds,key,config);
-  const result=await simulateThreat({query,devices:recommended.devices,routes,target:scenarioTarget,environment:scenarioEnv,core:sampling.bounds.core,coreRadius:settings.coreRadius,interval:2,simultaneous:config.simultaneous,progress:()=>{},yieldTask});
-  threats[key]={...result,config:structuredClone(config),text:threatSummaryText(result)};if(!withThreatFrames)threats[key]={routes:result.routes,interval:result.interval,perTarget:result.perTarget,summary:result.summary,notes:result.notes,config:structuredClone(config),text:threats[key].text};
-  ti++;progress({stage:'threats',completed:ti,total:3});
+  for(const plan of plans){
+   const result=await simulateThreat({query,devices:plan.devices,routes,target:scenarioTarget,environment:scenarioEnv,core:sampling.bounds.core,coreRadius:settings.coreRadius,interval:2,simultaneous:config.simultaneous,progress:()=>{},yieldTask});
+   const record={...result,config:structuredClone(config),text:threatSummaryText(result)};
+   threatsByPlan[plan.id][key]=withThreatFrames?record:{routes:result.routes,interval:result.interval,perTarget:result.perTarget,summary:result.summary,notes:result.notes,config:structuredClone(config),text:record.text};
+   ti++;progress({stage:'threats',completed:ti,total:plans.length*threatKeys.length});
+  }
  }
+ const recommended=plans.find(p=>p.id===scoring.recommendedId),threats=threatsByPlan[recommended.id];
  // ⑤ EMC 校核结论已在 ③ 计算，此处仅汇总阶段完成信号
  progress({stage:'emc',completed:1,total:1});
- const report={version:TASK3_VERSION,createdAt:new Date().toISOString(),settings:structuredClone(settings),scope,weights,equipment:PRESETS.filter(p=>presetIds.includes(p.id)).map(p=>({id:p.id,name:p.name,type:p.type})),environment:structuredClone(environment),target:structuredClone(target),origin:city.metadata.origin,inputHashes:city.metadata.sources,sampling,conditions:conditions.map(({id,name})=>({id,name})),candidateCount:candidates.length,siteCount:sites.length,plans,blindspots,scoring,comparison:table,threats,emc:emcReports,recommendedId:scoring.recommendedId,deploymentStatus:scoring.recommendationStatus,durationMs:Date.now()-start,limitations:['覆盖率仅针对所列有效空域采样点，不是连续空间无盲区证明。','盲区四分类为几何归因初值，阈值将按多轮仿真统计校订。','威胁推演为运动学逐帧模型，检出全部来自感知模型实判；蜂群容量溢出如实计数。','EMC 为工程代理规则，非频谱合规认证；自动处置仅使用既有模型离散频道和真实候选点，处置后的实际载频/位置已按同一感知模型重算受影响覆盖。','成本为相对成本单位，非人民币报价；施工可行性为重量/尺寸/架设方式/安装高度代理，未实测。']};
+ const report={version:TASK3_VERSION,createdAt:new Date().toISOString(),settings:structuredClone(settings),scope,weights,equipment:PRESETS.filter(p=>presetIds.includes(p.id)).map(p=>({id:p.id,name:p.name,type:p.type})),environment:structuredClone(environment),target:structuredClone(target),origin:city.metadata.origin,inputHashes:city.metadata.sources,sampling,conditions:conditions.map(({id,name})=>({id,name})),candidateCount:candidates.length,siteCount:sites.length,plans,blindspots,scoring,comparison:table,threats,threatsByPlan,emc:emcReports,recommendedId:scoring.recommendedId,deploymentStatus:scoring.recommendationStatus,durationMs:Date.now()-start,limitations:['覆盖率仅针对所列有效空域采样点，不是连续空间无盲区证明。','盲区四分类为几何归因初值，阈值将按多轮仿真统计校订。','威胁推演为运动学逐帧模型，检出全部来自感知模型实判；蜂群容量溢出如实计数。','EMC 为工程代理规则，非频谱合规认证；自动处置仅使用既有模型离散频道和真实候选点，处置后的实际载频/位置已按同一感知模型重算受影响覆盖。','成本为相对成本单位，非人民币报价；施工可行性为重量/尺寸/架设方式/安装高度代理，未实测。']};
  if(scope.clipped)report.limitations.push(scope.note);
  enrichReport(report,city); // 复用 areaEstimates/typeCounts
  // 规则提炼输入：候选池覆盖统计（类型/相对高度/覆盖数）与推荐方案分层盲区，供 rules.js 基于多轮数据统计阈值。
@@ -333,7 +341,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const recId=scoring.recommendedId,recPlan=plans.find(p=>p.id===recId),nominal=conditions[0].id;
  const perHeightBlind=settings.heights.map(h=>{const idx=sampling.samples.map((p,j)=>({p,j})).filter(({p})=>p.kind==='grid'&&p.agl===h);const blind=idx.filter(({j})=>!recPlan.coverage[0][j]).length;return {height:h,validGridCells:idx.length,blindGridCells:blind};});
  const rulesInput={candidateStats,perHeightBlind,recommendedId:recId,nominalCondition:nominal};
- const runRecord=finalizeRun(run,{summary:{samples:n,candidates:candidates.length,sites:sites.length,plans:plans.map(p=>({id:p.id,name:p.name,devices:p.devices.length,cost:p.cost,feasibility:scoring.plans.find(r=>r.id===p.id)?.indicators.feasibility??null,score:scoring.plans.find(r=>r.id===p.id)?.score??null,rank:scoring.plans.find(r=>r.id===p.id)?.rank??null,emcVerdict:emcByPlan[p.id].verdict,deployable:p.deployable,emcResolutionStatus:p.emcRemediation.status,metrics:p.metrics})) ,recommendedId:recId},blindspots:Object.fromEntries(Object.entries(blindspots).map(([pid,rows])=>[pid,rows.map(r=>({conditionId:r.conditionId,stats:r.stats,points:r.points.map(p=>({sampleId:p.sampleId,position:p.position,agl:p.agl,core:p.core,category:p.category,cause:p.cause}))}))])),threats:Object.fromEntries(Object.entries(threats).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}])),emc:Object.fromEntries(Object.entries(emcReports).map(([pid,r])=>[pid,{verdict:r.verdict,counts:r.counts,conflicts:r.conflicts,remediation:r.remediation}])),durationMs:report.durationMs,limitations:report.limitations});
+ const runRecord=finalizeRun(run,{summary:{samples:n,candidates:candidates.length,sites:sites.length,plans:plans.map(p=>({id:p.id,name:p.name,devices:p.devices.length,cost:p.cost,feasibility:scoring.plans.find(r=>r.id===p.id)?.indicators.feasibility??null,score:scoring.plans.find(r=>r.id===p.id)?.score??null,rank:scoring.plans.find(r=>r.id===p.id)?.rank??null,emcVerdict:emcByPlan[p.id].verdict,deployable:p.deployable,emcResolutionStatus:p.emcRemediation.status,metrics:p.metrics})) ,recommendedId:recId},blindspots:Object.fromEntries(Object.entries(blindspots).map(([pid,rows])=>[pid,rows.map(r=>({conditionId:r.conditionId,stats:r.stats,points:r.points.map(p=>({sampleId:p.sampleId,position:p.position,agl:p.agl,core:p.core,category:p.category,cause:p.cause}))}))])),threats:Object.fromEntries(Object.entries(threats).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}])),threatsByPlan:Object.fromEntries(Object.entries(threatsByPlan).map(([pid,byKey])=>[pid,Object.fromEntries(Object.entries(byKey).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}]))])),emc:Object.fromEntries(Object.entries(emcReports).map(([pid,r])=>[pid,{verdict:r.verdict,counts:r.counts,conflicts:r.conflicts,remediation:r.remediation}])),durationMs:report.durationMs,limitations:report.limitations});
  runRecord.rulesInput=rulesInput;runRecord.scope=structuredClone(scope);
  return {report,run:runRecord};
 }

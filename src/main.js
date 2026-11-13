@@ -4,7 +4,6 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createModel} from './model.js';
 import './style.css';
 import {mountLandmarks} from './landmarks.js';
-import {mountPlanningUI} from './planning/ui.js';
 import {mountSensorUI} from './sensors/ui.js';
 import {createWorkspace} from './workspace.js';
 import {siteAnalysisMetadata} from './site-analysis.js';
@@ -90,17 +89,16 @@ app.innerHTML=`<header id="platform-topbar">
   <div class="stats"><div><strong id="count">—</strong><span>建筑要素</span></div><div><strong id="height">—</strong><span>最高建筑 / m</span></div></div>
 </div>
 <div id="ac8-simulation-bar" aria-label="推演模拟控制">
-  <button id="ac8-sim-start" type="button" disabled>开始模拟</button>
   <label class="ac8-sim-scenario"><span aria-hidden="true">场景</span><select id="ac8-sim-scenario" aria-label="模拟场景">
-    <option value="flight" selected>单机飞行警报</option>
-    <option value="single">威胁推演 · 单目标</option>
-    <option value="multi">威胁推演 · 多目标</option>
-    <option value="swarm">威胁推演 · 蜂群</option>
+    <option value="single" selected>单机单点入侵</option>
+    <option value="multi">多方向同步入侵</option>
+    <option value="swarm">蜂群饱和攻击</option>
   </select></label>
   <label class="ac8-sim-speed"><span aria-hidden="true">速度</span><select id="ac8-sim-speed" aria-label="模拟速度">
     <option value="1">x1</option><option value="2">x2</option><option value="3">x3</option><option value="5">x5</option>
     <option value="10" selected>x10</option><option value="30">x30</option><option value="60">x60</option><option value="100">x100</option>
   </select></label>
+  <button id="ac8-sim-start" type="button" disabled>仿真模拟</button>
   <input id="ac8-sim-progress" type="range" min="0" max="1000" value="0" aria-label="模拟进度" disabled>
   <button id="ac8-sim-history" type="button" aria-controls="ac8-sim-history-panel" aria-expanded="false">模拟历史</button>
 </div>
@@ -486,7 +484,6 @@ try {
     landmarks?.setActive?.(next==='recon');
     setCoreForMode(next);
     applyModeLayers();
-    planning?.setScene?.(activeSiteDescriptor());
     task3?.setScene?.(activeSiteDescriptor());
   }
   function activeSiteDescriptor(){if(mode==='recon')return null;return {base:SITES[mode].base,label:SITES[mode].label,coreName:siteMeta[mode]?.coreBuilding?.name??SITES[mode].short};}
@@ -530,13 +527,13 @@ try {
   for(const id of ['buildings','terrain','imagery'])el(id).onchange=applyModeLayers;
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);window.__ac8Hud?.resize?.();};
   new ResizeObserver(resize).observe(viewport);resize();
-  let planning,sensors,task3;
+  let sensors,task3;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport,tweenCamera});
   const museumFocus=el('museum-focus');if(museumFocus)el('city-views').append(museumFocus);
   let lastHudStamp=0;
   renderer.setAnimationLoop(stamp=>{
     const dt=lastHudStamp?Math.min(.1,(stamp-lastHudStamp)/1000):0;lastHudStamp=stamp;
-    controls.update();landmarks.update();updateCoreLabel();planning?.update(stamp);
+    controls.update();landmarks.update();updateCoreLabel();task3?.update?.(stamp);
     window.__ac8Hud?.update?.(dt);
     if(!sensors?.render())renderer.render(scene,camera);
     window.__ac8Hud?.render?.();
@@ -558,30 +555,80 @@ try {
       return `东经 ${longitude.toFixed(6)}° · 北纬 ${latitude.toFixed(6)}°`;
     }catch{return '—';}
   }
-  function equipmentText(){
-    const devices=sensors?.getScenarioSnapshot?.().devices??[];
-    if(!devices.length)return '未配置';
-    const counts=new Map();
-    for(const device of devices){
-      const name=device.name||device.presetId||'未知装备';
-      counts.set(name,(counts.get(name)||0)+1);
-    }
-    return [...counts].map(([name,count])=>count>1?`${name} ×${count}`:name).join(' · ');
+  const TYPE_NAMES={radar:'雷达',radio:'无线电',optical:'光电',acoustic:'声学'};
+  const shortPlanName=name=>String(name??'').split(' · ')[0]||'—';
+  function currentPlan(){
+    const diag=window.task3Diagnostics,report=window.__task3Report;
+    return report?.plans?.find(plan=>plan.id===diag?.planId)??report?.plans?.find(plan=>plan.id===diag?.recommendedId)??report?.plans?.[0]??null;
   }
-  function planText(){
-    const selected=select=>select?.options?.length?select.selectedOptions?.[0]?.textContent?.trim():'';
-    const task3Ready=!!window.task3Diagnostics?.ready;
-    const planningReady=!!window.planningDiagnostics?.ready;
-    const task3Plan=task3Ready?selected(document.querySelector('#task3-plan')):'';
-    const planningPlan=planningReady?selected(document.querySelector('#planning-plan')):'';
-    if(app.dataset.activeView==='planning'&&planningPlan)return planningPlan;
-    return task3Plan||planningPlan||'均衡方案';
+  function currentMetric(plan=currentPlan()){
+    const diag=window.task3Diagnostics;
+    return plan?.metrics?.find(row=>row.condition===diag?.condition)??plan?.metrics?.[0]??null;
+  }
+  function sceneLine(){
+    const area=mode==='recon'?'河南博物院':(SITES[mode]?.short??SITES[mode]?.label??'—');
+    return `${area} · ${coreCoordinateText()}`;
+  }
+  function equipmentConfigText(){
+    const snapshot=sensors?.getEquipmentSnapshot?.()??window.task3Diagnostics?.lastEquipmentSnapshot??window.__task3Report?.equipmentSnapshot??null;
+    const ids=snapshot?.selectedPresetIds??[];
+    if(!ids.length)return '未配置';
+    const profiles=snapshot.profiles??[],byType=new Map(),order=['雷达','无线电','光电','声学'],rank=name=>{const index=order.indexOf(name);return index<0?order.length:index;};
+    for(const id of ids){
+      const profile=profiles.find(item=>item.presetId===id),type=TYPE_NAMES[profile?.type]??profile?.type??'未知',names=byType.get(type)??[];
+      names.push(profile?.name??id);byType.set(type,names);
+    }
+    const models=[...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('/')}`).join(' · ');
+    return `${ids.length} 台 / ${byType.size} 类 · ${models}`;
+  }
+  function deploymentConfigText(){
+    const plan=currentPlan();
+    if(!plan)return '尚未生成';
+    const cost=Number.isFinite(plan.cost)?` · 相对成本 ${plan.cost.toFixed(1)}`:'';
+    return `${shortPlanName(plan.name)} ${plan.devices.length} 台${cost}`;
+  }
+  function planStatusText(){
+    const diag=window.task3Diagnostics,report=window.__task3Report,plans=diag?.plans??[];
+    if(!plans.length)return '尚未生成';
+    const recommended=shortPlanName(report?.plans?.find(plan=>plan.id===diag.recommendedId)?.name);
+    return `${plans.length} 套 · 推荐${recommended} · 当前${shortPlanName(currentPlan()?.name)}`;
+  }
+  function coverageText(){
+    const plan=currentPlan();
+    if(!plan?.metrics?.length)return '尚未生成';
+    const current=currentMetric(plan),weakest=Math.min(...plan.metrics.map(row=>row.coverageRate));
+    return `当前工况 ${((current?.coverageRate??0)*100).toFixed(1)}% · 最弱工况 ${(weakest*100).toFixed(1)}% · 核心区覆盖 ${((current?.coreCoverageRate??0)*100).toFixed(1)}%`;
+  }
+  function blindRiskText(){
+    const diag=window.task3Diagnostics,report=window.__task3Report,plan=currentPlan();
+    if(!plan?.metrics?.length)return '尚未生成';
+    const current=currentMetric(plan),average=plan.metrics.reduce((sum,row)=>sum+(row.blindRate??0),0)/plan.metrics.length;
+    const index=Math.max(0,report?.conditions?.findIndex(row=>row.id===diag?.condition)??0);
+    const points=report?.blindspots?.[plan.id]?.[index]?.stats?.total;
+    return `平均盲区占比 ${(average*100).toFixed(1)}% · 盲区采样点 ${points??'—'} · 核心区二重覆盖 ${((current?.coreRedundantRate??0)*100).toFixed(1)}%`;
+  }
+  function emcText(){
+    const diag=window.task3Diagnostics;
+    if(!diag?.ready||!diag.emcCounts)return '尚未生成';
+    const verdict={pass:'通过',degraded:'降额',fail:'不通过'}[diag.emcVerdict]??'—';
+    return `${verdict} · 严重 ${diag.emcCounts.fail??0} / 提示 ${diag.emcCounts.warning??0}`;
+  }
+  function threatText(){
+    const report=window.__task3Report;
+    const threat=report?.threatsByPlan?.[report.recommendedId]?.swarm??report?.threats?.swarm;
+    if(!threat?.summary)return '尚未生成';
+    const summary=threat.summary,detected=(threat.perTarget??[]).filter(row=>row.firstDetectionTime!==null).length;
+    return `蜂群 ${summary.targetCount??0} 架 · 检出 ${detected} 架 · 平均首报 ${summary.meanFirstDetectionTime==null?'—':`${summary.meanFirstDetectionTime.toFixed(1)} s`} · 容量溢出 ${summary.overflowedTargets??0} 架`;
   }
   const sceneSummary=()=>({
-    area:mode==='recon'?'河南博物院':(SITES[mode]?.short??SITES[mode]?.label??'—'),
-    coordinates:coreCoordinateText(),
-    equipment:equipmentText(),
-    plan:planText(),
+    scene:sceneLine(),
+    equipmentConfig:equipmentConfigText(),
+    deploymentConfig:deploymentConfigText(),
+    planStatus:planStatusText(),
+    coverage:coverageText(),
+    blindRisk:blindRiskText(),
+    emc:emcText(),
+    threat:threatText(),
   });
   mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
   function restoreOverview(){
@@ -625,7 +672,7 @@ try {
       {id:'electrostatic',label:'静电'},
     ],
     onOpen:()=>{
-      // Hide planning / task3 layers before showing the equipment markers.
+      // Hide the task3 layer before showing the equipment markers.
       app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'}));
       sensors.activate();
     },
@@ -655,16 +702,15 @@ try {
     event.preventDefault();event.stopImmediatePropagation();
     app.dispatchEvent(new CustomEvent('equipment-demo-back'));
   },true);
-  planning=mountPlanningUI({app,city,scene,camera,controls,renderer,sensors,model,workspace,getSite:activeSiteDescriptor,embedded:true,onActivate:()=>{task3?.showFlight?.();workspace.activateView('task3');}});
   const simStart=app.querySelector('#ac8-sim-start'),simSpeed=app.querySelector('#ac8-sim-speed'),simProgress=app.querySelector('#ac8-sim-progress'),simScenario=app.querySelector('#ac8-sim-scenario');
   let simSeeking=false;
-  const simMode=()=>simScenario?.value==='single'||simScenario?.value==='multi'||simScenario?.value==='swarm'?simScenario.value:'flight';
-  const currentPlayback=()=>simMode()==='flight'?(planning?.getPlayback?.()??{}):(task3?.getThreatPlayback?.()??{});
+  const simMode=()=>['single','multi','swarm'].includes(simScenario?.value)?simScenario.value:'single';
+  const currentPlayback=()=>task3?.getThreatPlayback?.()??{};
   function updateSimulationBar(){
-    if(!planning)return;
-    const mode=simMode(),state=currentPlayback();
-    simStart.disabled=mode==='flight'?!!state.busy:!task3;
-    simStart.textContent=state.playing?'暂停模拟':state.enabled&&state.duration&&state.time>=state.duration?'再次模拟':state.enabled&&state.time>0?'继续模拟':'开始模拟';
+    if(!task3)return;
+    const state=currentPlayback();
+    simStart.disabled=!!state.busy;
+    simStart.textContent=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
     simStart.dataset.playing=String(!!state.playing);
     if(Number(simSpeed.value)!==state.speed&&state.speed)simSpeed.value=String(state.speed);
     const progress=state.duration?Math.max(0,Math.min(100,state.time/state.duration*100)):0;
@@ -674,22 +720,15 @@ try {
   }
   if(simStart&&simSpeed&&simProgress){
     simStart.onclick=()=>{
-      if(simMode()==='flight'){
-        const state=planning.getPlayback?.()??{};
-        if(state.playing){planning.pauseSimulation?.();return;}
-        const fresh=!state.enabled||!state.duration||state.time===0||state.time>=state.duration;
-        Promise.resolve(planning.startSimulation?.()).then(started=>{
-          if(started&&fresh)recordSimulation(planning.getSimulationResult?.());
-        });
-        return;
-      }
       const state=task3?.getThreatPlayback?.()??{};
       if(state.playing){task3.pauseThreatSimulation?.();return;}
-      task3?.startThreatSimulation?.(simMode());
+      const fresh=!state.enabled||!state.duration||state.time===0||state.time>=state.duration;
+      const started=task3?.startThreatSimulation?.(simMode());
+      if(started!==false&&fresh){const result=task3?.getThreatResult?.();if(result)recordSimulation(result);}
     };
-    simScenario?.addEventListener('change',()=>{planning.pauseSimulation?.();task3?.pauseThreatSimulation?.();updateSimulationBar();});
-    simSpeed.onchange=()=>{if(simMode()==='flight')planning.setSpeed?.(Number(simSpeed.value));else task3?.setThreatSpeed?.(Number(simSpeed.value));};
-    simProgress.oninput=()=>{if(simMode()==='flight')planning.setProgress?.(Number(simProgress.value));else task3?.setThreatProgress?.(Number(simProgress.value));};
+    simScenario?.addEventListener('change',()=>{task3?.pauseThreatSimulation?.();updateSimulationBar();});
+    simSpeed.onchange=()=>task3?.setThreatSpeed?.(Number(simSpeed.value));
+    simProgress.oninput=()=>task3?.setThreatProgress?.(Number(simProgress.value));
     simProgress.onpointerdown=()=>{simSeeking=true;};
     simProgress.onpointercancel=()=>{simSeeking=false;};
     window.addEventListener('pointerup',()=>{simSeeking=false;});
@@ -783,15 +822,14 @@ try {
     entries:[
       {id:'input',label:'推演输入'},
       {id:'plans',label:'方案对比'},
-      {id:'blindspots',label:'盲区分布'},
+      {id:'blindspots',label:'盲区分析'},
       {id:'emc',label:'电磁兼容'},
-      {id:'flight',label:'飞行演示'},
     ],
     onSelect:id=>activateDeploymentModule(id),
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
-    task3=mountTask3UI({app,city,terrain,scene,camera,controls,renderer,sensors,model,workspace,getSite:activeSiteDescriptor,simulation:planning});
+    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor});
     applyModeUI(mode);
   }).catch(error=>{console.warn('任务三面板挂载失败',error);el('toggle-task3').disabled=true;workspace.showWindow('deployment');el('toggle-task3').click();});
   document.documentElement.dataset.ready='true';
