@@ -116,8 +116,6 @@ try {
     ['shenzhen', '深圳国际交流中心', '12_shenzhen'],
     ['daxing', '大兴机场', '13_daxing'],
     ['hangzhou', '杭州萧山机场', '14_hangzhou'],
-    ['nuclear', '房山核设施', '15_nuclear'],
-    ['changjiang', '海南昌江核电厂', '16_changjiang'],
     ['railway', '北京—通州铁路', '17_railway'],
   ];
   for (const [id, label, name] of sites) {

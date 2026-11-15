@@ -20,39 +20,41 @@ import {initLicenseGate} from './license.js';
 initLicenseGate();
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
+  <div class="topbar-flow" aria-hidden="true"></div>
   <div class="topbar-brand">
     <img class="topbar-logo-full" src="${logoFullUrl}" alt="中国人民公安大学">
   </div>
+  <div class="topbar-center">
   <h1>反无装备优化部署与仿真推演平台</h1>
   <div class="topbar-drone" aria-hidden="true">
-    <svg viewBox="0 0 128 84" role="img">
+    <svg viewBox="0 0 140 92" role="img">
       <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M28 26h20l14 16 14-16h20" stroke-width="3.2"/>
-        <path d="M34 60h18l10-12 10 12h18" stroke-width="2.4" opacity=".75"/>
-        <ellipse cx="25" cy="24" rx="16" ry="5" stroke-width="2.2"/>
-        <ellipse cx="101" cy="24" rx="16" ry="5" stroke-width="2.2"/>
-        <ellipse cx="38" cy="61" rx="13" ry="4" stroke-width="1.8" opacity=".85"/>
-        <ellipse cx="88" cy="61" rx="13" ry="4" stroke-width="1.8" opacity=".85"/>
-        <rect x="52" y="30" width="24" height="14" rx="6" stroke-width="2.4"/>
-        <path d="M58 47h12l-3 7h-6z" stroke-width="1.8"/>
-        <path d="M64 58v7" stroke-width="2"/>
-        <path d="M55 70h18" stroke-width="2" opacity=".7"/>
+        <path d="M51 35 31 21M89 35l20-14M51 57 31 71M89 57l20 14" stroke-width="3.4"/>
+        <ellipse cx="27" cy="19" rx="17" ry="5.6" stroke-width="2.8"/>
+        <ellipse cx="113" cy="19" rx="17" ry="5.6" stroke-width="2.8"/>
+        <ellipse cx="27" cy="73" rx="17" ry="5.6" stroke-width="2.8"/>
+        <ellipse cx="113" cy="73" rx="17" ry="5.6" stroke-width="2.8"/>
+        <rect x="50" y="30" width="40" height="32" rx="10" stroke-width="3"/>
+        <circle cx="70" cy="46" r="8" stroke-width="2.6"/>
+        <path d="M62 62h16l-3.5 8h-9z" stroke-width="2.4"/>
+        <path d="M70 70v6" stroke-width="2.4"/>
+        <path d="M58 80h24" stroke-width="2.8" opacity=".85"/>
       </g>
-      <g fill="currentColor" opacity=".85">
-        <circle cx="25" cy="24" r="2.4"/><circle cx="101" cy="24" r="2.4"/>
-        <circle cx="38" cy="61" r="2"/><circle cx="88" cy="61" r="2"/>
-        <circle cx="64" cy="37" r="2.6"/>
+      <g fill="currentColor">
+        <circle cx="27" cy="19" r="3.1"/><circle cx="113" cy="19" r="3.1"/>
+        <circle cx="27" cy="73" r="3.1"/><circle cx="113" cy="73" r="3.1"/>
+        <circle cx="70" cy="46" r="3.6"/>
       </g>
-      <g fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5">
-        <path d="M112 16a22 22 0 0 1 0 16"/><path d="M118 11a31 31 0 0 1 0 26"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.8" opacity=".55">
+        <path d="M119 39a23 23 0 0 1 0 14"/><path d="M125 33a33 33 0 0 1 0 26"/>
       </g>
     </svg>
+  </div>
   </div>
 </header>
 <div id="platform-body">
 <aside id="workspace-sidebar">
   <div class="sidebar-top"><button id="sidebar-collapse" type="button" aria-label="折叠场景侧栏" title="折叠侧栏">«</button></div>
-  <button id="ac8-main-menu-toggle" class="ac8-main-menu-toggle" type="button" aria-controls="ac8-main-menu" aria-expanded="true" title="收起主菜单" aria-label="收起主菜单"><span aria-hidden="true">«</span><em>MENU</em></button>
   <nav class="workspace-launchers" id="ac8-main-menu" aria-label="功能">
     <button id="open-city-model" aria-controls="city-window" aria-pressed="false"><span aria-hidden="true">▦</span>三维环境建模<i class="ac8-launcher-bracket ac8-launcher-bracket-top" aria-hidden="true"></i><i class="ac8-launcher-bracket ac8-launcher-bracket-bottom" aria-hidden="true"></i></button>
     <button id="toggle-sensors" aria-controls="equipment-window" aria-pressed="false" disabled><span aria-hidden="true">◎</span>感知装备建模<i class="ac8-launcher-bracket ac8-launcher-bracket-top" aria-hidden="true"></i><i class="ac8-launcher-bracket ac8-launcher-bracket-bottom" aria-hidden="true"></i></button>
@@ -77,8 +79,6 @@ app.innerHTML=`<header id="platform-topbar">
     <option value="beijing">核心区域——北京故宫</option>
     <option value="daxing">机场区域——大兴机场</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
-    <option value="nuclear">核电设施——房山核设施</option>
-    <option value="changjiang">核电设施——海南昌江核电厂</option>
     <option value="railway">铁路沿线——北京站到通州站</option>
   </select></label></section>
   <section id="layers-section"><h2>场景图层</h2>
@@ -160,18 +160,8 @@ const SITES={
     base:'./data/sites/hangzhou/hangzhou-gba',
     imagery:'./data/sites/hangzhou/hangzhou-imagery.jpg',
   },
-  nuclear:{
-    label:'核电设施——房山核设施',short:'房山核设施',
-    base:'./data/sites/nuclear/nuclear-gba',
-    imagery:'./data/sites/nuclear/nuclear-imagery.jpg',
-    buildings:'./data/sites/nuclear/nuclear-gba.json',
-  },
-  changjiang:{
-    label:'核电设施——海南昌江核电厂',short:'海南昌江核电厂',
-    base:'./data/sites/changjiang/changjiang-gba',
-    imagery:'./data/sites/changjiang/changjiang-imagery.jpg',
-    buildings:'./data/sites/changjiang/changjiang-gba.json',
-  },
+
+
   railway:{
     label:'铁路沿线——北京站到通州站',short:'铁路走廊',
     base:'./data/sites/railway/railway-gba',
@@ -263,6 +253,19 @@ try {
     return tweenCamera(next.position,next.center,900);
   }
   frameObject(model.group,false,1,{animate:false});
+  // After the boot animation, settle closer to the city with a smooth tween.
+  function zoomAfterIntro(){
+    const run=()=>{
+      if(document.documentElement.dataset.ready!=='true'){window.setTimeout(run,200);return;}
+      try{
+        const next=frameTarget(activeGroup(),false,.55);
+        if(next)tweenCamera(next.position,next.center,1200);
+      }catch{}
+    };
+    window.setTimeout(run,450);
+  }
+  window.addEventListener('ac8-intro-complete',zoomAfterIntro,{once:true});
+  if(window.__ac8IntroDone)zoomAfterIntro();
   const ac8Hud=createAc8Hud({scene,camera,viewport,getActiveGroup:activeGroup});
   window.__ac8Hud=ac8Hud;
   el('reset').onclick=()=>frameObject(activeGroup());
@@ -424,7 +427,7 @@ try {
   function setCoreForMode(next){
     const core=SITES[next]?siteMeta[next]?.coreBuilding:null;
     setCoreHighlight(core);
-    setNeighborHighlight(next==='nuclear'||next==='changjiang'?siteParts[next]?.buildingsData?.buildings??[]:[],core);
+    setNeighborHighlight([],core);
     const button=el('core-focus');
     if(core){button.hidden=false;button.disabled=false;button.textContent=`⌖ ${core.shortName||core.name||'核心建筑'}`;button.title=`定位${core.name||'核心建筑'}`;}
     else{button.hidden=true;button.disabled=true;}

@@ -876,3 +876,10 @@ body.scene-menu-open #workspace-sidebar .ac8-scene-info {
 @media (max-width: 580px) {
   #workspace-sidebar .workspace-launchers { padding: 48px 14px 10px !important; }
 }
+
+/* Center each main-menu label inside its bracket frame. */
+#workspace-sidebar .workspace-launchers button {
+  justify-content: center !important;
+  padding: 6px 18px !important;
+  text-align: center !important;
+}

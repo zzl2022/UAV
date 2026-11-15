@@ -16,8 +16,6 @@ try{
   ['shenzhen','深圳国际交流中心'],
   ['daxing','大兴机场航站楼'],
   ['hangzhou','杭州萧山机场航站楼'],
-  ['nuclear','房山核设施'],
-  ['changjiang','昌江核电厂'],
   ['railway','北京站'],
  ];
  for(const [site,coreName] of sites){
@@ -27,8 +25,7 @@ try{
   assert.ok(model.buildingCount>0,`${site} has no buildings`);
   assert.ok(Number.isFinite(model.maxHeight)&&model.maxHeight>0);
   const neighbors=await page.evaluate(()=>window.cityDiagnostics.coreNeighbors??0);
-  if(site==='nuclear'||site==='changjiang')assert.ok(neighbors>0,`${site} core neighbors should be highlighted`);
-  else assert.equal(neighbors,0,`${site} should not highlight core neighbors`);
+  assert.equal(neighbors,0,`${site} should not highlight core neighbors`);
   const core=await page.locator('#core-label').innerText();
   assert.ok(core.includes(coreName),`${site} core label ${core}`);
   await page.locator('#core-focus').click();
