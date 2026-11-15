@@ -82,9 +82,6 @@ try {
 
   await openPage('target');
   await shot('05_target_basic');
-  await page.locator('#city-target-page .city-settings-nav').getByRole('button', {name: '位置', exact: true}).click();
-  await page.waitForTimeout(900);
-  await shot('06_target_position');
 
   await openPage('scene');
   await page.locator('#buildings').uncheck();

@@ -1,6 +1,5 @@
 #equipment-manager .equipment-demo-entry{margin-top:10px;border-top-color:#3b525d}
 #equipment-window.is-minimized{width:280px}
-#equipment-manager[data-demo=true] .equipment-editor-footer{display:none}
 #equipment-manager[data-demo=true] #equipment-profile-form{padding:22px}
 .equipment-demo-settings .demo-position{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 20px;border-bottom:1px solid #2c414d;margin-bottom:18px}
 .demo-position span,.demo-position output{display:block;font-size:13px;line-height:1.7;color:#b9cdd7}

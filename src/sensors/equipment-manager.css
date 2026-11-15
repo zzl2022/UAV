@@ -55,6 +55,7 @@
 .profile-unit{flex-shrink:0;padding:0 11px 0 5px;font-size:11px;color:#819faa;white-space:nowrap}
 .equipment-editor-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0;padding:16px 28px;border-top:1px solid #2c414d;background:#13242e}
 .equipment-editor-footer>div{display:flex;align-items:center;gap:9px;min-width:0}
+.equipment-profile-actions{display:flex;align-items:center;gap:8px}
 .equipment-editor-footer button{min-height:40px;font-size:13px;padding:9px 15px;white-space:nowrap;border-color:#435a67;border-radius:6px;background:#1a303c;color:#d4e1e8}
 .equipment-editor-footer button:hover{background:#25414e;border-color:#71929f}
 #equipment-profile-reset{background:transparent}
@@ -82,6 +83,7 @@
 #city-window .city-settings-page{padding:24px;overflow:auto;min-height:350px;height:min(580px,calc(80dvh - 130px));display:flex;flex-direction:column}
 .city-settings-page>h2{font-size:17px;font-weight:500;margin:0 0 23px;color:#e0f0f4}
 .city-settings-editor{display:grid;grid-template-columns:140px minmax(0,1fr);gap:24px;flex:1;min-height:0;overflow:hidden}
+#city-target-page .city-settings-editor{grid-template-columns:minmax(0,1fr)}
 .city-settings-nav{display:flex;flex-direction:column;gap:5px;overflow:auto;border-right:1px solid #2a4652;padding-right:14px}
 .city-settings-form{min-width:0;overflow:auto;padding:0 5px 14px 0}
 .city-settings-form .profile-field-grid{gap:25px 24px}
@@ -92,7 +94,6 @@
 .city-settings-form .profile-switch{flex-direction:row;justify-content:space-between;align-items:center;grid-column:1/-1;padding:3px 0 10px;border-bottom:1px solid #29434e;gap:14px}
 .city-settings-form .profile-switch .profile-field-control{border:0;background:transparent;min-height:24px;overflow:visible}
 .city-settings-form .profile-switch input[type=checkbox]{width:16px;height:16px;margin:0;padding:0;accent-color:#75dec4}
-#city-target-pick{margin-top:24px;font-size:12px;padding:10px 16px}
 #equipment-manager button:focus-visible,.equipment-model-menu button:focus-visible,.city-mode-tabs button:focus-visible,.city-settings-page button:focus-visible{outline:2px solid #7adfc5;outline-offset:2px}
 @media(max-width:760px){
  #equipment-window #equipment-panel.catalog-mode{max-height:calc(90dvh - 60px)}

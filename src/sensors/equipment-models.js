@@ -38,8 +38,8 @@ const additions=[{
   'parameters.cellPeakGbps':reported('小区峰值吞吐','Gbps',10,{qualifier:'+',statement:'原文为 10 Gbps+；属于小区峰值能力。'}),
  },
  groups:[
-  ['基础参数',['coverageDistance','minRange','capacity','updateSeconds']],
-  ['覆盖参数',['verticalBeamAngle','coverageHeight','rangeAccuracy','bearingAccuracy']],
+  ['感知覆盖',['coverageDistance','minRange','verticalBeamAngle','coverageHeight']],
+  ['定位精度',['rangeAccuracy','bearingAccuracy']],
   ['通感配置',['channelCount','frequencyGHz','bandwidthMHz']],
   ['通信性能',['uplinkStreams','downlinkStreams','cellPeakGbps']],
  ],
@@ -78,8 +78,8 @@ const additions=[{
   'parameters.temperatureMax':published('工作温度上限','℃',60,{min:-273.15,max:1000}),
  },
  groups:[
-  ['基础参数',['detectionDistance','responseTimeMs','capacity','updateSeconds']],
-  ['电场参数',['minRange','fieldMinVpm','fieldMaxVpm','sensitivityVpm','fieldAccuracyVpm','samplingHz']],
+  ['探测距离',['detectionDistance','minRange']],
+  ['场强测量',['fieldMinVpm','fieldMaxVpm','sensitivityVpm','fieldAccuracyVpm']],
   ['组网配置',['stationCount','nodeSpacingMeters']],
   ['环境功耗',['staticPowerMw','operatingPowerW','temperatureMin','temperatureMax']],
  ],

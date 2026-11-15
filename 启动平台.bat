@@ -1,97 +1,69 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions DisableDelayedExpansion
 chcp 65001 >nul
-cd /d "%~dp0"
-title UAV 低空防御仿真平台
+pushd "%~dp0" || exit /b 1
 
 set "PY=.venv\Scripts\python.exe"
-
-echo [1/5] 检查 Python 虚拟环境...
 if not exist "%PY%" (
-  where py >nul 2>nul
-  if not errorlevel 1 (
-    py -3 -m venv .venv
+  echo 正在创建 Python 虚拟环境…
+  where py >nul 2>&1
+  if errorlevel 1 (
+    python -c "import sys; sys.exit(sys.version_info < (3, 12))" || goto :no_python
+    python -m venv .venv || goto :fail
   ) else (
-    where python >nul 2>nul
-    if errorlevel 1 goto :no_python
-    python -m venv .venv
+    py -3 -c "import sys; sys.exit(sys.version_info < (3, 12))" || goto :no_python
+    py -3 -m venv .venv || goto :fail
   )
-  if errorlevel 1 goto :fail
 )
+"%PY%" -c "import sys; sys.exit(sys.version_info < (3, 12))" || goto :no_python
 
-echo [2/5] 检查 Python 依赖...
-"%PY%" -c "import shapefile, rasterio, numpy, pyproj, shapely, yaml, geopandas, requests, PIL, pytest" >nul 2>nul
+node -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit(major > 22 || major === 22 && minor >= 12 ? 0 : 1)" || goto :no_node
+node --input-type=module -e "await import('vite'); await import('three'); await import('three-mesh-bvh'); await import('pdfmake')" >nul 2>&1
 if errorlevel 1 (
-  echo         首次运行，正在安装 Python 依赖（需要网络）...
-  "%PY%" -m pip install --disable-pip-version-check -r requirements-integration.txt
-  if errorlevel 1 goto :fail
+  echo 正在安装前端依赖…
+  call npm ci --no-audit --no-fund || goto :fail
 )
 
-echo [3/5] 检查 Node.js 与前端依赖...
-where node >nul 2>nul
-if errorlevel 1 goto :no_node
-if not exist "node_modules\vite\package.json" (
-  echo         首次运行，正在安装 Node 依赖（需要网络）...
-  call npm ci --no-audit --no-fund
-  if errorlevel 1 goto :fail
+"%PY%" -c "import backend.capabilities" >nul 2>&1
+if errorlevel 1 (
+  call :install_python || goto :fail
 )
 
-echo [4/5] 检查场景与模型数据...
-if not exist "public\data\city.json" (
-  if exist "创意二文件\创意二数据集\区域数据\building\zheng_apart.shp" (
-    echo         正在从“创意二文件”生成基础场景数据...
-    "%PY%" scripts\prepare_data.py
-    if errorlevel 1 goto :fail
-  ) else (
-    echo [错误] 缺少 public\data\city.json，且未找到“创意二文件”原始数据。
-    echo        请完整下载仓库后重试。
-    goto :fail
-  )
-)
-for %%F in (
-  "public\data\beijing\beijing-gba.glb"
-  "public\data\beijing\beijing-gba.json"
-  "public\data\sites\daxing\daxing-gba.glb"
-  "public\data\sites\nuclear\nuclear-gba.glb"
-  "public\data\sites\railway\railway-gba.glb"
-  "public\data\sites\shenzhen\shenzhen-gba.glb"
-  "public\data\sites\hangzhou\hangzhou-gba.glb"
-  "public\data\sites\changjiang\changjiang-gba.glb"
-) do (
-  if not exist %%F (
-    echo [错误] 缺少模型文件 %%F
-    echo        请确认仓库已完整下载，或重新下载该文件。
-    goto :fail
-  )
-)
+if not exist "public\data\city.json" goto :prepare_data
+if not exist "public\data\terrain.json" goto :prepare_data
+goto :launch
 
-echo [5/5] 启动页面与 Python 模型服务...
-echo         浏览器访问 http://127.0.0.1:5173
-echo         关闭本窗口或按 Ctrl+C 停止服务。
-echo.
-"%PY%" scripts\start_integrated.py
-if errorlevel 1 goto :fail
-echo.
-echo 服务已停止。
-pause
+:prepare_data
+if not exist "创意二文件\创意二数据集\区域数据\building\zheng_apart.shp" (
+  echo [错误] 缺少基础场景数据，请补齐 public\data\city.json 和 terrain.json，或恢复原始数据集。
+  goto :fail
+)
+echo 正在生成基础场景数据…
+"%PY%" -c "import shapefile, rasterio" >nul 2>&1
+if errorlevel 1 (
+  call :install_python || goto :fail
+)
+"%PY%" scripts\prepare_data.py || goto :fail
+
+:launch
+"%PY%" -u scripts\start_integrated.py %* || goto :fail
+popd
 exit /b 0
 
 :no_python
-echo [错误] 未找到 Python。
-echo        请安装 Python 3.12+，安装时勾选“Add python.exe to PATH”。
-echo        下载地址：https://www.python.org/downloads/windows/
-pause
-exit /b 1
+echo [错误] 请安装 Python 3.12 或更新版本。如果 .venv 已失效，请重建该虚拟环境。
+goto :fail
 
 :no_node
-echo [错误] 未找到 Node.js。
-echo        请安装 Node.js 22.12+（推荐 24）。
-echo        下载地址：https://nodejs.org/
+echo [错误] 请安装 Node.js 22.12 或更新版本，推荐 Node.js 24。
+
+:fail
+echo 启动失败，请查看上方信息。
+popd
 pause
 exit /b 1
 
-:fail
-echo.
-echo 启动准备失败，请查看上方信息。
-pause
-exit /b 1
+:install_python
+echo 正在安装 Python 依赖…
+"%PY%" -m pip install --disable-pip-version-check -r requirements-integration.txt
+exit /b %errorlevel%

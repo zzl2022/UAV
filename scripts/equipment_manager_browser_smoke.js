@@ -60,10 +60,10 @@ try{
  await page.locator('#equipment-model-menu [data-preset-id=radio-x1c]').click();
  assert.equal(await page.locator('#equipment-tab-radio').getAttribute('aria-selected'),'true');
  assert.match(await page.locator('#equipment-model-name').innerText(),/X1C/);
- await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();
  await page.locator('#profile-parameters-maxRange').fill('5000');
  await selectEquipmentType(page,'optical');await selectEquipmentType(page,'radio');
- await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.waitForFunction(()=>document.querySelector('#equipment-save-state').innerText==='已保存',null,{timeout:5000});
  await page.locator('#profile-parameters-maxRange').fill('0');await page.locator('.equipment-group-nav').getByRole('button',{name:'接收频段',exact:true}).click();await page.locator('#equipment-profile-save').click();
@@ -72,15 +72,15 @@ try{
  const exported=JSON.parse(await readFile('artifacts/equipment-manager/profile.json','utf8'));assert.equal(exported.schema,'equipment-catalog/1');assert.equal(exported.profiles[0].parameters.maxRange,5000);assert.ok(!('position'in exported.profiles[0]));assert.ok(!('environment'in exported));
  await page.locator('#profile-parameters-maxRange').fill('4444');await page.locator('#equipment-profile-file').setInputFiles('artifacts/equipment-manager/profile.json');
  await page.waitForFunction(()=>/已新增|已导入/.test(document.querySelector('#equipment-profile-message').textContent));
- await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-profile-file').setInputFiles({name:'scene.json',mimeType:'application/json',buffer:Buffer.from('{"devices":[]}')});
  await page.waitForFunction(()=>document.querySelector('#equipment-profile-message').textContent.includes('导入失败'));assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await selectEquipmentType(page,'optical');
- await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'');
+ await page.locator('.equipment-group-nav').getByRole('button',{name:'探测距离',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'');
  await page.locator('.equipment-group-nav').getByRole('button',{name:'通道焦距',exact:true}).click();await page.locator('#profile-working-channel').selectOption('thermal');assert.equal(await page.locator('#profile-working-focalMm').inputValue(),'75');
  await selectEquipmentType(page,'acoustic');await page.locator('.equipment-group-nav').getByRole('button',{name:'阵列频带',exact:true}).click();await page.locator('#profile-working-arrayDiameter').selectOption('0.3');assert.equal(await page.locator('#profile-working-frequencyMin').inputValue(),'');
  await closeEquipmentMenu(page);await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:120000});
- await openEquipmentMenu(page,'radio');await page.getByRole('button',{name:'选择无线电型号',exact:true}).click();await page.locator('#equipment-model-menu [data-preset-id^="custom:radio-x1c:"]').first().click();await page.locator('.equipment-group-nav').getByRole('button',{name:'基础参数',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await openEquipmentMenu(page,'radio');await page.getByRole('button',{name:'选择无线电型号',exact:true}).click();await page.locator('#equipment-model-menu [data-preset-id^="custom:radio-x1c:"]').first().click();await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await closeEquipmentMenu(page);
  await openSceneMenu(page,'environment');
  const stations=await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rfStations);
@@ -91,19 +91,15 @@ try{
  assert.equal(await page.locator('#city-environment-rfStations').count(),0);
  await page.screenshot({path:'artifacts/equipment-manager/environment.png'});
  await openSceneMenu(page,'target');
+ const targetPosition=await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position);
  await page.locator('#city-target-count').fill('3');
- await page.locator('#city-target-page .city-settings-nav').getByRole('button',{name:'无线电',exact:true}).click();await page.locator('#city-target-emitting').uncheck();await page.locator('#city-target-fhss').check();
+ await page.locator('#city-target-emitting').uncheck();await page.locator('#city-target-fhss').check();
  const target=await page.evaluate(()=>window.sceneConfigurationDiagnostics.target);assert.equal(target.count,3);assert.equal(target.emitting,false);assert.equal(target.fhss,true);
  await page.screenshot({path:'artifacts/equipment-manager/target.png'});
- // Target map picking edits the draft, then Apply updates the shared target.
- await openSceneMenu(page,'scene');await page.locator('#museum-focus').click();await openSceneMenu(page,'target');await page.locator('#city-target-page .city-settings-nav').getByRole('button',{name:'位置',exact:true}).click();
- await page.locator('#city-target-pick').click();const viewport=await page.locator('#viewport').boundingBox();
- for(const [x,y] of [[.5,.5],[.6,.55],[.45,.6],[.65,.65]]){
-  await page.mouse.click(viewport.x+viewport.width*x,viewport.y+viewport.height*y);
-  if(!await page.locator('#ac8-scene-menu').evaluate(node=>node.classList.contains('is-minimized')))break;
- }
- assert.equal(await page.locator('#ac8-scene-menu').evaluate(node=>node.classList.contains('is-minimized')),false);
- const x=Number(await page.locator('#city-target-east').inputValue());await page.locator('#city-target-apply').click();assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position[0]),x);
+ assert.equal(await page.locator('#city-target-page .city-settings-nav,#city-target-page h3').count(),0);
+ assert.equal(await page.locator('#city-target-acousticFrequencyHz').count(),1);
+ assert.equal(await page.locator('#city-target-pick,#city-target-east,#city-target-north,#city-target-up').count(),0);
+ assert.deepEqual(target.position,targetPosition);
  await closeSceneMenu(page);await page.setViewportSize({width:390,height:844});await openEquipmentMenu(page,'radar');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'artifacts/equipment-manager/mobile.png'});
  assert.ok(await page.locator('#equipment-profile-save').evaluate(node=>{const r=node.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'mobile save button remains reachable');

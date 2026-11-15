@@ -5,6 +5,8 @@ import {createVolumeRenderer} from './volume-renderer.js';
 import {nominalCoverage} from './coverage.js';
 import './equipment-demo.css';
 
+const DEMO_RAMP_START=.22;
+
 export function createEquipmentDemo({app,scene,camera,controls,renderer,model,workspace,getScenario,getQuery,onStart,getSignalProbe}){
  const group=new THREE.Group();group.name='Equipment_Demonstration';group.visible=false;scene.add(group);
  const positions=new Map(),settings=new Map();let root=null,getProfile=null,current=null,active=null,field=null,volume=null,worker=null,generation=0,picking=false,down=null,range=null,openSettings=null;
@@ -29,7 +31,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
  signalRows=document.createElement('dl');signalRows.id='demo-signal-values';
  signalBox.append(signalTitle,signalRows);probeBox.append(signalBox);
  hud.querySelector('.demo-hud-actions').before(probeBox);
- const gradient=`linear-gradient(to right,${Array.from({length:32},(_,i)=>`rgb(${rampColor(i/31).map(v=>Math.round(v*255)).join(',')})`).join(',')})`;hud.querySelector('.demo-colorbar').style.background=gradient;
+ const gradient=`linear-gradient(to right,${Array.from({length:32},(_,i)=>`rgb(${rampColor(DEMO_RAMP_START+(1-DEMO_RAMP_START)*i/31).map(v=>Math.round(v*255)).join(',')})`).join(',')})`;hud.querySelector('.demo-colorbar').style.background=gradient;
  hud.querySelector('[data-demo-action=back]').onclick=()=>{hideHud();app.dispatchEvent(new CustomEvent('equipment-demo-back'));};
  const $=id=>root?.querySelector('#demo-'+id);
  const opts=()=>settings.get(current);
@@ -65,7 +67,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
   if(probeMarker){probeMarker.visible=true;probeMarker.position.fromArray(point);}
   window.equipmentDemoDiagnostics.probe={...value,source:useVolume?'volume':'surface'};
  }
- function buttons(){if($('stop'))$('stop').disabled=!active&&!picking;if($('start'))$('start').textContent=active?'更新仿真':'开始仿真';}
+ function buttons(){if($('stop'))$('stop').disabled=!active&&!picking;}
  function stop(){generation++;worker?.terminate();worker=null;active=null;picking=false;clear();group.visible=false;hud.hidden=true;renderer.domElement.style.cursor='';buttons();publish('stopped');message('仿真已停止');}
  function pointLabel(){const p=positions.get(current);if($('position'))$('position').textContent=p?`东 ${p[0].toFixed(0)} m · 北 ${(-p[2]).toFixed(0)} m · 高 ${p[1].toFixed(0)} m`:'未选择点位';}
  function anchor(){
@@ -97,7 +99,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
  function hideHud(){hud.hidden=true;}
  function configure(){
   if(!active||!field)return;const s=settings.get(active.profile.presetId),m=active.metric,displayRange=s.autoscale?range:[m.min,m.max],floor=s.floor??m.floor;
-  volume?.configure({metric:'margin',range:displayRange,floor,density:s.density,opacityDistance:active.settings.radius*.25,clip:s.clip,style:s.style});
+  volume?.configure({metric:'margin',range:displayRange,floor,density:s.density,opacityDistance:active.settings.radius*.25,minExtinction:.55,rampStart:DEMO_RAMP_START,clip:s.clip,style:s.style});
   for(const object of group.children)if(object.userData.demoNominal)object.visible=s.nominal;
   hud.querySelector('.demo-hud-metric').textContent=`${m.label}${m.unit?' / '+m.unit:''} · 显示 ≥ ${Number(floor).toFixed(m.max<=1?2:1)}`;
   hud.querySelector('.demo-scale').replaceChildren(...[0,.5,1].map(t=>{const label=document.createElement('span');label.textContent=(displayRange[0]+t*(displayRange[1]-displayRange[0])).toFixed(m.max<=1?2:1);return label;}));
@@ -146,7 +148,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
    settings.set(current,next);
   }
   root=document.createElement('div');root.className='equipment-demo-settings';container.append(root);
-  root.innerHTML='<h3>设备仿真</h3><div class="demo-position"><div><span>仿真点位</span><output id="demo-position">使用地图选点</output></div><button type="button" id="demo-pick">地图选点</button></div><div class="demo-setting-tabs" role="tablist" aria-label="仿真设置"><button type="button" role="tab" aria-selected="true" data-page="field">范围与朝向</button><button type="button" role="tab" aria-selected="false" data-page="render">可视化</button></div><div id="demo-fields" class="profile-field-grid"></div><div id="demo-render" class="profile-field-grid" hidden></div><div class="demo-actions"><button type="button" id="demo-start" class="primary">开始仿真</button><button type="button" id="demo-stop">停止仿真</button></div><p id="demo-status" role="status"></p>';
+  root.innerHTML='<h3>设备仿真</h3><div class="demo-position"><div><span>仿真点位</span><output id="demo-position">使用地图选点</output></div><button type="button" id="demo-pick">地图选点</button></div><div class="demo-setting-tabs" role="tablist" aria-label="仿真设置"><button type="button" role="tab" aria-selected="true" data-page="field">范围与朝向</button><button type="button" role="tab" aria-selected="false" data-page="render">可视化</button></div><div id="demo-fields" class="profile-field-grid"></div><div id="demo-render" class="profile-field-grid" hidden></div><div class="demo-actions"><button type="button" id="demo-stop">停止仿真</button></div><p id="demo-status" role="status"></p>';
   const s=opts(),m=DEMO_METRICS[profile.type].find(item=>item.id===s.metric);if(s.floor==null)s.floor=m.floor;
   const add=(host,key,label,unit,{min,max,step='any',options,boolean=false,visual=false}={})=>{
    const wrap=document.createElement('label');wrap.className='profile-field';const title=document.createElement('span');title.className='profile-field-label';title.textContent=label;
@@ -159,7 +161,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
     s[key]=boolean?input.checked:options&&['metric','style'].includes(key)?input.value:Number(input.value);
     if(key==='metric'){const metric=DEMO_METRICS[profile.type].find(item=>item.id===s.metric);s.floor=metric.floor;$('floor').value=s.floor;$('floor').min=metric.min;$('floor').max=metric.id==='distance'?s.radius:metric.max;$('floor').step=metric.max<=1?.01:.5;const box=$('floor').closest('.profile-field-control');let unit=box.querySelector('.profile-unit');if(!unit){unit=document.createElement('span');unit.className='profile-unit';box.append(unit);}unit.textContent=metric.unit;unit.hidden=!metric.unit;if(active)start();}
     else if(visual){if(active)configure();}
-    else{if(key==='mountHeight'&&positions.has(current)){const pos=positions.get(current),surface=getQuery(false).surfaceAt(pos[0],pos[2]);if(surface!=null)pos[1]=surface+s.mountHeight;pointLabel();}if(active)message('设置已修改，请更新仿真');}
+    else{if(key==='mountHeight'&&positions.has(current)){const pos=positions.get(current),surface=getQuery(false).surfaceAt(pos[0],pos[2]);if(surface!=null)pos[1]=surface+s.mountHeight;pointLabel();}if(active)message('设置已修改，请点击“性能展示”');}
     persistSettings();
    });
   };
@@ -180,7 +182,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
   const selectPage=name=>{for(const button of pageButtons){const selected=button.dataset.page===name;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;}$('fields').hidden=name!=='field';$('render').hidden=name!=='render';};
   for(const button of pageButtons)button.onclick=()=>selectPage(button.dataset.page);
   root.querySelector('.demo-setting-tabs').onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();event.stopPropagation();const next=event.key==='Home'?0:event.key==='End'?1:pageButtons.findIndex(b=>b.getAttribute('aria-selected')==='true')===0?1:0;selectPage(pageButtons[next].dataset.page);pageButtons[next].focus();};
-  $('start').onclick=start;$('stop').onclick=()=>stop();
+  $('stop').onclick=()=>stop();
   $('pick').onclick=()=>{stop();picking=true;buttons();message('请在城市地图中选择点位');renderer.domElement.style.cursor='crosshair';workspace.minimizeWindow('equipment');publish('picking');};
   anchor();pointLabel();buttons();selectPage('field');if(active)$('status').textContent=hud.querySelector('[role=status]').textContent;
  }
