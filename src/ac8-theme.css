@@ -338,3 +338,16 @@ select:focus-visible {
   width: calc(100% + 14px);
   opacity: 1;
 }
+
+/* Replaces the page backdrop after repeated blocked function-key clicks. */
+body.milk-egg-bg::before {
+  background: var(--milk-egg-bg) center / cover no-repeat !important;
+  opacity: 1 !important;
+}
+body.milk-egg-bg::after { display: none !important; }
+body.milk-egg-bg #scene-main {
+  background: var(--milk-egg-bg) center / cover no-repeat !important;
+}
+body.milk-egg-bg #viewport {
+  background: var(--milk-egg-bg) center / cover no-repeat !important;
+}

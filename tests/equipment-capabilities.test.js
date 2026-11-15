@@ -78,8 +78,8 @@ test('application mounts one equipment workspace and retains task3 entry',()=>{
  assert.ok(!source.includes('mountStudentCapabilities'));assert.ok(source.includes('mountSensorUI'));
  assert.ok(source.includes('mountTask3UI'));
 });
-test('acoustic simulation does not treat the unconfirmed camera FOV as an acoustic beam',()=>{
- const p=PRESETS.find(p=>p.type==='acoustic');assert.equal(p.parameters.azimuthFov,360);
- assert.equal(p.parameters.elevationMin,-90);assert.equal(p.parameters.elevationMax,90);
- for(const key of ['azimuthFov','elevationMin','elevationMax'])assert.notEqual(p.provenance[key],'文档');
+test('acoustic simulation uses the documented acoustic camera FOV rather than an unstated optical beam',()=>{
+ const p=PRESETS.find(p=>p.type==='acoustic');assert.equal(p.parameters.azimuthFov,94);
+ assert.equal(p.parameters.elevationMin,-38);assert.equal(p.parameters.elevationMax,38);
+ for(const key of ['azimuthFov','elevationMin','elevationMax'])assert.equal(p.provenance[key],'文档');
 });

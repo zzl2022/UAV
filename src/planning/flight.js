@@ -47,7 +47,7 @@ export function buildFlightRoute(query,bounds,{speed=15,clearance=25,cruiseAgl=6
  for(let pass=0;pass<3;pass++){let changed=false;for(let i=1;i<positions.length;i++){const result=query.trace(positions[i-1],positions[i]);if(result.blocked){const lift=Math.max(5,result.clearance+clearance);positions[i-1][1]+=lift;positions[i][1]+=lift;changed=true;repairs++;}}if(!changed)break;slopeEnvelope();}
  for(let i=1;i<positions.length;i++){const c=query.trace(positions[i-1],positions[i]);if(c.blocked||!c.known)throw Error('轨迹未通过建筑/地形连续线段检查');}
  let length=0;const points=positions.map((position,i)=>{if(i)length+=distance(position,positions[i-1]);return {position,time:length/speed};});
- return {id:'museum-west-east',name:'西侧进入 → 河南博物院周边 → 东侧离开',points,duration:length/speed,length,speed,maxVerticalSpeed:speed/Math.sqrt(10),clearance,cruiseAgl,repairs,geometryVerified:true,notes:'在有效 DEM 连通域内寻路并抬升避开 LoD1 建筑；不是航空运行许可或真实导航方案。'};
+ return {id:'museum-west-east',name:'西侧进入 → 核心区 → 东侧离开',points,duration:length/speed,length,speed,maxVerticalSpeed:speed/Math.sqrt(10),clearance,cruiseAgl,repairs,geometryVerified:true,notes:'在有效 DEM 连通域内寻路并抬升避开 LoD1 建筑；不是航空运行许可或真实导航方案。'};
 }
 export async function simulateFlight({query,devices,route,target,environment,core,coreRadius=700,interval=2,progress=()=>{},yieldTask=async()=>{}}){
  const emc=emcCheck(devices),frames=[];const times=[];for(let t=0;t<route.duration;t+=interval)times.push(t);times.push(route.duration);

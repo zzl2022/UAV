@@ -1,6 +1,7 @@
 // 警车移动雷达补盲：仅对当前方案做增量搜索与覆盖复核，不重跑候选生成、择优或威胁流水线。
 // 车载只改变部署方式；雷达射频参数复用用户已选预设，挂载高度与地表代理假设显式记录。
 import {createDevice,PRESETS} from '../sensors/presets.js';
+import {resolveEquipmentProfiles,applyEquipmentProfile} from '../sensors/equipment-catalog.js';
 import {evaluate,angles} from '../sensors/engine.js';
 import {scenarios} from '../planning/optimizer.js';
 import {classifyBlindSpots} from './blindspots.js';
@@ -41,8 +42,8 @@ export function restoreMobileRepairSnapshot(report,snapshot){
  if(report.mobileRepair?.basePlanId===snapshot.planId)delete report.mobileRepair;
 }
 
-export async function repairPlanWithMobileRadars({city,query,plan,sampling,equipment,settings,environment,target,conditionId='nominal',progress=()=>{},yieldTask=async()=>{},adapters={},limits=MOBILE_REPAIR_LIMITS}){
- const evaluateSensor=adapters.evaluate??evaluate,analyzeEmc=adapters.emcAnalysis??emcAnalysis,classify=adapters.classifyBlindSpots??classifyBlindSpots;
+export async function repairPlanWithMobileRadars({city,query,plan,sampling,equipment,equipmentSnapshot=null,settings,environment,target,conditionId='nominal',progress=()=>{},yieldTask=async()=>{},adapters={},limits=MOBILE_REPAIR_LIMITS}){
+ const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot),evaluateSensor=adapters.evaluate??evaluate,analyzeEmc=adapters.emcAnalysis??emcAnalysis,classify=adapters.classifyBlindSpots??classifyBlindSpots;
  const conditions=scenarios(environment),conditionIndex=conditions.findIndex(c=>c.id===conditionId);if(conditionIndex<0)throw Error(`未知覆盖工况 ${conditionId}`);
  const samplesList=sampling.samples,n=samplesList.length;
  const blindIndices=(plan.coverage[conditionIndex]??[]).map((count,j)=>count===0?j:-1).filter(j=>j>=0);
@@ -64,7 +65,7 @@ export async function repairPlanWithMobileRadars({city,query,plan,sampling,equip
   const ground=query.groundAt(x,z),surface=query.surfaceAt(x,z);if(ground===null||surface===null)return null;
   // surface==ground 才接受：楼顶或建筑内部高差不满足开阔地表代理。
   if(Math.abs(surface-ground)>limits.surfaceToleranceM)return null;
-  const position=[x,ground+limits.mountHeightM,z],direction=angles(position,anchor.position),device=createDevice(radarPresetId,`mobile-candidate-${candidates.length+1}`,position);
+  const position=[x,ground+limits.mountHeightM,z],direction=angles(position,anchor.position),device=applyEquipmentProfile(createDevice(radarPresetId,`mobile-candidate-${candidates.length+1}`,position),equipmentProfiles);
   device.parameters.pitch=Math.max(-60,Math.min(0,direction.elevation-30));device.parameters.frequencyGHz=channels[0];
   device.mobileRepair={platform:'police-car',deployment:'警车移动部署',mountHeightM:limits.mountHeightM,mountHeightSource:'模型假设',roadReachabilityVerified:false};
   const site={id:`mobile-candidate-site-${candidates.length+1}`,position:[...position],buildingId:null,name:'开阔地表几何代理点（未验证道路可达）',installation:`警车移动部署（可移动雷达）；挂载高度 ${limits.mountHeightM} m（模型假设）；不代表道路可达或施工条件已实测`,deployment:'police-car',groundM:ground,surfaceM:surface,mountHeightM:limits.mountHeightM,mountHeightSource:'模型假设',installationProxy:1,roadReachabilityVerified:false};

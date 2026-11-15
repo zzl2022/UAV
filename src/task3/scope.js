@@ -4,6 +4,12 @@ import {DEFAULT_SCOPE,DEFAULT_SCOPE_WIDTH_M,DEFAULT_SCOPE_DEPTH_M} from './const
 
 export const TASK3_DEFAULT_SETTINGS={...DEFAULT_SETTINGS,scope:DEFAULT_SCOPE,siteSpacing:500,scopeWidthM:DEFAULT_SCOPE_WIDTH_M,scopeDepthM:DEFAULT_SCOPE_DEPTH_M};
 
+export function parseTask3Spacing(value){
+ const text=String(value??'').trim(),spacing=Number(text);
+ if(!text||!Number.isFinite(spacing)||spacing<150||spacing>1000)throw Error('网格间距必须是 150–1000 米的有限数值。');
+ return spacing;
+}
+
 export function resolveTask3Settings(settings=TASK3_DEFAULT_SETTINGS){
  const source=settings??TASK3_DEFAULT_SETTINGS,scope=source.scope??DEFAULT_SCOPE;
  const resolved={...source,scope};

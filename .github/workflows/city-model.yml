@@ -19,10 +19,15 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: python -m venv .venv
-      - run: .venv/bin/python -m pip install -r requirements.txt
+      - run: .venv/bin/python -m pip install -r requirements-integration.txt
       - run: npm ci
-      - run: npm run prepare:data
+      - name: Prepare scene data only when absent
+        run: test -f public/data/city.json || npm run prepare:data
+      - run: mkdir -p artifacts
       - run: npm test
+      - run: .venv/bin/python -m pytest backend/test_capabilities.py -q -p no:cacheprovider --basetemp=artifacts/test-api
+      - run: .venv/bin/python -m pytest equipment_models/optical/tests -q -p no:cacheprovider --basetemp=artifacts/test-optical
+      - run: .venv/bin/python -m pytest equipment_models/acoustic/tests -q -p no:cacheprovider --basetemp=artifacts/test-acoustic
       - run: npm run test:imagery
       - run: npm run plan:build
       - run: npm run build

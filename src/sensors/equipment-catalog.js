@@ -35,7 +35,7 @@ export function catalogFields(presetId){
 export function defaultProfile(presetId){
  const preset=catalogModel(presetId),profile={presetId,type:preset.type,name:preset.name,parameters:{},physics:{},working:{}};
  if(preset.catalogOnly){for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.value??null;}return profile;}
- const device=createDevice(presetId,'profile');
+ const device=createDevice(preset.basePresetId??presetId,'profile');
  for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.nullable&&spec.source==='未提供'?null:scope==='working'?spec.value:device[scope][name];}
  return profile;
 }
@@ -58,7 +58,8 @@ export function profileGroups(presetId){
 }
 export function validateProfile(profile){
  const base=defaultProfile(profile?.presetId);
- if(profile.type!==base.type||profile.name!==base.name)throw Error('装备型号信息不一致');
+ if(profile.type!==base.type||(!catalogModel(profile.presetId).basePresetId&&profile.name!==base.name))throw Error('装备型号信息不一致');
+ if(typeof profile.name!=='string'||!profile.name.trim()||profile.name.length>120)throw Object.assign(Error('请填写装备名称（最多 120 字）'),{field:'name'});
  if(Object.keys(profile).some(key=>!Object.hasOwn(base,key)))throw Error('包含不支持的装备信息');
  for(const scope of ['parameters','physics','working']){
   if(!profile[scope]||typeof profile[scope]!=='object'||Array.isArray(profile[scope]))throw Error('参数格式无效');
@@ -80,8 +81,12 @@ export function validateProfile(profile){
  return structuredClone(profile);
 }
 export function validateCatalogFile(value){
- if(value?.schema!==CATALOG_SCHEMA||!Array.isArray(value.profiles)||!value.profiles.length||value.profiles.length>CATALOG_MODELS.length)throw Error('请选择装备参数文件');
+ if(value?.schema!==CATALOG_SCHEMA||!Array.isArray(value.profiles)||!value.profiles.length||value.profiles.length>200)throw Error('请选择装备参数文件（最多 200 个型号）');
  const ids=new Set();return value.profiles.map(profile=>{if(ids.has(profile.presetId))throw Error('装备型号重复');ids.add(profile.presetId);return validateProfile(profile);});
+}
+export function createCustomProfile(profile,name=profile.name){
+ const model=catalogModel(profile.presetId),base=model.basePresetId??model.id;
+ return {...structuredClone(profile),presetId:`custom:${base}:${crypto.randomUUID()}`,name};
 }
 export function resolveEquipmentProfiles(equipment){
  if(equipment instanceof Map)return equipment;
@@ -96,15 +101,32 @@ export function applyEquipmentProfile(device,equipment){
 }
 export function createCatalogStore(storage){
  const saved=new Map(CATALOG_MODELS.map(p=>[p.id,defaultProfile(p.id)])),listeners=new Set();let readError=false;
- try{const raw=storage?.getItem(CATALOG_STORAGE_KEY);if(raw)for(const profile of validateCatalogFile(JSON.parse(raw)))saved.set(profile.presetId,profile);}catch{readError=true;}
+ try{
+  const raw=storage?.getItem(CATALOG_STORAGE_KEY);
+  if(raw){
+   const data=JSON.parse(raw);
+   if(data?.schema!==CATALOG_SCHEMA||!Array.isArray(data.profiles)||data.profiles.length>200)throw Error('参数存储格式无效');
+   for(const profile of data.profiles)try{
+    // Restore profiles independently; fill newly added fields from current defaults.
+    const defaults=defaultProfile(profile?.presetId),next={...defaults,...profile};
+    if(!catalogModel(next.presetId).basePresetId)next.name=defaults.name;
+    for(const scope of ['parameters','physics','working']){
+     next[scope]={...defaults[scope]};
+     for(const key of Object.keys(defaults[scope]))if(Object.hasOwn(profile[scope]??{},key))next[scope][key]=profile[scope][key];
+    }
+    saved.set(next.presetId,validateProfile(next));
+   }catch{readError=true;}
+  }
+ }catch{readError=true;}
  const snapshot=()=>({schema:CATALOG_SCHEMA,profiles:[...saved.values()].map(p=>structuredClone(p))});
  const publish=()=>{const value=snapshot();for(const listener of [...listeners])listener(structuredClone(value));};
  const persist=next=>{if(!storage)throw Error('当前浏览器无法保存，请导出参数');storage.setItem(CATALOG_STORAGE_KEY,JSON.stringify({schema:CATALOG_SCHEMA,profiles:[...next.values()]}));};
  return {
   readError,get:id=>structuredClone(saved.get(id)),getSnapshot:snapshot,
   subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
-  save(profile){const valid=validateProfile(profile),next=new Map(saved);next.set(profile.presetId,valid);persist(next);saved.set(profile.presetId,valid);publish();},
+  save(profile){const valid=validateProfile(profile),next=new Map(saved);next.set(profile.presetId,valid);if(next.size>200)throw Error('装备型号不能超过 200 个');persist(next);saved.set(profile.presetId,valid);publish();},
   import(value){const profiles=validateCatalogFile(value),next=new Map(saved);for(const p of profiles)next.set(p.presetId,p);persist(next);for(const p of profiles)saved.set(p.presetId,p);publish();return profiles;},
+  importAsNew(value){const profiles=validateCatalogFile(value).map(p=>validateProfile(createCustomProfile(p))),next=new Map(saved);for(const p of profiles)next.set(p.presetId,p);if(next.size>200)throw Error('装备型号不能超过 200 个');persist(next);for(const p of profiles)saved.set(p.presetId,p);publish();return profiles;},
   export(profile){return profile?{schema:CATALOG_SCHEMA,profiles:[validateProfile(profile)]}:snapshot();},
  };
 }

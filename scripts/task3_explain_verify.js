@@ -6,7 +6,7 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'
 try{
  const page=await browser.newPage({viewport:{width:1200,height:1000}}),errors=[],failed=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>failed.push(r.url()));
- await page.goto('file:///c:/Users/17311/Desktop/项目/01_我的项目/UAV/任务三模型可解释性.html');
+ await page.goto('file:///c:/Users/17311/Desktop/项目/创意二文件/UAV/任务三模型可解释性.html');
  await page.waitForLoadState('load');
  for(const id of ['s0','s1','s2','s3','s4','s5','s6','s7','s8'])assert.ok(await page.locator(`#${id}`).count(),`缺章节 ${id}`);
  const html=await readFile('任务三模型可解释性.html','utf8');

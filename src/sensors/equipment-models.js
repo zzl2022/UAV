@@ -87,5 +87,8 @@ const additions=[{
 
 export const CATALOG_MODELS=[...PRESETS,...additions];
 export function catalogModel(presetId){
- const model=CATALOG_MODELS.find(p=>p.id===presetId);if(!model)throw Error('装备型号无效');return model;
+ const model=CATALOG_MODELS.find(p=>p.id===presetId);if(model)return model;
+ const match=typeof presetId==='string'&&presetId.match(/^custom:([a-z0-9-]+):([a-zA-Z0-9-]{1,64})$/),base=match&&CATALOG_MODELS.find(p=>p.id===match[1]);
+ if(!base)throw Error('装备型号无效');
+ return {...base,id:presetId,basePresetId:base.id,name:`${base.name}（自定义）`};
 }

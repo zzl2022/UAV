@@ -721,9 +721,13 @@ body.scene-menu-open #ac8-main-menu-toggle {
   padding: 12px 20px 3px 0;
   border-top: 1px solid rgba(255, 255, 255, .5);
   border-right: 1px solid rgba(255, 255, 255, .5);
+  max-height: calc(100dvh - 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   opacity: 0;
   transform: translateX(-24px);
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 2;
   transition: opacity .5s ease, transform .75s cubic-bezier(.16, 1, .3, 1), top .78s cubic-bezier(.16, 1, .3, 1);
 }
@@ -742,7 +746,7 @@ body.scene-menu-open #workspace-sidebar .ac8-scene-info {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin: 0 0 11px;
+  margin: 0 0 8px;
 }
 .ac8-info-label {
   color: #7fe8ff;

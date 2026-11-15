@@ -19,7 +19,7 @@ export function scenarios(environment){return [
  {id:'interference',name:'电磁干扰',environment:{...environment,emNoiseDb:10,cochannelDb:10,crosstalkDb:5},target:{emitting:true,count:1}},
  ];}
 export function boundsFor(city,settings){
- const landmark=museumLandmark(city);if(!landmark)throw Error('缺少河南博物院核心区定位');
+ const landmark=museumLandmark(city);if(!landmark)throw Error('缺少当前场景核心建筑定位');
  if(settings.scope==='core')return {west:landmark.position[0]-1200,east:landmark.position[0]+1200,south:landmark.position[2]-1200,north:landmark.position[2]+1200,core:landmark.position};
  if(settings.scope==='custom')return {west:landmark.position[0]-settings.scopeWidthM/2,east:landmark.position[0]+settings.scopeWidthM/2,south:landmark.position[2]-settings.scopeDepthM/2,north:landmark.position[2]+settings.scopeDepthM/2,core:landmark.position};
  let west=Infinity,east=-Infinity,south=Infinity,north=-Infinity;
@@ -78,24 +78,26 @@ export function generateCandidates(city,query,settings,sampling){
  return candidates;
 }
 export function chooseGreedy(candidates,weights,{budget,maxDevices}){
- const covered=new Uint8Array(weights.length),selected=[];let cost=0;
+ const covered=new Uint8Array(weights.length),selected=[],events=[],totalWeight=weights.reduce((a,b)=>a+b,0);let cost=0;
+ const coveredWeightPct=()=>totalWeight?100*weights.reduce((sum,w,i)=>sum+w*covered[i],0)/totalWeight:0;
  for(let pass=0;pass<4;pass++){
   const prior=selected.join(',');
   while(selected.length<maxDevices){
-   let best=-1,bestScore=0;
+   let best=-1,bestScore=0,bestGain=0;
    for(let i=0;i<candidates.length;i++){
     const candidate=candidates[i];if(selected.includes(i)||cost+candidate.cost>budget+1e-9)continue;
     let gain=0;for(const j of candidate.cover)if(!covered[j])gain+=weights[j];
-    const score=gain/candidate.cost;if(score>bestScore+1e-10){bestScore=score;best=i;}
+    const score=gain/candidate.cost;if(score>bestScore+1e-10){bestScore=score;best=i;bestGain=gain;}
    }
-   if(best<0)break;selected.push(best);cost+=candidates[best].cost;for(const j of candidates[best].cover)covered[j]=1;
+   if(best<0)break;const candidate=candidates[best];selected.push(best);cost+=candidate.cost;for(const j of candidate.cover)covered[j]=1;
+   events.push({type:'select',phase:pass===0?'greedy':'refill',pass:pass+1,step:events.length+1,candidateIndex:best,deviceId:candidate.device?.id??null,presetId:candidate.device?.presetId??null,siteId:candidate.site?.id??null,gain:bestGain,cost:candidate.cost,gainPerCost:bestScore,cumulativeCost:cost,coveredWeightPct:coveredWeightPct()});
   }
   const counts=new Uint16Array(weights.length);for(const i of selected)for(const j of candidates[i].cover)counts[j]++;
-  for(let k=selected.length-1;k>=0;k--){const i=selected[k];if(candidates[i].cover.every(j=>counts[j]>=2)){for(const j of candidates[i].cover)counts[j]--;cost-=candidates[i].cost;selected.splice(k,1);}}
+  for(let k=selected.length-1;k>=0;k--){const i=selected[k],candidate=candidates[i];if(candidate.cover.every(j=>counts[j]>=2)){for(const j of candidate.cover)counts[j]--;cost-=candidate.cost;selected.splice(k,1);events.push({type:'delete',phase:'reverse-delete',pass:pass+1,step:events.length+1,candidateIndex:i,deviceId:candidate.device?.id??null,presetId:candidate.device?.presetId??null,siteId:candidate.site?.id??null,releasedCost:candidate.cost,cumulativeCost:cost,coveredWeightPct:coveredWeightPct(),reason:'所有覆盖样本在删除后仍由其他已选设备覆盖，反向冗余删除不降低覆盖'});}}
   // Redundant deletion frees budget: refill rather than stopping with avoidable holes.
   if(selected.join(',')===prior)break;
  }
- return {indices:selected,cost:Math.max(0,cost),covered:Array.from(covered),coveredWeight:weights.reduce((sum,w,i)=>sum+w*covered[i],0),totalWeight:weights.reduce((a,b)=>a+b,0)};
+ return {indices:selected,cost:Math.max(0,cost),covered:Array.from(covered),coveredWeight:weights.reduce((sum,w,i)=>sum+w*covered[i],0),totalWeight,events};
 }
 export function emcCheck(devices){
  const penalties=Object.fromEntries(devices.map(d=>[d.id,0])),conflicts=[];

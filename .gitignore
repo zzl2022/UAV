@@ -2,19 +2,26 @@ node_modules/
 dist/
 *.log
 .venv/
-public/data/
 artifacts/
+创意二文件/
+
+# 场景/站点模型数据为可再生产物，不提交（clone 后运行 prepare_data.py 生成）
+public/data/
+
+# 归档目录中体积较大的本地备份不提交，其余归档文件正常提交
+archive/创意二资料/
+archive/NoLod_*.glb
 
 __pycache__/
 *.pyc
+.trae/
+.idea/
 
+.env.local
+public/uav.key
 .npm-cache/
 .python-deps/
-
-# local agent/tooling metadata
-.trae/
-.trae-html-share-packages/
-.screenshots/
-
-# competition data (kept on D:\Datasets\UAV-创意二, accessed via junction)
-创意二文件/
+.integration-runtime/
+equipment_models/*/outputs/*
+!equipment_models/optical/outputs/optical_demo.json
+!equipment_models/acoustic/outputs/acoustic_demo.json

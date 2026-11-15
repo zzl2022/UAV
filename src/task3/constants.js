@@ -68,6 +68,17 @@ export const THREAT_SCENARIOS={
  swarm:{name:'蜂群饱和攻击',directions:3,dronesPerDirection:14,speedMps:12,aglM:[30,45,60],simultaneous:true,note:'42 架，超出 TDOA-X1B(35)/OA-X1Bmini(30)/X1C(15) 并发容量，用于检验容量溢出与漏探'},
 };
 
+// 可序列化威胁输入。数量是场景总架数；方位数组与方向数一一对应，高度按方向与架次序号循环。
+export const DEFAULT_THREAT_CONFIGS=Object.fromEntries(Object.entries(THREAT_SCENARIOS).map(([key,s])=>[key,{
+ count:s.directions*s.dronesPerDirection,
+ directions:s.directions,
+ azimuthsDeg:Array.from({length:s.directions},(_,d)=>d*(360/s.directions)),
+ aglM:[...s.aglM],
+ speedMps:s.speedMps,
+ simultaneous:!!s.simultaneous,
+}]));
+export const THREAT_CONFIG_LIMITS={minCount:1,maxCount:128,minDirections:1,maxDirections:16,maxAglM:1000,maxSpeedMps:100};
+
 // 四指标默认权重（界面可调）。
 export const METRIC_WEIGHTS={coverage:0.4,blind:0.25,cost:0.2,feasibility:0.15};
 export const METRIC_LABELS={coverage:'覆盖完整性',blind:'盲区面积占比(越小越好)',cost:'装备配置成本(相对单位,非人民币报价)',feasibility:'现场施工可行性代理'};

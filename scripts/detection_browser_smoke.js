@@ -21,8 +21,10 @@ try{
  await page.locator('#detection-spacing').selectOption('100');d=await ready();
  await page.locator('#detection-style').selectOption('volume');
  const viewport=await page.locator('#viewport').boundingBox();let hovered=false;
+ await page.locator('#equipment-window-minimize').click();
  for(const [x,y] of [[.7,.4],[.65,.45],[.7,.55],[.6,.5],[.8,.6],[.5,.6],[.6,.65],[.8,.4]]){await page.mouse.move(viewport.x+viewport.width*x,viewport.y+viewport.height*y);await page.waitForTimeout(160);if(await page.evaluate(()=>window.sensorDiagnostics?.probe?.source==='detection-volume')){hovered=true;break;}}
  assert.ok(hovered,'probe must inspect a position inside the 3D field');
+ await page.locator('#equipment-window-minimize').click();
  const total=d.grid.total;await page.locator('#detection-metric').selectOption('pd');d=await ready();assert.equal(d.metric,'pd');assert.equal(d.grid.total,total);assert.match(await page.locator('#detection-scale-title').innerText(),/Pd/);
  await page.locator('#detection-clip').fill('0.8');await page.locator('#detection-clip').dispatchEvent('input');assert.equal(await page.evaluate(()=>window.detectionDiagnostics.clip),.8);
  await page.screenshot({path:'artifacts/detection-volume-pd-cutaway.png',timeout:90000});

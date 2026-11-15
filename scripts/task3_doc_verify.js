@@ -6,7 +6,7 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'
 try{
  const page=await browser.newPage({viewport:{width:1200,height:1000}}),errors=[],failed=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>failed.push(r.url()));
- await page.goto('file:///c:/Users/17311/Desktop/项目/01_我的项目/UAV/任务三成果展示.html');
+ await page.goto('file:///c:/Users/17311/Desktop/项目/创意二文件/UAV/任务三成果展示.html');
  await page.waitForLoadState('load');
  for(const id of ['guide','model','results','limits'])assert.ok(await page.locator(`#${id}`).count(),`缺章节 ${id}`);
  const imgs=await page.evaluate(()=>[...document.images].map(i=>i.src));

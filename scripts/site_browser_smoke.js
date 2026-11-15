@@ -1,6 +1,7 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
+import {openSceneMenu, closeSceneMenu} from './city_menu_helper.js';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
 try{
  await mkdir('artifacts',{recursive:true});
@@ -9,12 +10,14 @@ try{
  const base=(process.env.APP_URL||'http://127.0.0.1:5173').replace(/\/$/,'');
  await page.goto(`${base}/index.html`,{timeout:120000});
  await page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:180000});
- await page.locator('#open-city-model').click();
- await page.waitForSelector('#city-window[open]',{timeout:30000});
+ await openSceneMenu(page,'scene');
  const sites=[
   ['beijing','太和殿'],
+  ['shenzhen','深圳国际交流中心'],
   ['daxing','大兴机场航站楼'],
-  ['nuclear','核设施核心建筑（推测）'],
+  ['hangzhou','杭州萧山机场航站楼'],
+  ['nuclear','房山核设施'],
+  ['changjiang','昌江核电厂'],
   ['railway','北京站'],
  ];
  for(const [site,coreName] of sites){
@@ -23,15 +26,23 @@ try{
   const model=await page.evaluate(id=>window.cityDiagnostics.models[id],site);
   assert.ok(model.buildingCount>0,`${site} has no buildings`);
   assert.ok(Number.isFinite(model.maxHeight)&&model.maxHeight>0);
+  const neighbors=await page.evaluate(()=>window.cityDiagnostics.coreNeighbors??0);
+  if(site==='nuclear'||site==='changjiang')assert.ok(neighbors>0,`${site} core neighbors should be highlighted`);
+  else assert.equal(neighbors,0,`${site} should not highlight core neighbors`);
   const core=await page.locator('#core-label').innerText();
   assert.ok(core.includes(coreName),`${site} core label ${core}`);
   await page.locator('#core-focus').click();
-  await page.locator('#city-window-minimize').click();
+  await closeSceneMenu(page);
   await page.waitForTimeout(900);
   await page.screenshot({path:`artifacts/site-${site}-model.png`});
-  await page.locator('#city-window-minimize').click();
+  await openSceneMenu(page,'scene');
   console.log(`${site}:`,model,'core:',core);
  }
+ // Switching back to the reconstructed Zhengzhou model must restore its own statistics.
+ await page.selectOption('#model-select','recon');
+ await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='recon'&&!document.querySelector('#model-select').disabled,null,{timeout:120000});
+ assert.equal(await page.locator('#count').innerText(),'15,889');
+ assert.equal(await page.locator('#height').innerText(),'136');
  assert.deepEqual(errors,[]);
  console.log('GBA site browser smoke passed:',await page.evaluate(()=>window.cityDiagnostics));
 }finally{await browser.close();}

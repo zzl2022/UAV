@@ -23,19 +23,19 @@ export function demoDefaults(profile){
 export function prepareDemo(profile,settings,position){
  profile=validateProfile(profile);settings={...demoDefaults(profile),...settings};
  for(const [key,min,max] of [['radius',25,5000],['ceiling',25,3000],['heading',0,360],['pitch',-90,90],['horizontal',.1,360],['vertical',.1,179],['mountHeight',1,500]]){
-  if(!Number.isFinite(settings[key])||settings[key]<min||settings[key]>max)throw Error('请检查演示范围与朝向');
+  if(!Number.isFinite(settings[key])||settings[key]<min||settings[key]>max)throw Error('请检查仿真范围与朝向');
  }
- if(![25,50,100].includes(settings.spacing)||!['volume','surface'].includes(settings.style))throw Error('演示采样或渲染方式无效');
+ if(![25,50,100].includes(settings.spacing)||!['volume','surface'].includes(settings.style))throw Error('仿真采样或渲染方式无效');
  if(profile.type==='optical'&&settings.horizontal>=180)throw Error('光电视场必须小于 180°');
- if(!Array.isArray(position)||position.length!==3||!position.every(Number.isFinite))throw Error('请选择有效的演示点位');
- const type=profile.type,selected=DEMO_METRICS[type].find(m=>m.id===settings.metric);if(!selected)throw Error('演示物理量无效');
+ if(!Array.isArray(position)||position.length!==3||!position.every(Number.isFinite))throw Error('请选择有效的仿真点位');
+ const type=profile.type,selected=DEMO_METRICS[type].find(m=>m.id===settings.metric);if(!selected)throw Error('仿真物理量无效');
  let device=null;
  if(['radar','radio'].includes(type)){
   device=createDevice(catalogModel(profile.presetId).basePresetId??profile.presetId,'equipment-demo',position);device.name=profile.name;Object.assign(device.parameters,profile.parameters,{heading:settings.heading,pitch:settings.pitch});device.physics={...profile.physics};
   if(!settings.reflections)device.parameters.reflection=0;
  }
  return {profile,settings,position:[...position],type,metric:{...selected,max:selected.id==='distance'?settings.radius:selected.max},device,
-  kind:['optical','fivega'].includes(type)?'几何示意':type==='electrostatic'?'距离示意':'模型演示'};
+  kind:['optical','fivega'].includes(type)?'几何示意':type==='electrostatic'?'距离示意':'设备仿真'};
 }
 export function demoShape(spec){
  const {profile,settings:s,type}=spec,p=profile.parameters;
