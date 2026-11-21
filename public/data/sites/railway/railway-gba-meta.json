@@ -1,0 +1,150 @@
+{
+  "name": "北京 · 北京—通州铁路 5 km 走廊 · GBA LoD1",
+  "route": {
+    "name": "北京—通州铁路（示意线）",
+    "points": [
+      [
+        -11155.39,
+        141.75
+      ],
+      [
+        -9915.5,
+        198.98
+      ],
+      [
+        -4921.15,
+        -195.9
+      ],
+      [
+        1551.97,
+        -472.04
+      ],
+      [
+        8547.31,
+        245.04
+      ],
+      [
+        11155.87,
+        463.74
+      ]
+    ],
+    "source": "user-defined schematic railway polyline"
+  },
+  "source": "GlobalBuildingAtlas LoD1 (per-building footprints + heights)",
+  "sourceUrl": "https://huggingface.co/datasets/zhu-xlab/GBA.LoD1",
+  "license": "CC BY-NC 4.0",
+  "attribution": "GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors",
+  "center": [
+    116.55755,
+    39.90425
+  ],
+  "radiusMeters": 5000,
+  "bbox": [
+    116.3691,
+    39.855,
+    116.746,
+    39.9535
+  ],
+  "featureBounds": [
+    116.367632,
+    39.852864,
+    116.747411,
+    39.95472
+  ],
+  "coverageMargins": {
+    "west": -0.001469,
+    "south": -0.002136,
+    "east": -0.001411,
+    "north": -0.00122
+  },
+  "localBounds": [
+    -16126.46,
+    16126.46,
+    -5485.39,
+    5451.35
+  ],
+  "buildingCount": 114564,
+  "blockCount": 114564,
+  "minHeight": 3,
+  "maxHeight": 158.36,
+  "filters": {
+    "minHeight": 3,
+    "maxHeight": 300,
+    "minAreaMeters2": 20
+  },
+  "skipped": {
+    "height": 36109,
+    "area": 19541,
+    "geometry": 0,
+    "duplicate": 0
+  },
+  "coreBuilding": {
+    "id": "gba-osm-121545669-0",
+    "name": "北京站",
+    "shortName": "北京站",
+    "height": 51.11,
+    "areaM2": 9074.1,
+    "center": [
+      -11082.67,
+      131.68
+    ],
+    "distanceFromCenterMeters": 11083.5,
+    "rings": [
+      [
+        [
+          -11039.49,
+          0,
+          79.53
+        ],
+        [
+          -11037.12,
+          0,
+          181.8
+        ],
+        [
+          -11125.85,
+          0,
+          183.84
+        ],
+        [
+          -11128.23,
+          0,
+          81.55
+        ],
+        [
+          -11039.49,
+          0,
+          79.53
+        ]
+      ]
+    ],
+    "selection": "largest footprint within 300 m of target 116.427100,39.902900"
+  },
+  "sourceCounts": {
+    "osm": 23584,
+    "3dglobfp": 102025,
+    "ours2": 8496
+  },
+  "heightSource": "GBA LoD1 heights (3D-GloBFP/OSM fusion)",
+  "baseElevation": 0,
+  "rawSha256": "47a6bb5a26623a1c903908abbf60f1914acc473627d01d1e648bfc104c1dcf78",
+  "coordinateSystem": "local metric [east, up, -north]; origin at center; local_tmerc",
+  "limitations": [
+    "GBA LoD1 is a model product; heights are not surveyed.",
+    "License is CC BY-NC 4.0: non-commercial use with attribution.",
+    "Base is flat (no DEM); absolute elevations are not represented.",
+    "Low/tiny structures are filtered; roads are left to the imagery basemap."
+  ],
+  "metricProjection": "local_tmerc",
+  "glb": {
+    "file": "railway-gba.glb",
+    "bytes": 93340744,
+    "sha256": "3aa70759be4bd64a296d0957750cb9c2aba8e1e60ecef076c2e5609929411d3d",
+    "compression": "weld + KHR_mesh_quantization"
+  },
+  "mesh": {
+    "vertices": 4379741,
+    "triangles": 1938460,
+    "drawCalls": 1
+  }
+}

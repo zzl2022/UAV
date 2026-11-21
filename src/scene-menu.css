@@ -517,8 +517,7 @@ body.scene-menu-enabled #city-window { display: none !important; }
   padding: 9px 0 0;
   border-top: 1px solid rgba(127, 232, 255, .14);
 }
-#ac8-scene-menu .city-settings-footer button,
-#ac8-scene-menu #city-target-pick {
+#ac8-scene-menu .city-settings-footer button {
   width: auto;
   min-height: 0;
   margin: 0;
@@ -535,9 +534,7 @@ body.scene-menu-enabled #city-window { display: none !important; }
   transition: border-color .18s, background .18s, box-shadow .18s;
 }
 #ac8-scene-menu .city-settings-footer button:hover,
-#ac8-scene-menu .city-settings-footer button:focus-visible,
-#ac8-scene-menu #city-target-pick:hover,
-#ac8-scene-menu #city-target-pick:focus-visible {
+#ac8-scene-menu .city-settings-footer button:focus-visible {
   border-color: rgba(127, 232, 255, .75);
   background: rgba(10, 50, 66, .7);
   box-shadow: 0 0 16px rgba(80, 210, 255, .16);
@@ -592,7 +589,6 @@ body.scene-menu-enabled #city-window { display: none !important; }
   font: inherit;
   font-size: 11px;
 }
-#ac8-scene-menu #city-target-pick { margin: 4px 0 0; }
 
 /* ---------- back ---------- */
 #ac8-scene-back {
@@ -875,4 +871,11 @@ body.scene-menu-open #workspace-sidebar .ac8-scene-info {
 }
 @media (max-width: 580px) {
   #workspace-sidebar .workspace-launchers { padding: 48px 14px 10px !important; }
+}
+
+/* Center each main-menu label inside its bracket frame. */
+#workspace-sidebar .workspace-launchers button {
+  justify-content: center !important;
+  padding: 6px 18px !important;
+  text-align: center !important;
 }

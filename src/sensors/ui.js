@@ -361,22 +361,12 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  const scenarioListeners=new Set(),getScenarioSnapshot=()=>structuredClone(state);
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
  const publishScenario=()=>{publishConfiguration();const snapshot=getScenarioSnapshot();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
- let cityTargetPick=false;
  const cityConditions=mountCityConditions({panel:app.querySelector('#city-panel'),getState:()=>state,
   onEnvironment:value=>{state.environment=structuredClone(value);capabilities.invalidate();publishScenario();},
   onTarget:value=>{state.target=structuredClone(value);capabilities.invalidate();publishScenario();},
-  onPickTarget:()=>{cityTargetPick=true;workspace.minimizeWindow('city');window.__ac8SceneMenu?.minimize();},
  });
  publishConfiguration();
  app.querySelector('#open-city-model').addEventListener('click',()=>cityConditions.refresh());
- renderer.domElement.addEventListener('pointerup',event=>{
-  if(!cityTargetPick)return;
-  const cityWindowNode=app.querySelector('#city-window');
-  if(!cityWindowNode?.open&&!window.__ac8SceneMenu?.isOpen()){cityTargetPick=false;return;}
-  if(!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
-  const hit=surfaceAt(event.clientX,event.clientY);if(!hit)return;
-  event.stopImmediatePropagation();cityTargetPick=false;const position=hit.point.toArray();position[1]+=50;cityConditions.setTargetPosition(position);workspace.restoreWindow('city');window.__ac8SceneMenu?.restore();
- },true);
  app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
  return {panel,activate,deactivate,focusType,startDemo,showDemoHud,hideDemoHud,stopDemo,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario:getScenarioSnapshot,getScenarioSnapshot,getEquipmentSnapshot:manager.getSnapshot,subscribeEquipmentChanges:manager.subscribe,subscribeScenarioChanges(listener){scenarioListeners.add(listener);return()=>scenarioListeners.delete(listener);},setActiveScene,applyScenario(value){demo.stop();state=validateScenario(value,activeOrigin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();app.dataset.activeView='sensors';if(window.__ac8EquipmentMenu?.openDetail)window.__ac8EquipmentMenu.openDetail('radar');else show();}};
 }

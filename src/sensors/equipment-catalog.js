@@ -5,11 +5,36 @@ import {CATALOG_MODELS,catalogModel} from './equipment-models.js';
 export const CATALOG_SCHEMA='equipment-catalog/1';
 export const CATALOG_STORAGE_KEY='uav.equipment-catalog.v1';
 const field=(label,unit,min,max,value,options={})=>({label,unit,min,max,value,step:'any',...options});
+const params=(...keys)=>keys.map(key=>`parameters.${key}`);
+const physics=(...keys)=>keys.map(key=>`physics.${key}`);
 const modelGroups={
- radar:[['覆盖精度',['azimuthFov','elevationMin','elevationMax','rangeAccuracy','azimuthAccuracy','elevationAccuracy']],['工作频率',['frequencyGHz']]],
- optical:[['图像尺寸',['imageWidth','imageHeight','thermalWidth','thermalHeight']],['光学性能',['wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels']]],
- radio:[['接收频段',['bandMinGHz','bandMaxGHz','bandToleranceMHz']],['测向覆盖',['networkAccuracy','bearingAccuracy','azimuthFov','elevationMin','elevationMax']]],
- acoustic:[['声压范围',['minSoundDb','maxSoundDb','dynamicRangeDb']],['测角精度',['bearingAccuracy','elevationAccuracy']]],
+ radar:[
+  ['探测范围',params('maxRange','minRange','azimuthFov','elevationMin','elevationMax')],
+  ['测量精度',params('rangeAccuracy','azimuthAccuracy','elevationAccuracy')],
+  ['发射配置',[...params('frequencyGHz'),...physics('peakPowerW','pulseWidthUs','switchTimeUs','txGainDb')]],
+  ['接收积累',physics('rxGainDb','noiseFigureDb','systemLossDb','pulses')],
+  ['检出判定',[...params('thresholdDb','referenceSnrDb','referenceRcs'),...physics('pfa','pdRequired')]],
+  ['传播杂波',params('rainCoefficient','rainExponent','reflection','clutterDb')],
+ ],
+ optical:[
+  ['探测距离',params('maxRange','minRange')],['通道焦距',['working.channel','working.focalMm']],
+  ['图像尺寸',params('imageWidth','imageHeight','thermalWidth','thermalHeight')],
+  ['成像条件',params('wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels','rainDbKm')],
+  ['云台范围',['working.yawMin','working.yawMax','working.pitchMin','working.pitchMax']],
+ ],
+ radio:[
+  ['探测范围',params('maxRange','minRange','azimuthFov','elevationMin','elevationMax')],
+  ['接收频段',[...params('bandMinGHz','bandMaxGHz','bandToleranceMHz'),...physics('bandwidthMHz')]],
+  ['定位精度',params('networkAccuracy','bearingAccuracy')],
+  ['接收特性',physics('rxGainDb','noiseFigureDb','receiverLossDb')],
+  ['链路传播',[...params('referenceSnrDb','referenceEirpDbm','pathExponent','wallLossDb','reflection'),...physics('referenceFrequencyGHz','referenceEirpDbm')]],
+  ['检出观测',[...params('thresholdDb'),...physics('pfa','pdRequired','observationSeconds','hopSeconds')]],
+ ],
+ acoustic:[
+  ['探测距离',params('maxRange','minRange')],['阵列频带',['working.arrayDiameter','working.frequencyMin','working.frequencyMax']],
+  ['声压范围',params('minSoundDb','maxSoundDb','dynamicRangeDb')],['测角精度',params('bearingAccuracy','elevationAccuracy')],
+  ['声学检出',params('absorptionDbKm','wallLossDb','reflection','referenceNoiseDb','thresholdDb')],
+ ],
 };
 const workingFields={
  optical:{channel:field('成像通道','',0,0,'visible',{options:[['visible','可见光'],['thermal','热成像']],source:'资料'}),focalMm:field('工作焦距','mm',6.5,312,6.5,{source:'资料'}),yawMin:field('云台水平下限','°',0,360,0,{source:'资料'}),yawMax:field('云台水平上限','°',0,360,360,{source:'资料'}),pitchMin:field('云台俯仰下限','°',-90,90,-90,{source:'资料'}),pitchMax:field('云台俯仰上限','°',-90,90,90,{source:'资料'})},
@@ -42,19 +67,9 @@ export function defaultProfile(presetId){
 export function getProfileValue(profile,key){const [scope,name]=key.split('.');return profile[scope]?.[name];}
 export function setProfileValue(profile,key,value){const [scope,name]=key.split('.');if(!Object.hasOwn(catalogFields(profile.presetId),key))throw Error('参数无效');profile[scope][name]=value;}
 export function profileGroups(presetId){
- const preset=catalogModel(presetId),used=new Set(),groups=[];
- const add=(name,keys)=>{keys=keys.filter(key=>Object.hasOwn(catalogFields(presetId),key));keys.forEach(key=>used.add(key));if(keys.length)groups.push({name,keys});};
- if(preset.catalogOnly){
-  for(const [name,keys] of preset.groups)add(name,keys.map(key=>path('parameters',key)));
-  return {groups,advanced:[]};
- }
- add('基础参数',['maxRange','minRange','capacity','updateSeconds'].map(key=>path('parameters',key)));
- if(preset.type==='optical')add('通道焦距',['working.channel','working.focalMm']);
- if(preset.type==='acoustic')add('阵列频带',['working.arrayDiameter','working.frequencyMin','working.frequencyMax']);
- for(const [name,keys] of modelGroups[preset.type])add(name,keys.map(key=>path('parameters',key)));
- if(preset.type==='optical')add('云台范围',['working.yawMin','working.yawMax','working.pitchMin','working.pitchMax']);
- const advanced=Object.keys(catalogFields(presetId)).filter(key=>!used.has(key));
- return {groups,advanced};
+ const preset=catalogModel(presetId),definitions=catalogFields(presetId);
+ const entries=preset.catalogOnly?preset.groups.map(([name,keys])=>[name,params(...keys)]):modelGroups[preset.type];
+ return entries.map(([name,keys])=>({name,keys:keys.filter(key=>Object.hasOwn(definitions,key))})).filter(group=>group.keys.length);
 }
 export function validateProfile(profile){
  const base=defaultProfile(profile?.presetId);

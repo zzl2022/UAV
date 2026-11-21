@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    116.2941,
+    39.4198,
+    116.5269,
+    39.5998
+  ],
+  "zoom": 15,
+  "tileRange": [
+    26969,
+    12452,
+    26990,
+    12473
+  ],
+  "tileCount": 484,
+  "image": "daxing-imagery.jpg",
+  "width": 2043,
+  "height": 2048,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

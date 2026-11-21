@@ -106,10 +106,11 @@
 #platform-topbar::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url('./assets/city-skyline.svg') repeat-x center bottom/auto 100%;opacity:.85;filter:drop-shadow(0 0 7px rgba(80,210,255,.16));-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 7%,#000 93%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0%,#000 7%,#000 93%,transparent 100%)}
 .topbar-brand{justify-self:start;display:flex;align-items:center;min-width:0;position:relative;z-index:1}
 .topbar-logo-full{height:58px;width:auto;max-width:min(360px,36vw);object-fit:contain;display:block;filter:drop-shadow(0 0 10px rgba(127,232,255,.35));flex:0 0 auto}
+.topbar-center{position:relative;z-index:1;justify-self:center;display:flex;align-items:center;justify-content:center;min-width:0}
 #platform-topbar h1{position:relative;z-index:1;margin:0;font-size:34px;font-weight:700;letter-spacing:4px;color:#eef8fb;text-align:center;white-space:nowrap;text-shadow:0 0 26px rgba(80,210,255,.24)}
-.topbar-drone{justify-self:end;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;color:#7fe8ff;filter:drop-shadow(0 0 10px rgba(80,210,255,.55));animation:topbar-drone-hover 6s ease-in-out infinite}
-.topbar-drone svg{width:72px;height:auto;opacity:.92}
-@keyframes topbar-drone-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.topbar-drone{--drone-sway:48px;position:absolute;left:calc(100% + 80px);top:50%;z-index:1;display:flex;align-items:center;justify-content:center;color:#7fe8ff;filter:drop-shadow(0 0 10px rgba(80,210,255,.55));animation:topbar-drone-sway 10s ease-in-out infinite;will-change:transform}
+.topbar-drone svg{width:84px;height:auto;opacity:.94}
+@keyframes topbar-drone-sway{0%,100%{transform:translateY(-50%) translateX(calc(var(--drone-sway) * -1))}50%{transform:translateY(-50%) translateX(calc(var(--drone-sway) * 2))}}
 #platform-body{position:relative;display:flex;flex:1;min-height:0;overflow:hidden}
 #workspace-sidebar{position:relative;height:100%;min-width:0;transition:width .2s ease,padding .2s ease}
 #scene-main{flex:1;min-width:0}
@@ -149,13 +150,13 @@
 #equipment-window #equipment-panel .hint,#equipment-window #equipment-panel .sensor-metric,#equipment-window #equipment-panel small{font-size:12px!important}
 .workspace-window .window-bar h2{font-size:20px!important}
 @media(max-width:1400px){#platform-topbar h1{font-size:29px;letter-spacing:3px}.topbar-logo-full{height:52px;max-width:300px}}
-@media(max-width:1100px){#platform-topbar{grid-template-columns:minmax(220px,1fr) auto minmax(70px,1fr);padding:0 16px}#platform-topbar h1{font-size:23px;letter-spacing:2px}.topbar-logo-full{height:42px;max-width:240px}.topbar-drone svg{width:56px}}
-@media(max-width:850px){#platform-topbar{height:74px;padding:0 14px}#platform-topbar h1{font-size:18px;letter-spacing:1px;white-space:normal;line-height:1.25}.topbar-logo-full{height:30px;max-width:170px}.topbar-drone svg{width:44px}.workspace-launchers button{font-size:15px!important;min-height:56px!important}}
+@media(max-width:1100px){#platform-topbar{grid-template-columns:minmax(220px,1fr) auto minmax(70px,1fr);padding:0 16px}#platform-topbar h1{font-size:23px;letter-spacing:2px}.topbar-logo-full{height:42px;max-width:240px}.topbar-drone svg{width:62px}.topbar-drone{--drone-sway:34px;left:calc(100% + 62px)}}
+@media(max-width:850px){#platform-topbar{height:74px;padding:0 14px}#platform-topbar h1{font-size:18px;letter-spacing:1px;white-space:normal;line-height:1.25}.topbar-logo-full{height:30px;max-width:170px}.topbar-drone svg{width:48px}.topbar-drone{--drone-sway:24px;left:calc(100% + 56px)}.workspace-launchers button{font-size:15px!important;min-height:56px!important}}
 @media(max-width:580px){
  #platform-topbar{height:64px;grid-template-columns:auto 1fr auto;padding:0 10px;gap:8px}
  #platform-topbar h1{font-size:15px;letter-spacing:.5px}
  .topbar-logo-full{height:26px;max-width:145px}
- .topbar-drone svg{width:36px}
+ .topbar-drone svg{width:38px}.topbar-drone{--drone-sway:18px;left:calc(100% + 44px)}
  #platform-body{flex-direction:column}
  #workspace-sidebar{width:100%!important;height:48dvh;border-right:0;border-bottom:1px solid #36505b}
  #app.sidebar-collapsed #workspace-sidebar{display:none}
@@ -239,3 +240,50 @@
 .task3-floating-header{background:rgba(19,42,54,.8)!important}
 #scene-main #threat-hud{top:24px}
 #app.equipment-window-open #threat-hud{display:none}
+
+/* Alternating pale-blue / orange light sweeps across the city silhouette. */
+.topbar-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.topbar-flow::before,
+.topbar-flow::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  height: 200%;
+  width: 24%;
+  filter: blur(1.5px);
+  transform: skewX(-15deg);
+  opacity: 0;
+  animation: topbar-flow-sweep 8s linear infinite;
+}
+.topbar-flow::before {
+  background: linear-gradient(100deg,
+    transparent 0%,
+    rgba(120, 220, 255, .10) 18%,
+    rgba(160, 235, 255, .40) 43%,
+    rgba(230, 252, 255, .24) 50%,
+    rgba(160, 235, 255, .34) 57%,
+    transparent 84%);
+}
+.topbar-flow::after {
+  background: linear-gradient(100deg,
+    transparent 0%,
+    rgba(255, 120, 25, .10) 18%,
+    rgba(255, 145, 45, .40) 43%,
+    rgba(255, 225, 160, .26) 50%,
+    rgba(255, 160, 65, .34) 57%,
+    transparent 84%);
+  animation-delay: 4s;
+}
+@keyframes topbar-flow-sweep {
+  0% { left: -48%; opacity: 0; }
+  8% { opacity: .95; }
+  42% { opacity: .95; }
+  50% { left: 122%; opacity: 0; }
+  100% { left: 122%; opacity: 0; }
+}

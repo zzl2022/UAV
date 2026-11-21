@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Three.js 用 `[东, 上, -北]`（米）；Python 模型用 `[东, 北, 上]`。转换集中在 `backend/capabilities.py::to_enu`。
 - 数据管线：`scripts/prepare_data.py` 读取 `创意二文件/创意二数据集/区域数据/`（SHP 建筑轮廓、DEM、影像、白模），产出 `public/data/`（`city.json`、`terrain.json`、`buildings.geojson`、`report.json` 等）。
-- `public/data/` 是数据管线的可再生产物，**不提交**（2026-11-15 起与原仓库策略一致）；首次运行前需执行 `scripts/prepare_data.py` 生成场景，GBA 站点模型用 `npm run prepare:sites` 生成。`dist/`、`artifacts/` 同样不提交；`创意二文件/` 是比赛原始数据，不打包，只有重新生成数据时才需要它。
+- `public/data/` 已随仓库提交（包含基础场景和全部站点模型，保证下载后可直接运行）；`dist/`、`artifacts/` 是可再生产物，不提交；`创意二文件/` 是比赛原始数据，不打包，只有重新生成数据时才需要它。
 
 ### 其他目录
 

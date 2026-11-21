@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    113.9755,
+    22.5025,
+    114.0728,
+    22.5923
+  ],
+  "zoom": 16,
+  "tileRange": [
+    53516,
+    28544,
+    53534,
+    28561
+  ],
+  "tileCount": 342,
+  "image": "shenzhen-imagery.jpg",
+  "width": 2048,
+  "height": 2046,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

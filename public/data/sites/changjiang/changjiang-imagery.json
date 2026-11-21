@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    108.8484,
+    19.4141,
+    108.9436,
+    19.5039
+  ],
+  "zoom": 16,
+  "tileRange": [
+    52583,
+    29146,
+    52600,
+    29164
+  ],
+  "tileCount": 342,
+  "image": "changjiang-imagery.jpg",
+  "width": 2048,
+  "height": 2048,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

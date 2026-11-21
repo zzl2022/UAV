@@ -5,8 +5,6 @@ dist/
 artifacts/
 创意二文件/
 
-# 场景/站点模型数据为可再生产物，不提交（clone 后运行 prepare_data.py 生成）
-public/data/
 
 # 归档目录中体积较大的本地备份不提交，其余归档文件正常提交
 archive/创意二资料/

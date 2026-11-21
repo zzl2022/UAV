@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    120.3824,
+    30.1846,
+    120.4864,
+    30.2744
+  ],
+  "zoom": 15,
+  "tileRange": [
+    27341,
+    13490,
+    27350,
+    13499
+  ],
+  "tileCount": 100,
+  "image": "hangzhou-imagery.jpg",
+  "width": 2048,
+  "height": 2046,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

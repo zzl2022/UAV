@@ -20,7 +20,7 @@ try{
  await ready();
  await page.getByRole('button',{name:'选择雷达型号',exact:true}).click();
  await page.locator('#equipment-model-menu [data-preset-id="radar-03d"]').click();
- await group('基础参数');await page.locator('#profile-parameters-maxRange').fill('6300');
+ await group('探测范围');await page.locator('#profile-parameters-maxRange').fill('6300');
  await page.waitForFunction(()=>window.equipmentManagerDiagnostics.dirty===false);
  await group('设备仿真');assert.equal(await page.locator('#demo-mountHeight').inputValue(),'30');
  await page.locator('#demo-mountHeight').fill('45');await page.locator('#demo-radius').fill('900');
@@ -31,7 +31,7 @@ try{
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6300');
  await group('设备仿真');assert.equal(await page.locator('#demo-mountHeight').inputValue(),'45');assert.equal(await page.locator('#demo-radius').inputValue(),'900');
  // Flush a valid edit on immediate navigation, before the debounce timer fires.
- await group('基础参数');await page.locator('#profile-parameters-maxRange').fill('6100');
+ await group('探测范围');await page.locator('#profile-parameters-maxRange').fill('6100');
  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.equipmentManagerDiagnostics,null,{timeout:120000});await openEquipment();
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6100');
  // Invalid edits must not overwrite the last valid saved profile.

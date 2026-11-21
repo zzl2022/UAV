@@ -8,7 +8,7 @@ out vec4 outColor;
 #define gl_FragColor outColor
 uniform sampler3D field;uniform sampler2D sceneDepth;uniform sampler2D ramp;
 uniform vec3 boxMin,boxSize,dimensions;uniform vec2 resolution;
-uniform mat4 inverseProjection,cameraWorld;uniform float marchStep,density,valueMin,valueMax,displayFloor,clipX;uniform int channel,surfaceMode;
+uniform mat4 inverseProjection,cameraWorld;uniform float marchStep,density,opacityDistance,minExtinction,rampStart,valueMin,valueMax,displayFloor,clipX;uniform int channel,surfaceMode;
 in vec3 vWorld;
 vec4 voxel(ivec3 p){return texelFetch(field,clamp(p,ivec3(0),ivec3(dimensions)-1),0);}
 // Interpolate scalar values, with a nearest-neighbour hard validity mask.
@@ -38,7 +38,7 @@ void main(){
   if(uv.x>clipX)continue;
   vec2 s=scalar(uv);if(s.y<.5||s.x<displayFloor)continue;
   float v=clamp((s.x-valueMin)/(valueMax-valueMin),0.0,1.0);
-  vec3 color=texture(ramp,vec2(v,.5)).rgb;
+  vec3 color=texture(ramp,vec2(mix(rampStart,1.0,v),.5)).rgb;
   if(surfaceMode==1){
    float left=max(nearT,t-dt),right=t;
    for(int j=0;j<7;j++){float mid=(left+right)*.5;vec3 p=(cameraPosition+direction*mid-boxMin)/boxSize;vec2 m=scalar(p);if(p.x<=clipX&&m.y>.5&&m.x>=displayFloor)right=mid;else left=mid;}
@@ -47,7 +47,7 @@ void main(){
    float lighting=.6+.4*abs(dot(normalize(grad+vec3(1e-5)),normalize(vec3(.4,.8,.5))));
    gl_FragColor=linearToOutputTexel(vec4(color*lighting,.78));return;
   }
-  float alpha=1.0-exp(-density*dt/1100.0*(.2+.8*v));
+  float alpha=1.0-exp(-density*dt/opacityDistance*mix(minExtinction,1.0,v));
   acc.rgb+=(1.0-acc.a)*color*alpha;acc.a+=(1.0-acc.a)*alpha;
  }
  if(acc.a<.004)discard;gl_FragColor=vec4(acc.rgb/max(acc.a,1e-6),acc.a);
@@ -63,11 +63,12 @@ export function createVolumeRenderer(group,field){
  const ramp=new THREE.DataTexture(colors,256,1);ramp.colorSpace=THREE.SRGBColorSpace;ramp.minFilter=THREE.LinearFilter;ramp.magFilter=THREE.LinearFilter;ramp.needsUpdate=true;
  const target=new THREE.WebGLRenderTarget(1,1,{depthTexture:new THREE.DepthTexture(1,1),minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
  const uniforms={field:{value:texture},ramp:{value:ramp},sceneDepth:{value:target.depthTexture},boxMin:{value:new THREE.Vector3(...grid.origin)},boxSize:{value:new THREE.Vector3(...grid.size)},dimensions:{value:new THREE.Vector3(...grid.dimensions)},resolution:{value:new THREE.Vector2()},inverseProjection:{value:new THREE.Matrix4()},cameraWorld:{value:new THREE.Matrix4()},marchStep:{value:Math.min(...grid.step)*.65},density:{value:1.3},valueMin:{value:-20},valueMax:{value:40},displayFloor:{value:0},clipX:{value:1},channel:{value:0},surfaceMode:{value:0}};
+ Object.assign(uniforms,{opacityDistance:{value:1100},minExtinction:{value:.2},rampStart:{value:0}});
  const material=new THREE.ShaderMaterial({glslVersion:THREE.GLSL3,vertexShader,fragmentShader,uniforms,side:THREE.BackSide,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});
  const mesh=new THREE.Mesh(new THREE.BoxGeometry(...grid.size),material);mesh.position.fromArray(grid.origin.map((v,i)=>v+grid.size[i]/2));mesh.name='Raymarched_Detection_Volume';mesh.renderOrder=50;group.add(mesh);
  let metric='margin';
  return {mesh,
-  configure({metric:key='margin',floor=0,density=1.3,clip=1,style='volume',range=null}){metric=key;const m=VOLUME_METRICS[key];uniforms.channel.value={margin:0,snr:1,pd:2}[key];uniforms.valueMin.value=range?.[0]??m.min;uniforms.valueMax.value=range?.[1]??m.max;uniforms.displayFloor.value=floor;uniforms.density.value=density;uniforms.clipX.value=clip;uniforms.surfaceMode.value=style==='surface'?1:0;},
+  configure({metric:key='margin',floor=0,density=1.3,opacityDistance=1100,minExtinction=.2,rampStart=0,clip=1,style='volume',range=null}){metric=key;const m=VOLUME_METRICS[key];uniforms.channel.value={margin:0,snr:1,pd:2}[key];uniforms.valueMin.value=range?.[0]??m.min;uniforms.valueMax.value=range?.[1]??m.max;uniforms.displayFloor.value=floor;uniforms.density.value=density;uniforms.opacityDistance.value=Math.max(1,opacityDistance);uniforms.minExtinction.value=minExtinction;uniforms.rampStart.value=rampStart;uniforms.clipX.value=clip;uniforms.surfaceMode.value=style==='surface'?1:0;},
   render(renderer,scene,camera){
    if(!group.visible)return false;
    const size=renderer.getDrawingBufferSize(new THREE.Vector2());if(target.width!==size.x||target.height!==size.y)target.setSize(size.x,size.y);

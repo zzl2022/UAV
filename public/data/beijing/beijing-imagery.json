@@ -1,0 +1,21 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    116.33864,
+    39.87108,
+    116.45576,
+    39.96152
+  ],
+  "zoom": 16,
+  "tileRange": [
+    53946,
+    24819,
+    53968,
+    24841
+  ],
+  "tileCount": 529,
+  "image": "beijing-imagery.jpg",
+  "width": 2034,
+  "height": 2048
+}
