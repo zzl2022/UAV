@@ -7,6 +7,7 @@ import {scenarios} from '../planning/optimizer.js';
 import {classifyBlindSpots} from './blindspots.js';
 import {emcAnalysis,emcVerdictText} from './emc.js';
 import {EQUIPMENT_CHANNELS_GHZ} from './constants.js';
+import {createDeploymentExclusion} from './building-constraints.js';
 
 export const MOBILE_REPAIR_LIMITS={maxAnchors:12,maxCandidates:144,maxDevices:6,radiiM:[500,750,1000],directions:12,fineRadiusM:750,fineGridStepM:25,maxFineCandidatesPerAnchor:4096,maxFineCoveringPerAnchor:8,mountHeightM:2,surfaceToleranceM:0.5};
 const GEOMETRIC=['近距盲区','超出标称距离','超出方位视场','超出俯仰视场'];
@@ -43,6 +44,7 @@ export function restoreMobileRepairSnapshot(report,snapshot){
 }
 
 export async function repairPlanWithMobileRadars({city,query,plan,sampling,equipment,equipmentSnapshot=null,settings,environment,target,conditionId='nominal',progress=()=>{},yieldTask=async()=>{},adapters={},limits=MOBILE_REPAIR_LIMITS}){
+ const exclusion=createDeploymentExclusion(city,settings);exclusion.assertDevices(plan.devices,plan.sites);
  const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot),evaluateSensor=adapters.evaluate??evaluate,analyzeEmc=adapters.emcAnalysis??emcAnalysis,classify=adapters.classifyBlindSpots??classifyBlindSpots;
  const conditions=scenarios(environment),conditionIndex=conditions.findIndex(c=>c.id===conditionId);if(conditionIndex<0)throw Error(`未知覆盖工况 ${conditionId}`);
  const samplesList=sampling.samples,n=samplesList.length;
@@ -59,6 +61,7 @@ export async function repairPlanWithMobileRadars({city,query,plan,sampling,equip
  summary.search.anchors=anchors.length;
  const candidates=[],seen=new Set();
  const addCandidate=(anchorIndex,x,z,searchPhase)=>{
+  if(exclusion.blocked([x,0,z]))return null;
   const anchor=samplesList[anchorIndex];
   if(x<bounds.west||x>=bounds.east||z<bounds.south||z>=bounds.north)return null;
   const key=`${x.toFixed(1)},${z.toFixed(1)}`;if(seen.has(key))return null;seen.add(key);
@@ -183,6 +186,7 @@ export async function repairPlanWithMobileRadars({city,query,plan,sampling,equip
  Object.assign(summary,{status:remainingSampleIds.length?'partial':'covered',addedDeviceCount:selected.length,addedDeviceIds:selected.map(item=>item.deviceId),addedCost,totalCost:plan.cost+addedCost,afterBlindCount:remainingSampleIds.length,coveredSampleIds,remainingSampleIds,selected:selected.map(item=>({deviceId:item.deviceId,siteId:item.site.id,presetId:radarPresetId,position:[...item.device.position],frequencyGHz:item.device.parameters.frequencyGHz,anchorSampleId:item.anchorSampleId,searchPhase:item.searchPhase,newlyCoveredSampleIds:item.newlyCoveredSampleIds,mountHeightM:limits.mountHeightM,mountHeightSource:'模型假设',roadReachabilityVerified:false})),emc:{beforeCounts:{...originalEmc.counts},afterCounts:{...finalEmc.counts},newFailCount}});
  summary.message=summary.status==='covered'?`新增 ${selected.length} 台警车移动雷达，真实覆盖 ${coveredSampleIds.length} 个当前工况盲点；该工况采样盲点已全部覆盖，其余工况已同步重算。`:`新增 ${selected.length} 台警车移动雷达，真实覆盖 ${coveredSampleIds.length} 个当前工况盲点，仍有 ${remainingSampleIds.length} 个未覆盖并继续保留。${summary.search.emcRejectedCandidates?' 部分候选因 EMC 不可行被排除。':''}`;
  const derivedPlan={...structuredClone(plan),devices,sites,cost:plan.cost+addedCost,installationProxy:plan.installationProxy+selected.length,metrics:coverageMetrics(finalCoverage,samplesList,conditions),coverage:finalCoverage,coverageContributions,deployable:finalEmc.counts.fail===0,derivation:summary};
+ exclusion.assertDevices(devices,sites);
  const emc={...finalEmc,text:emcVerdictText(finalEmc),remediation:plan.emcRemediation??null,mobileRepair:{beforeCounts:{...originalEmc.counts},afterCounts:{...finalEmc.counts},newFailCount}};
  return {planId:plan.id,plan:derivedPlan,blindspots,emc,summary};
 }

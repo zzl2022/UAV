@@ -1,6 +1,7 @@
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../sensors/presets.js';
 import {evaluate,angles,validateTarget,validateEnvironment} from '../sensors/engine.js';
 import {museumLandmark} from '../landmarks.js';
+import {createDeploymentExclusion} from '../task3/building-constraints.js';
 export const PLAN_VERSION='deployment-1.0';
 export const DEFAULT_SETTINGS={scope:'city',spacing:500,heights:[30,60,100],siteSpacing:900,maxSites:192,maxDevices:64,budget:600,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3};
 export function validateSettings(s){
@@ -56,9 +57,11 @@ export function generateSamples(city,query,settings,dataBounds=null){
  return {bounds,...(settings.scope==='custom'?{effectiveBounds}:{}),samples,excluded:{outsideDem,insideBuildings},spacing:settings.spacing};
 }
 export function generateCandidates(city,query,settings,sampling){
+ const exclusion=createDeploymentExclusion(city,settings);
  const {bounds}=sampling,sites=[],cells=new Map();
  for(const b of city.buildings){
   if(b.height>140)continue;const ring=b.rings[0],x=ring.reduce((a,p)=>a+p[0],0)/ring.length,z=ring.reduce((a,p)=>a+p[2],0)/ring.length;
+  if(exclusion.blocked([x,0,z],b.id))continue;
   if(x<bounds.west||x>bounds.east||z<bounds.south||z>bounds.north||query.groundAt(x,z)===null)continue;
   const key=[Math.floor((x-bounds.west)/settings.siteSpacing),Math.floor((z-bounds.south)/settings.siteSpacing)].join(',');
   const current=cells.get(key)??{};if(!current.low||b.height<current.low.building.height)current.low={x,z,building:b};if(!current.high||b.height>current.high.building.height)current.high={x,z,building:b};cells.set(key,current);
@@ -109,6 +112,7 @@ export function emcCheck(devices){
  return {penalties,conflicts,meaning:'同频差 <0.1 GHz、间距 <600 m 的启发式干扰代理；不是频谱合规或真实 EMC 认证'};
 }
 export async function optimizeDeployment({city,query,settings={...DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},progress=()=>{},yieldTask=async()=>{}}){
+ const exclusion=createDeploymentExclusion(city,settings);
  validateSettings(settings);validateTarget(target);validateEnvironment(environment);const start=Date.now(),sampling=generateSamples(city,query,settings),candidates=generateCandidates(city,query,settings,sampling),conditions=scenarios(environment),n=sampling.samples.length;
  const weights=conditions.flatMap((condition,c)=>sampling.samples.map(p=>p.weight*(c===0?2:1)));
  const contexts=new Map();
@@ -137,6 +141,7 @@ export async function optimizeDeployment({city,query,settings={...DEFAULT_SETTIN
   let found=null;
   for(const radius of [80,180,350]){for(let a=0;a<12;a++){
    const angle=a*Math.PI/6,x=p.position[0]+radius*Math.cos(angle),z=p.position[2]+radius*Math.sin(angle),ground=query.groundAt(x,z),surface=query.surfaceAt(x,z);
+   if(exclusion.blocked([x,0,z]))continue;
    if(ground===null||surface===null)continue;const position=[x,surface+2,z],direction=angles(position,p.position);
    const device=createDevice('radar-03d',`repair-${repairSites+1}`,position);device.parameters.pitch=Math.max(-60,Math.min(0,direction.elevation-30));device.parameters.frequencyGHz=16+(repairSites%4)*0.5;
    const context=query.trace(position,p.position);if(!context.known||context.blocked)continue;
@@ -150,6 +155,7 @@ export async function optimizeDeployment({city,query,settings={...DEFAULT_SETTIN
  const plans=[];
  for(const policy of budgets){
   const chosen=chooseGreedy(candidates,weights,policy),devices=chosen.indices.map(i=>structuredClone(candidates[i].device)),emc=emcCheck(devices),coverage=conditions.map(()=>new Uint16Array(n));
+  exclusion.assertDevices(devices,chosen.indices.map(i=>candidates[i].site));
   for(const i of chosen.indices)for(const j of candidates[i].cover){const c=Math.floor(j/n),index=j%n;
    if(emc.penalties[candidates[i].device.id]>0){const condition=conditions[c],result=evaluate(candidates[i].device,{...target,position:sampling.samples[index].position,...condition.target},{...condition.environment,cochannelDb:condition.environment.cochannelDb+emc.penalties[candidates[i].device.id]},contexts.get(`${candidates[i].site.id}:${index}`));if(result.status!=='within-model'||result.marginDb<settings.marginReserveDb)continue;}
    coverage[c][index]++;

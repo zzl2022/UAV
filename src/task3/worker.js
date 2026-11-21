@@ -31,6 +31,8 @@ async function ensureScene(data){
 if(typeof self!=='undefined')self.onmessage=async({data})=>{
  try{
   await ensureScene(data);
+  const exclusions=(data.settings??data.input?.settings)?.buildingExclusions;
+  if(exclusions&&exclusions.sceneKey!==(data.site?.base??'recon'))throw Error('建筑禁部署约束与当前地图不一致，请重新选择');
   const progress=value=>self.postMessage({type:'progress',requestId:data.requestId??null,value});
   if(data.type==='pipeline'){
    const {report,run}=await runTask3Pipeline({city,query,settings:data.settings,environment:data.environment,target:data.target,weights:data.weights,presetIds:data.presetIds,equipmentSnapshot:data.equipmentSnapshot,planTypes:data.planTypes,progress,yieldTask});

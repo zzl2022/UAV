@@ -313,9 +313,7 @@ try {
     if(!site)return;
     if(siteGroups[id]?.children.length)return;
     status(`正在加载${site.label}…`);
-    const buildingData=site.buildings
-      ?fetchJSON(site.buildings).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;})
-      :Promise.resolve(null);
+    const buildingData=fetchJSON(`${site.base}.json`).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;});
     const [meta,gltf,buildingsData]=await Promise.all([
       fetchJSON(`${site.base}-meta.json`),
       new GLTFLoader().loadAsync(`${site.base}.glb`),
@@ -327,7 +325,7 @@ try {
     const group=new THREE.Group();group.name=`${id}_GBA_LoD1`;group.visible=false;group.add(gltf.scene);
     const origin=[meta.center?.[0]??0,meta.center?.[1]??0,0];
     group.userData={...group.userData,name:meta.name,origin,ecefTransform:null};
-    siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData};
+    siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData,city:buildingsData?{metadata:siteAnalysisMetadata(meta,site),buildings:buildingsData.buildings}:null};
     try{
       const texture=await new THREE.TextureLoader().loadAsync(site.imagery);
       texture.colorSpace=THREE.SRGBColorSpace;
@@ -852,7 +850,7 @@ try {
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
-    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,getActiveModel:()=>mode==='recon'?model:siteSensorContext(mode)?.model??null,getGroundAt:()=>mode==='recon'?terrainSampler(model.ground.geometry):()=>0});
+    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,getBuildingContext:()=>({sceneKey:mode==='recon'?'recon':SITES[mode]?.base,city:mode==='recon'?city:siteParts[mode]?.city,model:mode==='recon'?model:siteParts[mode]}),getActiveModel:()=>mode==='recon'?model:siteSensorContext(mode)?.model??null,getGroundAt:()=>mode==='recon'?terrainSampler(model.ground.geometry):()=>0});
     applyModeUI(mode);
   }).catch(error=>{console.warn('任务三面板挂载失败',error);el('toggle-task3').disabled=true;workspace.showWindow('deployment');el('toggle-task3').click();});
   document.documentElement.dataset.ready='true';

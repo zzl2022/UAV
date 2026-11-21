@@ -245,3 +245,17 @@ body.app-revealed:not(.hud-menu-open):not(.scene-menu-open) .ac8-scene-info .ac8
  #task3-custom-editor .task3-custom-actions{grid-template-columns:1fr;gap:6px}
  #task3-custom-editor .task3-custom-actions button{grid-column:1/-1;min-height:32px;font-size:11px}
 }
+#task3-panel .task3-building-settings{margin-top:18px;padding-top:12px;border-top:1px solid #45616c}
+#task3-panel .task3-building-settings button{min-height:44px;margin:4px 6px 4px 0}
+#task3-building-count{color:#ff9bb0;font-size:13px;line-height:1.6}
+#task3-building-editor{position:absolute;right:18px;top:98px;z-index:12;width:260px;max-width:calc(100% - 36px);box-sizing:border-box;padding:16px;border:1px solid #ff8ca5;border-radius:5px;background:rgba(12,28,38,.96);color:#ffe5ec;font-size:14px;line-height:1.6;box-shadow:0 6px 28px #0008}
+#task3-building-editor[hidden]{display:none}
+#task3-building-editor p{margin:10px 0;color:#d2e2e9}
+#task3-building-editor span{display:block;color:#ffb0c2;margin:8px 0}
+#task3-building-editor button{width:100%;min-height:44px;background:#293944;color:#fff;border:1px solid #ff8ca5;border-radius:4px;cursor:pointer}
+#task3-device-explanation{margin:12px 0 4px;min-height:44px;width:100%;border:1px solid #69e2bd;background:#183a3a;color:#d6fff0}
+#task3-device-explanation:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(1)}
+#task3-panel .task3-device-choice{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;white-space:nowrap}
+#task3-panel .task3-device-choice input{width:18px;height:18px;flex:none;accent-color:#69e2bd}
+#task3-panel .task3-building-settings button:focus-visible,#task3-building-editor button:focus-visible,#task3-device-explanation:focus-visible,#task3-panel .task3-device-choice input:focus-visible{outline:2px solid #ffd783;outline-offset:3px}
+@media(max-width:580px){#task3-building-editor{top:130px;right:8px;width:220px}}

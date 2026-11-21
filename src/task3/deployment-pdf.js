@@ -4,6 +4,7 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import {createDeploymentDocument,createDeploymentDocumentAll} from './deployment-doc.js';
 import {BLIND_CATEGORIES} from './constants.js';
+import {createDeviceExplanation} from './device-explanation.js';
 
 const FONT = 'NotoSansSC';
 const FONT_FILE = 'NotoSansSC-Regular.otf';
@@ -46,7 +47,7 @@ function ensureFont() {
       [FONT]: {normal: FONT_FILE, bold: FONT_FILE, italics: FONT_FILE, bolditalics: FONT_FILE},
     };
     return true;
-  })();
+  })().catch(error=>{fontPromise=null;throw error;});
   return fontPromise;
 }
 
@@ -157,6 +158,7 @@ function buildPlanDesign(models) {
       ['离地高度层', first.grid.heightsM.map(value => `${num(value, 0)} m`).join(' / ')],
       ['有效空域采样 / 候选 / 初始站点', `${first.grid.sampleCount} / ${first.grid.candidateCount} / ${first.grid.siteCount}`],
       ['覆盖裕量门槛', `${num(first.grid.marginReserveDb)} dB`],
+      ['建筑禁部署约束', `${first.buildingExclusions?.buildingIds?.length??0} 个源建筑实体；初始选点、补点、迁移与移动补盲共同遵守`],
     ], ['auto', '*']),
   ];
 
@@ -396,6 +398,27 @@ export async function renderDeploymentPdfBuffer(input) {
   await ensureFont();
   const docDefinition = buildDocument(input);
   return pdfMake.createPdf(docDefinition).getBuffer();
+}
+
+export function buildDeviceExplanationPdf(model){
+ return {pageSize:'A4',pageMargins:[42,42,42,48],defaultStyle:{font:FONT,fontSize:10,color:INK,lineHeight:1.3},info:{title:'设备部署解释明细'},footer:(page,total)=>({text:`第 ${page} / ${total} 页`,alignment:'center',fontSize:8,margin:[0,20,0,0]}),content:[
+  {text:'设备部署解释明细',fontSize:22,color:ACCENT,margin:[0,0,0,12]},
+  {text:`${model.planName} · ${model.conditionName} · 已勾选 ${model.devices.length} 台设备`,margin:[0,0,0,6]},
+  muted(`运行编号：${model.runId}\n生成时间：${model.generatedAt}\n禁部署建筑记录：${model.buildingExclusions.buildingIds.length} 个源建筑实体`,[0,0,0,14]),
+  ...model.devices.flatMap((device,index)=>[
+   {text:`${index+1}. ${device.displayName} · ${device.modelName}`,fontSize:15,color:ACCENT,margin:[0,12,0,8],...(index?{pageBreak:'before'}:{})},
+   subTitle('通俗解释'),...device.plain.map(t=>({text:t,margin:[0,0,0,6]})),
+   subTitle('专业技术说明'),...device.technical.map(t=>({text:t,fontSize:9,margin:[0,0,0,6]})),
+   subTitle('各工况实际覆盖贡献'),simpleTable(['工况','覆盖采样','独立覆盖','有效采样总数'],device.contributions.map(c=>[c.name,...['coveredSamples','independentSamples','totalSamples'].map(k=>c[k]===null?'未提供':String(c[k]))]),['*','auto','auto','auto']),
+   {stack:[subTitle(`${device.displayName} · 本次模型关键参数（含假设与用户设置）`),simpleTable(['参数','本次取值','单位'],device.parameterRows.map(row=>[row.label,row.value,row.unit||'无量纲']),['*','auto','auto'])],unbreakable:true},
+   muted(`数据来源：运行 ${model.runId} / 方案 ${model.planId} / 设备 ${device.id}；覆盖数据来自最终逐设备贡献，电磁结论来自当前方案校核。`,[0,8,0,0]),
+  ]),subTitle('适用范围与限制'),...model.limitations.map(t=>({text:t,fontSize:9,margin:[0,0,0,6]})),
+ ]};
+}
+export async function renderDeviceExplanationPdfBuffer(model){await ensureFont();return pdfMake.createPdf(buildDeviceExplanationPdf(model)).getBuffer();}
+export async function exportDeviceExplanationPdf(input){
+ const model=createDeviceExplanation(input);await ensureFont();
+ await pdfMake.createPdf(buildDeviceExplanationPdf(model)).download(`设备部署解释明细-${model.runId}-${model.planId}.pdf`);return model;
 }
 
 // 导出入口：确保字体就绪后生成并下载 PDF。
