@@ -10,6 +10,15 @@ test('telemetry respects source ENU axes and separates AGL from WGS84 model elev
  const east=flightTelemetry([100,100,0],metadata.ecefTransform,()=>40),north=flightTelemetry([0,0,-100],metadata.ecefTransform,()=>null);
  assert.ok(east.longitude>origin.longitude);assert.ok(north.latitude>origin.latitude);assert.equal(east.agl,60);assert.equal(north.agl,null);
 });
+test('telemetry reports missing or significantly negative AGL as unknown and only normalizes near-zero error',()=>{
+ const {metadata}=JSON.parse(readFileSync(new URL('../public/data/city.json',import.meta.url)));
+ const at=(up,ground)=>flightTelemetry([0,up,0],metadata.ecefTransform,()=>ground);
+ assert.equal(at(10,null).agl,null);assert.equal(at(10,undefined).agl,null);assert.equal(at(10,NaN).agl,null);
+ assert.equal(flightTelemetry([0,10,0],metadata.ecefTransform,null).agl,null);
+ assert.equal(at(-5,0).agl,null,'显著负 AGL 不得被钳成 0');
+ assert.equal(at(-1e-8,0).agl,0);assert.equal(at(1e-8,0).agl,0);
+ assert.equal(at(60,0).agl,60);assert.equal(at(60,0).ground,0);
+});
 test('voice is opt-in, chooses Chinese, limits repeated alarms and cancels stale speech',()=>{
  const spoken=[];let cancels=0;const host={SpeechSynthesisUtterance:class{constructor(text){this.text=text;}},speechSynthesis:{cancel(){cancels++;},getVoices:()=>[{lang:'zh-CN',localService:true}],speak:v=>spoken.push(v)}};
  const voice=createVoiceAlarm(host);assert.equal(voice.announce('alarm','报警'),false);voice.setEnabled(true);

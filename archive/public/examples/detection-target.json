@@ -1,0 +1,11 @@
+{
+  "target": {
+    "speed": 12,
+    "count": 1,
+    "size": 0.4,
+    "capability": {
+      "width_m": 0.4,
+      "height_m": 0.12
+    }
+  }
+}

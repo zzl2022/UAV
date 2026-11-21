@@ -307,6 +307,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  }
  let down;
  renderer.domElement.addEventListener('pointerdown',event=>{
+  if(renderer.domElement.dataset.buildingSelecting==='true')return;
   down=[event.clientX,event.clientY];if(panel.hidden||event.button!==0||pickMode)return;
   const marker=markerAt(event.clientX,event.clientY);if(!marker)return;
   event.stopImmediatePropagation();event.preventDefault();

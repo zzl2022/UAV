@@ -5,6 +5,11 @@ dist/
 artifacts/
 创意二文件/
 
+
+# 归档目录中体积较大的本地备份不提交，其余归档文件正常提交
+archive/创意二资料/
+archive/NoLod_*.glb
+
 __pycache__/
 *.pyc
 .trae/
@@ -12,6 +17,7 @@ __pycache__/
 
 .env.local
 public/uav.key
+.trae-html-share-packages/
 .npm-cache/
 .python-deps/
 .integration-runtime/

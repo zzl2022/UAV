@@ -8,6 +8,22 @@ import {DEFAULT_THREAT_CONFIGS,THREAT_CONFIG_LIMITS} from './constants.js';
 const DEG=Math.PI/180,STEP=20,CLEARANCE=25;
 const GEOMETRY_FAIL=['近距盲区','超出标称距离','超出方位视场','超出俯仰视场','目标无线电静默','目标信号不在接收频段'];
 
+// 径向与自定义折线共用坡度包络、建筑净空修复和三维距离计时，保证两类路线口径一致。
+function finalizeRoute(query,positions,speedMps,startDelayS){
+ const slopeEnvelope=()=>{
+  for(let i=1;i<positions.length;i++){const d=Math.hypot(positions[i][0]-positions[i-1][0],positions[i][2]-positions[i-1][2]);positions[i][1]=Math.max(positions[i][1],positions[i-1][1]-d/3);}
+  for(let i=positions.length-2;i>=0;i--){const d=Math.hypot(positions[i][0]-positions[i+1][0],positions[i][2]-positions[i+1][2]);positions[i][1]=Math.max(positions[i][1],positions[i+1][1]-d/3);}
+ };
+ let repairs=0;slopeEnvelope();
+ for(let pass=0;pass<3;pass++){let changed=false;
+  for(let i=1;i<positions.length;i++){const r=query.trace(positions[i-1],positions[i]);if(r.blocked){const lift=Math.max(5,r.clearance+CLEARANCE);positions[i-1][1]+=lift;positions[i][1]+=lift;changed=true;repairs++;}}
+  if(!changed)break;slopeEnvelope();
+ }
+ let blockedSegments=0;for(let i=1;i<positions.length;i++)if(query.trace(positions[i-1],positions[i]).blocked)blockedSegments++;
+ let length=0;const points=positions.map((position,i)=>{if(i)length+=Math.hypot(...position.map((v,k)=>v-positions[i-1][k]));return {position,time:startDelayS+length/speedMps};});
+ return {points,duration:points.at(-1).time,length,repairs,blockedSegments};
+}
+
 // 从 bounds 边缘沿方位角直线飞向 core 中心；方位角定义与 engine.angles 一致（北为 0°，顺时针）。
 export function buildRadialRoute(query,bounds,{azimuthDeg,aglM,speedMps,id,lateralOffsetM=0,startDelayS=0}){
  const core=bounds.core,a=azimuthDeg*DEG,dx=Math.sin(a),dz=-Math.cos(a);
@@ -25,18 +41,34 @@ export function buildRadialRoute(query,bounds,{azimuthDeg,aglM,speedMps,id,later
   positions.push([x,Math.max(ground+aglM,(surface??ground)+CLEARANCE),z]);
  }
  if(positions.length<2)throw Error(`径向航路 ${id} 全段无有效地形点（跳过 ${skipped} 点）`);
- const slopeEnvelope=()=>{
-  for(let i=1;i<positions.length;i++){const d=Math.hypot(positions[i][0]-positions[i-1][0],positions[i][2]-positions[i-1][2]);positions[i][1]=Math.max(positions[i][1],positions[i-1][1]-d/3);}
-  for(let i=positions.length-2;i>=0;i--){const d=Math.hypot(positions[i][0]-positions[i+1][0],positions[i][2]-positions[i+1][2]);positions[i][1]=Math.max(positions[i][1],positions[i+1][1]-d/3);}
+ return {id,azimuthDeg,...finalizeRoute(query,positions,speedMps,startDelayS),speed:speedMps,startDelayS,skipped,notes:'直线径向入侵航路；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
+}
+
+// 用户路点接受 [x,z] 或 [x,y,z]；输入 y 不参与飞行高度，高度统一由当前地形、AGL 与表面净空计算。
+export function buildCustomRoute(query,{waypoints,aglM,speedMps,id='single-custom'}){
+ const limits=THREAT_CONFIG_LIMITS;
+ if(!Number.isFinite(aglM)||aglM<=0||aglM>limits.maxAglM)throw Error(`自定义折线离地高度必须是 (0,${limits.maxAglM}] 米内的有限数值`);
+ if(!Number.isFinite(speedMps)||speedMps<=0||speedMps>limits.maxSpeedMps)throw Error(`自定义折线速度必须是 (0,${limits.maxSpeedMps}] 米/秒内的有限数值`);
+ if(!Array.isArray(waypoints)||waypoints.length<2)throw Error('自定义折线至少需要两个不同有效路点');
+ const normalized=waypoints.map((point,i)=>{
+  if(!Array.isArray(point)||![2,3].includes(point.length)||point.some(v=>!Number.isFinite(v)))throw Error(`自定义折线路点 ${i+1} 必须是 [x,z] 或 [x,y,z] 有限数值数组`);
+  return point.length===2?[point[0],point[1]]:[point[0],point[2]];
+ });
+ if(new Set(normalized.map(p=>p.join(','))).size<2)throw Error('自定义折线至少需要两个不同有效路点');
+ const ordered=normalized.filter((point,i)=>!i||point[0]!==normalized[i-1][0]||point[1]!==normalized[i-1][1]);
+ for(const [i,[x,z]] of ordered.entries())if(!Number.isFinite(query.groundAt(x,z)))throw Error(`自定义折线路点 ${i+1} 无有效地形高程`);
+ const positions=[];let skipped=0;
+ const append=(x,z)=>{
+  const ground=query.groundAt(x,z);if(!Number.isFinite(ground)){skipped++;return;}
+  const surface=query.surfaceAt(x,z);positions.push([x,Math.max(ground+aglM,(surface??ground)+CLEARANCE),z]);
  };
- let repairs=0;slopeEnvelope();
- for(let pass=0;pass<3;pass++){let changed=false;
-  for(let i=1;i<positions.length;i++){const r=query.trace(positions[i-1],positions[i]);if(r.blocked){const lift=Math.max(5,r.clearance+CLEARANCE);positions[i-1][1]+=lift;positions[i][1]+=lift;changed=true;repairs++;}}
-  if(!changed)break;slopeEnvelope();
+ for(let i=1;i<ordered.length;i++){
+  const a=ordered[i-1],b=ordered[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/STEP));
+  for(let j=0;j<n;j++){const f=j/n;append(a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f);}
  }
- let blockedSegments=0;for(let i=1;i<positions.length;i++)if(query.trace(positions[i-1],positions[i]).blocked)blockedSegments++;
- let length=0;const points=positions.map((position,i)=>{if(i)length+=Math.hypot(...position.map((v,k)=>v-positions[i-1][k]));return {position,time:startDelayS+length/speedMps};});
- return {id,azimuthDeg,points,duration:points.at(-1).time,speed:speedMps,startDelayS,length,skipped,repairs,blockedSegments,notes:'直线径向入侵航路；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
+ append(...ordered.at(-1));
+ if(positions.length<2)throw Error(`自定义折线全段无有效地形点（跳过 ${skipped} 点）`);
+ return {id,kind:'custom',azimuthDeg:null,waypoints:ordered.map(p=>[...p]),...finalizeRoute(query,positions,speedMps,0),speed:speedMps,startDelayS:0,aglM,skipped,notes:'用户有序路点构成的运动学折线；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
 }
 
 // 规范化单个场景配置；缺省字段继承默认值，返回的新对象和数组可直接 JSON 序列化。

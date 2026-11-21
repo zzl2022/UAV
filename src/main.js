@@ -14,7 +14,9 @@ import {createAc8Hud} from './ac8-hud.js';
 import {mountSceneMenu} from './scene-menu.js';
 import {mountHudMenu} from './hud-menu.js';
 import {flightTelemetry} from './planning/telemetry.js';
+import {terrainSampler} from './sensors/terrain-query.js';
 import logoFullUrl from './assets/logo-full.png';
+
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
   <div class="topbar-flow" aria-hidden="true"></div>
@@ -52,6 +54,7 @@ app.innerHTML=`<header id="platform-topbar">
 <div id="platform-body">
 <aside id="workspace-sidebar">
   <div class="sidebar-top"><button id="sidebar-collapse" type="button" aria-label="折叠场景侧栏" title="折叠侧栏">«</button></div>
+  <button id="ac8-main-menu-toggle" class="ac8-main-menu-toggle" type="button" aria-controls="ac8-main-menu" aria-expanded="true" title="收起主菜单" aria-label="收起主菜单"><span aria-hidden="true">«</span><em>MENU</em></button>
   <nav class="workspace-launchers" id="ac8-main-menu" aria-label="功能">
     <button id="open-city-model" aria-controls="city-window" aria-pressed="false"><span aria-hidden="true">▦</span>三维环境建模<i class="ac8-launcher-bracket ac8-launcher-bracket-top" aria-hidden="true"></i><i class="ac8-launcher-bracket ac8-launcher-bracket-bottom" aria-hidden="true"></i></button>
     <button id="toggle-sensors" aria-controls="equipment-window" aria-pressed="false" disabled><span aria-hidden="true">◎</span>感知装备建模<i class="ac8-launcher-bracket ac8-launcher-bracket-top" aria-hidden="true"></i><i class="ac8-launcher-bracket ac8-launcher-bracket-bottom" aria-hidden="true"></i></button>
@@ -76,6 +79,8 @@ app.innerHTML=`<header id="platform-topbar">
     <option value="beijing">核心区域——北京故宫</option>
     <option value="daxing">机场区域——大兴机场</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
+    <option value="nuclear">核电设施——房山核设施</option>
+    <option value="changjiang">核电设施——海南昌江核电厂</option>
     <option value="railway">铁路沿线——北京站到通州站</option>
   </select></label></section>
   <section id="layers-section"><h2>场景图层</h2>
@@ -157,8 +162,18 @@ const SITES={
     base:'./data/sites/hangzhou/hangzhou-gba',
     imagery:'./data/sites/hangzhou/hangzhou-imagery.jpg',
   },
-
-
+  nuclear:{
+    label:'核电设施——房山核设施',short:'房山核设施',
+    base:'./data/sites/nuclear/nuclear-gba',
+    imagery:'./data/sites/nuclear/nuclear-imagery.jpg',
+    buildings:'./data/sites/nuclear/nuclear-gba.json',
+  },
+  changjiang:{
+    label:'核电设施——海南昌江核电厂',short:'海南昌江核电厂',
+    base:'./data/sites/changjiang/changjiang-gba',
+    imagery:'./data/sites/changjiang/changjiang-imagery.jpg',
+    buildings:'./data/sites/changjiang/changjiang-gba.json',
+  },
   railway:{
     label:'铁路沿线——北京站到通州站',short:'铁路走廊',
     base:'./data/sites/railway/railway-gba',
@@ -298,9 +313,7 @@ try {
     if(!site)return;
     if(siteGroups[id]?.children.length)return;
     status(`正在加载${site.label}…`);
-    const buildingData=site.buildings
-      ?fetchJSON(site.buildings).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;})
-      :Promise.resolve(null);
+    const buildingData=fetchJSON(`${site.base}.json`).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;});
     const [meta,gltf,buildingsData]=await Promise.all([
       fetchJSON(`${site.base}-meta.json`),
       new GLTFLoader().loadAsync(`${site.base}.glb`),
@@ -312,7 +325,7 @@ try {
     const group=new THREE.Group();group.name=`${id}_GBA_LoD1`;group.visible=false;group.add(gltf.scene);
     const origin=[meta.center?.[0]??0,meta.center?.[1]??0,0];
     group.userData={...group.userData,name:meta.name,origin,ecefTransform:null};
-    siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData};
+    siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData,city:buildingsData?{metadata:siteAnalysisMetadata(meta,site),buildings:buildingsData.buildings}:null};
     try{
       const texture=await new THREE.TextureLoader().loadAsync(site.imagery);
       texture.colorSpace=THREE.SRGBColorSpace;
@@ -424,7 +437,7 @@ try {
   function setCoreForMode(next){
     const core=SITES[next]?siteMeta[next]?.coreBuilding:null;
     setCoreHighlight(core);
-    setNeighborHighlight([],core);
+    setNeighborHighlight(next==='nuclear'||next==='changjiang'?siteParts[next]?.buildingsData?.buildings??[]:[],core);
     const button=el('core-focus');
     if(core){button.hidden=false;button.disabled=false;button.textContent=`⌖ ${core.shortName||core.name||'核心建筑'}`;button.title=`定位${core.name||'核心建筑'}`;}
     else{button.hidden=true;button.disabled=true;}
@@ -555,7 +568,7 @@ try {
       return `东经 ${longitude.toFixed(6)}° · 北纬 ${latitude.toFixed(6)}°`;
     }catch{return '—';}
   }
-  const TYPE_NAMES={radar:'雷达',radio:'无线电',optical:'光电',acoustic:'声学'};
+  const TYPE_NAMES={radar:'雷达',radio:'无线电',optical:'光电',acoustic:'声学',fivega:'5G-A',electrostatic:'静电'};
   const shortPlanName=name=>String(name??'').split(' · ')[0]||'—';
   function currentPlan(){
     const diag=window.task3Diagnostics,report=window.__task3Report;
@@ -578,57 +591,65 @@ try {
       const profile=profiles.find(item=>item.presetId===id),type=TYPE_NAMES[profile?.type]??profile?.type??'未知',names=byType.get(type)??[];
       names.push(profile?.name??id);byType.set(type,names);
     }
-    const models=[...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('/')}`).join(' · ');
-    return `${ids.length} 台 / ${byType.size} 类 · ${models}`;
+    return [...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type}：${[...new Set(names)].join('、')}`).join('｜');
   }
-  function deploymentConfigText(){
-    const plan=currentPlan();
-    if(!plan)return '尚未生成';
-    const cost=Number.isFinite(plan.cost)?` · 相对成本 ${plan.cost.toFixed(1)}`:'';
-    return `${shortPlanName(plan.name)} ${plan.devices.length} 台${cost}`;
+  function deploymentInputText(){
+    const diag=window.task3Diagnostics,settings=diag?.inputSummary?.settings??window.__task3Report?.settings;
+    if(!app.querySelector('#task3-scope-width')&&!settings)return '等待推演输入';
+    const value=(id,fallback='—')=>app.querySelector(`#${id}`)?.value??fallback??'—';
+    const threat=app.querySelector('#task3-threat'),threatName=threat?.selectedOptions?.[0]?.textContent??'—';
+    const state=diag?.busy?' · 方案计算中':diag?.staleResult?' · 结果已过期，待重新生成':'';
+    return `范围 ${value('task3-scope-width',settings?.scopeWidthM)} × ${value('task3-scope-depth',settings?.scopeDepthM)} m · 网格 ${value('task3-spacing',settings?.spacing)} m · 预算 ${value('task3-budget',settings?.budget)} · 设备上限 ${value('task3-max-devices',settings?.maxDevices)} · 威胁 ${threatName}（${value('task3-threat-count')} 架，高度 ${value('task3-threat-agl')} m，速度 ${value('task3-threat-speed')} m/s）${state}`;
   }
-  function planStatusText(){
-    const diag=window.task3Diagnostics,report=window.__task3Report,plans=diag?.plans??[];
-    if(!plans.length)return '尚未生成';
-    const recommended=shortPlanName(report?.plans?.find(plan=>plan.id===diag.recommendedId)?.name);
-    return `${plans.length} 套 · 推荐${recommended} · 当前${shortPlanName(currentPlan()?.name)}`;
+  function noResultText(){return window.task3Diagnostics?.busy?'方案计算中，尚未生成':'尚未生成';}
+  function withResultState(text,plan=currentPlan()){
+    const diag=window.task3Diagnostics,states=[];
+    if(diag?.mobilePending)states.push('移动补盲计算中，以下为原方案结果');
+    else if(diag?.busy)states.push('方案计算中，以下为上一轮结果');
+    else if(diag?.staleResult)states.push('结果已过期，以下为上一轮结果');
+    if(plan?.derivation)states.push(`移动补盲派生（新增 ${plan.derivation.addedDeviceCount??0} 台）`);
+    return states.length?`${states.join(' · ')} · ${text}`:text;
   }
-  function coverageText(){
-    const plan=currentPlan();
-    if(!plan?.metrics?.length)return '尚未生成';
-    const current=currentMetric(plan),weakest=Math.min(...plan.metrics.map(row=>row.coverageRate));
-    return `当前工况 ${((current?.coverageRate??0)*100).toFixed(1)}% · 最弱工况 ${(weakest*100).toFixed(1)}% · 核心区覆盖 ${((current?.coreCoverageRate??0)*100).toFixed(1)}%`;
+  function swarmText(plan){
+    const report=window.__task3Report,threatPlanId=plan?.derivation?.basePlanId??plan?.id;
+    const threat=report?.threatsByPlan?.[threatPlanId]?.swarm??(threatPlanId===report?.recommendedId?report?.threats?.swarm:null);
+    if(!threat?.summary)return '蜂群验证 尚未生成';
+    const summary=threat.summary,detected=(threat.perTarget??[]).filter(row=>row.firstDetectionTime!==null).length;
+    const source=plan?.derivation?'（原方案，派生未重算）':'';
+    return `蜂群验证${source} ${summary.targetCount??0} 架 · 检出 ${detected} 架 · 平均首报 ${summary.meanFirstDetectionTime==null?'—':`${summary.meanFirstDetectionTime.toFixed(1)} s`} · 容量溢出 ${summary.overflowedTargets??0} 架`;
   }
-  function blindRiskText(){
+  function planComparisonText(){
+    const report=window.__task3Report,plans=report?.plans??[],plan=currentPlan();
+    if(!plans.length||!plan)return noResultText();
+    const recommended=shortPlanName(report?.plans?.find(item=>item.id===report.recommendedId)?.name),derived=!!plan.derivation;
+    const score=report?.scoring?.plans?.find(item=>item.id===plan.id)?.score;
+    const cost=Number.isFinite(plan.cost)?plan.cost.toFixed(1):'—',scoreText=Number.isFinite(score)?score.toFixed(3):'—';
+    return withResultState(`${plans.length} 套 · ${derived?'原方案推荐':'推荐方案'}${recommended} · 当前方案${shortPlanName(plan.name)} · 设备 ${plan.devices.length} 台 · 相对成本 ${cost} · ${derived?'原方案综合分':'综合分'} ${scoreText} · ${swarmText(plan)}`,plan);
+  }
+  function blindAnalysisText(){
     const diag=window.task3Diagnostics,report=window.__task3Report,plan=currentPlan();
-    if(!plan?.metrics?.length)return '尚未生成';
-    const current=currentMetric(plan),average=plan.metrics.reduce((sum,row)=>sum+(row.blindRate??0),0)/plan.metrics.length;
-    const index=Math.max(0,report?.conditions?.findIndex(row=>row.id===diag?.condition)??0);
-    const points=report?.blindspots?.[plan.id]?.[index]?.stats?.total;
-    return `平均盲区占比 ${(average*100).toFixed(1)}% · 盲区采样点 ${points??'—'} · 核心区二重覆盖 ${((current?.coreRedundantRate??0)*100).toFixed(1)}%`;
+    if(!plan?.metrics?.length)return noResultText();
+    const current=currentMetric(plan),weakest=Math.min(...plan.metrics.map(row=>row.coverageRate)),average=plan.metrics.reduce((sum,row)=>sum+(row.blindRate??0),0)/plan.metrics.length;
+    const index=Math.max(0,report?.conditions?.findIndex(row=>row.id===diag?.condition)??0),points=diag?.blindStats?.total??report?.blindspots?.[plan.id]?.[index]?.stats?.total;
+    let mobile='移动补盲 未启用';
+    if(diag?.mobilePending)mobile='移动补盲 计算中，尚未应用派生结果';
+    else if(plan.derivation)mobile=`移动补盲 派生新增 ${plan.derivation.addedDeviceCount??0} 台，全工况覆盖、盲区与 EMC 已重算`;
+    const text=`当前工况覆盖率 ${((current?.coverageRate??0)*100).toFixed(1)}% · 最弱工况覆盖 ${(weakest*100).toFixed(1)}% · 盲点数 ${points??'—'} / 盲区占比 ${((current?.blindRate??0)*100).toFixed(1)}% · 核心覆盖 ${((current?.coreCoverageRate??0)*100).toFixed(1)}% / 二重覆盖 ${((current?.coreRedundantRate??0)*100).toFixed(1)}% · 平均盲区 ${(average*100).toFixed(1)}% · ${mobile}`;
+    return withResultState(text,plan);
   }
   function emcText(){
-    const diag=window.task3Diagnostics;
-    if(!diag?.ready||!diag.emcCounts)return '尚未生成';
-    const verdict={pass:'通过',degraded:'降额',fail:'不通过'}[diag.emcVerdict]??'—';
-    return `${verdict} · 严重 ${diag.emcCounts.fail??0} / 提示 ${diag.emcCounts.warning??0}`;
-  }
-  function threatText(){
-    const report=window.__task3Report;
-    const threat=report?.threatsByPlan?.[report.recommendedId]?.swarm??report?.threats?.swarm;
-    if(!threat?.summary)return '尚未生成';
-    const summary=threat.summary,detected=(threat.perTarget??[]).filter(row=>row.firstDetectionTime!==null).length;
-    return `蜂群 ${summary.targetCount??0} 架 · 检出 ${detected} 架 · 平均首报 ${summary.meanFirstDetectionTime==null?'—':`${summary.meanFirstDetectionTime.toFixed(1)} s`} · 容量溢出 ${summary.overflowedTargets??0} 架`;
+    const report=window.__task3Report,plan=currentPlan(),emc=report?.emc?.[plan?.id];
+    if(!plan||!emc)return noResultText();
+    const verdict={pass:'通过',degraded:'降额',fail:'不通过'}[emc.verdict]??'—',deployable=typeof plan.deployable==='boolean'?plan.deployable:(emc.counts?.fail??0)===0;
+    return withResultState(`${verdict} · 严重 ${emc.counts?.fail??0} / 提示 ${emc.counts?.warning??0} · 部署状态 ${deployable?'可部署':'不可部署，存在未解决严重冲突'}`,plan);
   }
   const sceneSummary=()=>({
     scene:sceneLine(),
     equipmentConfig:equipmentConfigText(),
-    deploymentConfig:deploymentConfigText(),
-    planStatus:planStatusText(),
-    coverage:coverageText(),
-    blindRisk:blindRiskText(),
+    deploymentInput:deploymentInputText(),
+    planComparison:planComparisonText(),
+    blindAnalysis:blindAnalysisText(),
     emc:emcText(),
-    threat:threatText(),
   });
   mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
   function restoreOverview(){
@@ -726,7 +747,7 @@ try {
       const started=task3?.startThreatSimulation?.(simMode());
       if(started!==false&&fresh){const result=task3?.getThreatResult?.();if(result)recordSimulation(result);}
     };
-    simScenario?.addEventListener('change',()=>{task3?.pauseThreatSimulation?.();updateSimulationBar();});
+    simScenario?.addEventListener('change',()=>{task3?.selectThreatScenario?.(simMode());updateSimulationBar();});
     simSpeed.onchange=()=>task3?.setThreatSpeed?.(Number(simSpeed.value));
     simProgress.oninput=()=>task3?.setThreatProgress?.(Number(simProgress.value));
     simProgress.onpointerdown=()=>{simSeeking=true;};
@@ -829,7 +850,7 @@ try {
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
-    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor});
+    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,getBuildingContext:()=>({sceneKey:mode==='recon'?'recon':SITES[mode]?.base,city:mode==='recon'?city:siteParts[mode]?.city,model:mode==='recon'?model:siteParts[mode]}),getActiveModel:()=>mode==='recon'?model:siteSensorContext(mode)?.model??null,getGroundAt:()=>mode==='recon'?terrainSampler(model.ground.geometry):()=>0});
     applyModeUI(mode);
   }).catch(error=>{console.warn('任务三面板挂载失败',error);el('toggle-task3').disabled=true;workspace.showWindow('deployment');el('toggle-task3').click();});
   document.documentElement.dataset.ready='true';
