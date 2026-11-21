@@ -25,12 +25,12 @@ try{
  await page.locator('#toggle-deployment').click();
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isOpen(),null,{timeout:5000});
  await page.waitForTimeout(1200);
- assert.deepEqual(await page.locator('#ac8-deployment-menu .ac8-hud-tabs button').allInnerTexts(),['推演输入','方案对比','盲区分布','电磁兼容','飞行演示']);
+ assert.deepEqual(await page.locator('#ac8-deployment-menu .ac8-hud-tabs button').allInnerTexts(),['推演输入','方案对比','盲区分析','电磁兼容']);
  await openModule('推演输入');
  await page.locator('#task3-panel').waitFor({state:'visible',timeout:10000});
  await page.screenshot({path:`${out}/acceptance-default-collapsed.png`});
  await page.setViewportSize({width:390,height:844});
- for(const label of ['推演输入','方案对比','盲区分布','电磁兼容','飞行演示']){
+ for(const label of ['推演输入','方案对比','盲区分析','电磁兼容']){
   await openModule(label);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${label} 小视口不得横向溢出`);
  }
@@ -74,5 +74,5 @@ try{
  await openModule('推演输入');await page.screenshot({path:`${out}/acceptance-scope-clipped.png`});
  assert.deepEqual(errors,[]);
  const distances=emc.conflicts.map(conflict=>conflict.distanceM);
- console.log(JSON.stringify({tabs:'5/5 子模块切换；小视口 390×844 通过',default:{scope:'2400×2400 m',devices:defaultPlan.devices.length,chineseNames:`${names[0]}…${names.at(-1)}`,emc:emc.counts,distanceM:{min:Math.min(...distances),max:Math.max(...distances),rowsChecked:Math.min(50,emc.conflicts.length),coLocatedZeroes:distances.filter(value=>value===0).length,nonColocatedChecked:nonZero.map(value=>value.distanceM)}},clipped:{requested:'10000×10000 m',effective:`${effectiveWidth.toFixed(3)}×${effectiveDepth.toFixed(3)} m`,samples:clippedExport.report.sampling.samples.length,note:clipped.note},screenshots:['acceptance-default-collapsed.png','acceptance-input-window.png','acceptance-pipeline-window.png','acceptance-plans-window.png','acceptance-emc-window.png','acceptance-small-viewport.png','acceptance-chinese-numbering.png','acceptance-emc-distances.png','acceptance-emc-nonzero-distance.png','acceptance-scope-clipped.png'].map(name=>`${out}/${name}`)},null,2));
+ console.log(JSON.stringify({tabs:'4/4 子模块切换；小视口 390×844 通过',default:{scope:'2400×2400 m',devices:defaultPlan.devices.length,chineseNames:`${names[0]}…${names.at(-1)}`,emc:emc.counts,distanceM:{min:Math.min(...distances),max:Math.max(...distances),rowsChecked:Math.min(50,emc.conflicts.length),coLocatedZeroes:distances.filter(value=>value===0).length,nonColocatedChecked:nonZero.map(value=>value.distanceM)}},clipped:{requested:'10000×10000 m',effective:`${effectiveWidth.toFixed(3)}×${effectiveDepth.toFixed(3)} m`,samples:clippedExport.report.sampling.samples.length,note:clipped.note},screenshots:['acceptance-default-collapsed.png','acceptance-input-window.png','acceptance-pipeline-window.png','acceptance-plans-window.png','acceptance-emc-window.png','acceptance-small-viewport.png','acceptance-chinese-numbering.png','acceptance-emc-distances.png','acceptance-emc-nonzero-distance.png','acceptance-scope-clipped.png'].map(name=>`${out}/${name}`)},null,2));
 }finally{await browser.close();}

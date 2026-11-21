@@ -10,6 +10,13 @@ const makeFixture=(samples,devices=[])=>({
  city:{buildings:[]},sampling:{samples,bounds:{west:-1500,east:1500,south:-1500,north:1500,core:[0,0,0]}},
  plan:{id:'balanced',name:'测试方案',devices,sites:devices.map((d,i)=>({id:`base-${i}`,position:[...d.position],installationProxy:1})),cost:devices.length*12,installationProxy:devices.length,coverage:Array.from({length:4},()=>samples.map(()=>0)),metrics:[],coverageContributions:{}},
 });
+
+test('移动补盲粗搜与细搜均排除禁部署建筑，即使地表查询将其误当开阔地',async()=>{
+ const fixture=makeFixture([sample('blocked',0,0)]);
+ fixture.city={buildings:[{id:'excluded',height:20,foundationDepth:0,rings:[[[-2000,0,-2000],[2000,0,-2000],[2000,0,2000],[-2000,0,2000],[-2000,0,-2000]]]}]};
+ const result=await repairPlanWithMobileRadars({...fixture,query:{...query,surfaceAt:()=>0},equipment,settings:{marginReserveDb:3,costs:{radar:12},buildingExclusions:{buildingIds:['excluded']}},environment:DEFAULT_ENV,target:DEFAULT_TARGET,adapters});
+ assert.equal(result.summary.addedDeviceCount,0);assert.equal(result.summary.search.validGroundCandidates,0);assert.deepEqual(result.plan.coverage,fixture.plan.coverage);
+});
 const query={
  groundAt:()=>0,surfaceAt:(x,z)=>z>500?20:0,
  trace:()=>({known:true,blocked:false,buildingCount:0,sensorGround:0,targetGround:0}),

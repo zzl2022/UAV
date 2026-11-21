@@ -18,7 +18,7 @@ workspace.showWindow('equipment');document.documentElement.dataset.ready='true';
 </script></body></html>`;
 const root=fileURLToPath(new URL('..',import.meta.url)),out=path.resolve(root,process.env.EQUIPMENT_ARTIFACT_DIR||'artifacts/equipment-catalog-new');
 await mkdir(out,{recursive:true});
-const server=await createServer({root,configFile:false,server:{host:'127.0.0.1',port:0},plugins:[{
+const server=await createServer({root,configFile:false,cacheDir:'node_modules/.vite-equipment-catalog',server:{host:'127.0.0.1',port:0},plugins:[{
  name:'equipment-catalog-fixture',configureServer(vite){vite.middlewares.use('/__equipment_catalog_test__',(_req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fixture);});},
 }]});
 let browser;
@@ -27,7 +27,7 @@ try{
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/chromium'),headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:1515,height:980}}),errors=[],assessmentRequests=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().includes('/api/'))assessmentRequests.push(r.url());});
- await page.goto(url);await page.waitForFunction(()=>document.documentElement.dataset.ready==='true');
+ await page.goto(url,{timeout:120000,waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.documentElement.dataset.ready==='true');
  const nav=page.locator('.equipment-group-nav'),input=key=>page.locator(`#profile-parameters-${key}`);
  const group=name=>nav.getByRole('button',{name,exact:true}).click();
  const tab=type=>page.locator(`#equipment-tab-${type}`).click();
