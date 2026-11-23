@@ -1,0 +1,585 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>设备建模核查与组会说明</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef2f7;color:#243449;font:16px/1.85 "Microsoft YaHei","Noto Sans CJK SC",sans-serif}main{max-width:1120px;margin:32px auto;background:white;border-radius:14px;padding:44px 58px;box-shadow:0 8px 30px #1a365d0a}h1{font-size:30px;color:#153650;line-height:1.45;margin:0 0 12px}h2{font-size:23px;margin:44px 0 16px;color:#153650;scroll-margin-top:20px}h3{font-size:19px;margin:30px 0 10px;color:#235274}p{margin:12px 0}strong{color:#173f60}a{color:#17629b;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}nav{background:#f1f6fb;border-radius:10px;padding:20px 24px;margin:26px 0}nav a{display:block;margin:4px 0;font-size:14px}nav strong{display:block;margin-bottom:8px}.meta,.small,figcaption{font-size:13px;color:#63748a}.meta{padding:12px 16px;background:#f7f9fc;border-radius:8px;overflow-wrap:anywhere}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13.5px;margin:18px 0;table-layout:fixed}th,td{padding:11px 12px;border:1px solid #dae2ec;vertical-align:top;text-align:left;overflow-wrap:anywhere;white-space:pre-line}th{background:#edf4fa;color:#244b6b;font-weight:700}tr:nth-child(even){background:#fafbfd}code{font-family:Consolas,monospace;font-size:.9em;background:#f0f4f8;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f1f6fa;padding:17px 20px;border-left:3px solid #4681aa;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7}pre code{background:none;padding:0;font-size:inherit}figure{margin:22px 0}svg{width:100%;height:auto;display:block}figcaption{text-align:center;margin-top:6px}li{margin:7px 0}details{border:1px solid #dce5ef;border-radius:8px;padding:12px 16px;margin:12px 0}summary{cursor:pointer;font-weight:700;color:#214f73}summary span{font-size:12px;font-weight:400;margin-left:12px;color:#63748a}.demo-defaults{background:#f8fafc}.appendix-intro{background:#eef6fb;border-radius:8px;padding:16px}input{font:inherit;width:100%;border:1px solid #a9bdce;padding:10px 14px;border-radius:7px;margin:14px 0}button{font:inherit;padding:8px 14px;border-radius:6px;background:#235d87;color:white;border:0;cursor:pointer;margin:0 8px 8px 0}.model table th:nth-child(1){width:18%}.model table th:nth-child(2){width:12%}.model table th:nth-child(3){width:10%}.model table th:nth-child(4){width:33%}.model table th:nth-child(5){width:27%}footer{font-size:12px;color:#6a798b;margin-top:36px;overflow-wrap:anywhere}@media(max-width:700px){main{margin:0;border-radius:0;padding:24px 18px}h1{font-size:26px}h2{font-size:21px}table{font-size:12px}th,td{padding:8px 7px}pre{padding:12px;font-size:12px}}@media print{@page{size:A4;margin:18mm}body{background:white;font-size:10.5pt;line-height:1.65}main{margin:0;padding:0;max-width:none;box-shadow:none}nav,.controls{display:none}h1{font-size:23pt}h2{font-size:17pt;break-after:avoid}h3{font-size:13pt;break-after:avoid}th{background:#eef3f8!important}table{font-size:8.5pt}tr,figure,pre{break-inside:avoid}a{color:inherit}details{border:0;padding:0}summary{font-size:12pt}table{table-layout:fixed}.table-scroll{overflow:visible}#appendix{break-before:page}}</style></head><body><main><div class="meta">核查日期：2026-11-23 · 当前提交：abe901c9ab8e6f62c71baf05bd65375d35dae78b<br>对比2026-11-18参数快照：内置环境、目标及9个型号档案均未变化。</div><nav aria-label="文档目录"><strong>阅读导航</strong><a href="#section-1">1. 汇报先讲的三个结论</a><a href="#section-2">2. 五项项目修改的当前状态</a><a href="#section-3">3. 光学设备近处为什么有空白</a><a href="#section-4">4. 六类设备：原理、公式和项目实现</a><a href="#section-5">5. 默认值在哪里起作用，是否合理</a><a href="#section-6">6. 组会可直接使用的讲述顺序</a><a href="#section-7">7. 代码与依据</a><a href="#section-8">8. 本轮验证记录</a><a href="#appendix">附录：207项设备参数与公共默认值</a></nav><h1>感知装备建模核查与组会说明</h1>
+<p>2026年11月23日 · 反无人机部署项目</p>
+<h2 id="section-1">1. 汇报先讲的三个结论</h2>
+<p><strong>光电近处空白主要可以由视场几何解释。</strong> 当前默认设备朝上看，近处低目标容易落在视场下缘以外；距离近、成像像素多，并不意味着目标一定在画面里。遮挡、地形缺失和采样显示还会产生其他空白，应分别判断。</p>
+<p><strong>六类设备的实现深度不同。</strong> 雷达、无线电和声学有简化信号预算；光电设备仿真展示几何像素和透射系数；5G-A只作几何示意，静电只作距离示意。彩色区域不能统一解释为“已检出区域”，更不能统一解释为实测概率。</p>
+<p><strong>默认值要按来源和计算路径解释。</strong> 资料标称、演示假设、资料缺失是三种情况。雷达默认能量预算尚未自洽重现8 km标称距离；无线电若干接收参数在参考距离反标定后抵消；光电焦距在当前设备仿真中没有直接驱动视场。这些都是组会应说明的实际模型边界。</p>
+<h2 id="section-2">2. 五项项目修改的当前状态</h2>
+<p>本轮以当前工作区为准逐项核查，以下功能已实现，未重复修改业务代码。</p>
+<table>
+<thead>
+<tr>
+<th>要求</th>
+<th>当前行为</th>
+<th>对应实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>统一目标尺寸名称</td>
+<td><code>size</code>为“等效可见尺寸”，<code>width_m</code>为“成像水平尺寸”，<code>height_m</code>为“成像垂直尺寸”；三个编辑入口采用相同表述</td>
+<td><code>presets.js</code>、<code>target-profiles.js</code>、<code>capability-ui.js</code>、<code>student-capabilities/ui.js</code></td>
+</tr>
+<tr>
+<td>地图选点后自动平面视角</td>
+<td>启动设备或目标选点时调用统一俯视取景；保留透视相机，观察方向变为俯视</td>
+<td><code>main.js/onPickView</code>、<code>sensors/ui.js</code>、<code>equipment-demo.js</code></td>
+</tr>
+<tr>
+<td>选中一个点后退出</td>
+<td>有效表面命中后清除选点标志，后续点击不再改变位置；未命中时保留选点；过滤右键和拖动</td>
+<td><code>sensors/ui.js</code>、<code>equipment-demo.js</code></td>
+</tr>
+<tr>
+<td>参数设置成功反馈</td>
+<td>目标合法修改后反馈已生效；环境点击应用后反馈成功；设备保存和400 ms防抖自动保存后反馈成功，失败时显示错误</td>
+<td><code>city-conditions.js</code>、<code>equipment-manager.js</code></td>
+</tr>
+<tr>
+<td>清理无效建模参数</td>
+<td>已从当前雷达、无线电编辑页移除被覆盖或代数抵消的11个字段，兼容字段仍保留在数据结构中</td>
+<td><code>equipment-catalog.js/INACTIVE_EDITOR_FIELDS</code></td>
+</tr>
+</tbody>
+</table>
+<p>尺寸没有强制改成机身“长宽高”，因为当前模型没有根据姿态求机身投影：水平、垂直尺寸是成像输入。机型预设中的原始数组仍为长×宽×高，预设选择时把最大水平尺寸赋给<code>size</code>，把宽、高赋给两个成像初值；这只是初值约定，不是任意观察方向的真实投影。</p>
+<p>现有参数清理清单：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>已隐藏的字段</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>雷达</td>
+<td><code>parameters.thresholdDb/referenceSnrDb/referenceRcs</code></td>
+<td>活动<code>physics</code>分支用能量方程和统计门限，覆盖旧参考距离公式；目标自身的<code>rcs</code>仍然有效</td>
+</tr>
+<tr>
+<td>无线电</td>
+<td><code>parameters.thresholdDb/referenceSnrDb/referenceEirpDbm/pathExponent</code></td>
+<td>活动分支改用自由空间预算与<code>physics</code>中的参考波形和统计门限</td>
+</tr>
+<tr>
+<td>无线电</td>
+<td><code>physics.rxGainDb/noiseFigureDb/receiverLossDb/bandwidthMHz</code></td>
+<td>每次反推处理增益后，在最终SNR中抵消；仍影响显示的中间功率或噪声量</td>
+</tr>
+</tbody>
+</table>
+<p>静态设备规格不作为“无用参数”整体删除。焦距、阵列规格、通信性能、功耗和工作温度仍有资料核对或选型用途；其是否进入当前场计算见附录逐项表。旧JSON和历史模型分支仍可读取这些兼容字段。</p>
+<h2 id="section-3">3. 光学设备近处为什么有空白</h2>
+<h3>3.1 默认设置给出的视场下缘</h3><figure><svg viewBox="0 0 900 405" role="img" aria-label="光电视场下缘与地面的交点示意，30米设备高度、正10度俯仰，地面交点约214米。">
+<defs><clipPath id="plot"><rect x="66" y="78" width="764" height="268"/></clipPath></defs>
+<rect width="900" height="405" rx="12" fill="#f5f8fc"/>
+<text x="32" y="34" font-size="18" font-weight="700" fill="#173452">同一平地的垂直剖面：近处目标可能在视场之外</text>
+<g clip-path="url(#plot)"><polygon points="66.0,259.0 830.0,-358.69999999999993 830.0,346.0 474.139732931878,346.0" fill="#d4e9fb"/>
+<polygon points="66.0,259.0 474.139732931878,346.0 66.0,346.0" fill="#fbe3d5"/>
+<line x1="66.0" y1="259.0" x2="830.0" y2="54.460702388000016" stroke="#4881b3" stroke-dasharray="7 5" stroke-width="2"/>
+<line x1="66.0" y1="259.0" x2="474.139732931878" y2="346.0" stroke="#ba5831" stroke-width="3"/></g>
+<line x1="66" y1="346" x2="850" y2="346" stroke="#63758b" stroke-width="2"/>
+<line x1="66" y1="346" x2="66" y2="78" stroke="#63758b"/>
+<circle cx="66.0" cy="259.0" r="6" fill="#173452"/>
+<circle cx="474.139732931878" cy="346" r="5" fill="#ba5831"/>
+<text x="83" y="245" font-size="15" fill="#173452">设备 · 30 m</text>
+<text x="292" y="193" font-size="17" fill="#276495">视场内（局部）</text>
+<text x="470" y="264" font-size="14" fill="#276495">光轴 +10°</text>
+<text x="230" y="292" font-size="14" fill="#9a4326">下缘 −7.99°</text>
+<text x="112" y="330" font-size="14" fill="#9a4326">近地视场外</text>
+<text x="440.139732931878" y="372" font-size="14" fill="#9a4326">约214 m</text>
+<text x="792" y="372" font-size="14" fill="#52647a">400 m</text>
+<text x="25" y="75" font-size="13" fill="#52647a">高度</text>
+<text x="660" y="395" font-size="13" fill="#52647a">水平距离（非斜距）</text>
+</svg><figcaption>60°水平视场、1920×1080图像。示意图仅表达视场几何；地表本身在体素模型中被标记为实体边界。</figcaption></figure>
+<p>当前“设备仿真”的光电默认安装高度为所选表面上方30 m，俯仰为+10°；可见光分辨率为1920×1080。档案没有实际水平视场时，仿真使用60°回退假设。由图像比例推算垂直视场：</p>
+<pre><code class="language-text">θv = 2 atan[tan(θh/2) × Ny/Nx]
+θlow = pitch − θv/2
+rnear = (hdevice − htarget) / tan(−θlow)
+</code></pre>
+<p>最后一式仅适用于同一水平基准、目标低于设备且视场下缘向下的情形。代入60°、1920×1080，垂直视场约35.98°，下缘约−7.99°。设备离地30 m、目标在同一平地高度时，下缘约在水平214 m处接地。因此近处低空区域可以在视场外，较远处反而进入视场。</p>
+<p>这不是固定214 m的球形盲区。提高目标高度、降低设备安装高度或减小俯仰角都会改变近地交点。表面选在屋顶时，“上方30 m”从屋顶起算，不能一律解释为距地面30 m。模型也将地面和实体内部采样标记为不绘制，以上地面交点用于说明几何边界，不表示地表本身是有效体素。</p>
+<p>热成像缺失水平视场时也回退为60°；640×512对应约49.58°垂直视场，同一平地例子的交点约114 m。旧部署预设的9°热视场并非此处正在使用的默认值。</p>
+<h3>3.2 其他空白的含义</h3>
+<table>
+<thead>
+<tr>
+<th>原因</th>
+<th>当前实现</th>
+<th>如何判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>超出视场、半径或被实体遮挡</td>
+<td>硬排除，<code>mask=2</code></td>
+<td>显示范围线框；切换“视线可达”；比较俯仰10°、0°和负值</td>
+</tr>
+<tr>
+<td>地形或路径信息不足</td>
+<td>未知，<code>mask=0</code></td>
+<td>查看DEM覆盖和探针状态；不能称为确定未检出</td>
+</tr>
+<tr>
+<td>实体内部或地面以下</td>
+<td><code>mask=3</code></td>
+<td>检查设备与目标相对建筑、地形的位置</td>
+</tr>
+<tr>
+<td>超过离地高度上限</td>
+<td><code>mask=4</code></td>
+<td>核对仿真的800 m默认高度上限</td>
+</tr>
+<tr>
+<td>采样稀疏</td>
+<td>光电请求水平25 m、垂直12.5 m，总点数上限24000，实际间距可能自动放大</td>
+<td>缩小仿真范围，核对实际网格；边界分辨率不等于设备精度</td>
+</tr>
+<tr>
+<td>显示过滤</td>
+<td>像素默认显示下限1 px；剖切<code>clip&lt;1</code>隐藏部分区域</td>
+<td>把剖切恢复为1，检查指标和显示下限；表面模式只画门限边界</td>
+</tr>
+</tbody>
+</table>
+<p>当前仿真没有最短对焦距离、近距失焦或镜头遮光模型；目录<code>minRange</code>为空时按0处理。因此不能用“相机近处无法对焦”解释当前代码产生的空白，也不应为填满画面而直接删除视场门限。</p>
+<h2 id="section-4">4. 六类设备：原理、公式和项目实现</h2>
+<p>以下距离以m计，<code>log</code>为以10为底的对数。电磁频率代入传播公式时换为Hz，带宽换为Hz，线性增益与dB增益不可混用。</p>
+<h3>4.1 雷达：主动发射，接收目标回波</h3>
+<p>重点是<strong>回波功率随距离四次方衰减</strong>，目标RCS、发射能量和积累决定信号预算。基本测距原理为<code>r=cΔt/2</code>，但平台没有处理真实回波波形；活动模型计算：</p>
+<pre><code class="language-text">SNRlin = Pt τ Gt Gr λ² σ N / [(4π)³ r⁴ k T0 F L]
+SNRdB = 10 log(SNRlin) − ΣLscene
+Rblind = c(τ + tswitch)/2
+Lrain = 2(r/1000) kR rain^α
+SNRreq = 10 log[ln(Pfa)/ln(Pdreq) − 1]
+Pdmodel = Pfa^[1/(1 + 10^(SNRdB/10))]
+</code></pre>
+<p><code>Pt</code>为峰值功率，<code>τ</code>为脉宽，<code>Gt/Gr</code>为线性收发增益，<code>σ</code>为目标RCS，<code>N</code>为积累脉冲数，<code>T0=290 K</code>，<code>F/L</code>为线性噪声系数/系统损耗。雨衰乘2表示往返路径。建筑、视场、距离、容量等另外作门控。统计Pd映射依赖模型假设，不是实测检出率。[1]</p>
+<p>实现入口为<code>engine.js/evaluate → physics.js/radarSnr</code>；双径、立面和杂波采用简化代理，没有完整求解电磁散射。</p>
+<h3>4.2 无线电：被动接收无人机发射链路</h3>
+<p>重点是<strong>目标必须发射、频段匹配，接收信号要超过模型门限</strong>。本项目的参考距离标定公式为：</p>
+<pre><code class="language-text">FSPL(r,f) = 20 log(4πrf/c)
+Pr = EIRP + Gr − Lrx − FSPL(r,f)
+Nnoise = −174 + NF + 10 log(BHz)
+Gproc = SNRreq − (Prref − Nnoise)
+SNR = Pr − Nnoise + Gproc − Lscene
+</code></pre>
+<p>代数化简后，最终裕量为：</p>
+<pre><code class="language-text">Margin = EIRP − EIRPref + FSPL(Rref,fref) − FSPL(r,f) − Lscene
+</code></pre>
+<p>因此接收增益、NF、接收损耗和带宽在当前“每次重新反标定”的最终裕量中抵消。这是参考距离的相对比较模型，不能用它研究固定接收机带宽变化造成的真实灵敏度变化。<code>Pfa/Pdreq</code>会平移SNR标尺并改变统计概率映射，但在此标定机制下也不独立改变未考虑跳频捕获时的裕量边界。</p>
+<p>跳频捕获代理为<code>Pcapture=1−exp(−Tobs/Thop)</code>，与统计Pd相乘。TDOA原理为<code>|x−si|−|x−sj|=cΔtij</code>，但平台没有解算真实站间时差，只在给定站数≥4时输出参考定位误差与GDOP的估计。实现入口为<code>engine.js/evaluate → physics.js/radioBudget</code>。</p>
+<h3>4.3 光电：视场内目标投影到图像</h3>
+<p>重点是<strong>先在视场内，再谈像素与成像质量</strong>。针孔近似中：</p>
+<pre><code class="language-text">θh = 2 atan(Sw/2f)
+px = Nx Wproj / [2z tan(θh/2)]
+Tvis = exp[−3.912r/(1000Vkm)]
+Train = 10^[−krain rain (r/1000)/20]
+</code></pre>
+<p><code>Sw</code>是传感器有效宽度，<code>f</code>是焦距，<code>z</code>是相机光轴方向深度；目标投影假设与像平面平行。增大焦距会缩小视场并增加同距离目标像素。[2] 当前三条代码路径须分开汇报：</p>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>实际计算</th>
+<th>关键区别</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>当前设备仿真</td>
+<td>视场、遮挡、水平像素、透射系数</td>
+<td>使用独立仿真水平视场和斜距<code>r</code>近似；像素没有乘透射率，焦距不直接驱动视场，不作识别判定</td>
+</tr>
+<tr>
+<td>部署/简化JS评估</td>
+<td>有效像素=几何像素×照度或热对比×透射系数，再比较<code>requiredPixels</code></td>
+<td>使用<code>size</code>及宽/窄/热视场预设；这是一套未标定识别代理</td>
+</tr>
+<tr>
+<td>Python资料核对</td>
+<td>由传感器尺寸和焦距或直接视场推导视场，用光轴深度<code>z</code>计算水平和垂直像素</td>
+<td>默认缺实际传感器尺寸/视场、识别像素门限，相关结果为空；显式假设后才继续推算</td>
+</tr>
+</tbody>
+</table>
+<p>因此，调工作焦距而当前仿真范围不变，是这条实现路径的结果；“35 cm目标可识别”的资料陈述缺少距离和环境，不能据此推成2000 m识别保证。</p>
+<h3>4.4 声学：接收旋翼和电机声音</h3>
+<p>重点是<strong>声源级减传播损耗，再减环境噪声</strong>。当前设备仿真计算：</p>
+<pre><code class="language-text">Lreceived = Lsource,1m − 20 log(max(1,r)) − αair r/1000
+            − nbuilding Lwall − Ldiffraction − Lreflection − Lrefraction
+Lnoise = 10 log[Σi 10^(Li/10)]
+SNR = Lreceived − Lnoise
+Margin = SNR − thresholdDb
+csound = 331.3 + 0.606 T°C + windSpeed
+</code></pre>
+<p>噪声按功率叠加，不能直接相加dB。建筑遮挡增加有限损失，而不是像光电一样直接置零。反射默认关闭；开启后才计算相应反射项。风速公式是沿传播方向的一维代理，并非完整风场折射求解。</p>
+<p>项目没有实录声波输入或真实阵列波束形成。Python资料核对另用空气、风、雨的线性距离损耗及12 dB遮挡代理；质量<code>Q=clip[(SNR−SNRzero)/(SNRfull−SNRzero),0,1]</code>不是检出概率。两套参数不能混算。</p>
+<h3>4.5 5G-A：通信波形兼顾环境感知</h3>
+<p>通感一体化通过通信信号及回波获得测距、测角和测速能力。[4] 单站原理可用<code>r=cτ/2</code>、<code>vr=λfd/2</code>说明，但平台没有实现时延、多普勒或阵列角度估计。</p>
+<p>当前A9650 S49仿真只用方位、俯仰、水平/垂直张角、视线遮挡和独立仿真半径，展示距离或可达性；没有SNR、Pd或实际定位精度计算。目录的覆盖距离、业务高度和通信规格不能被理解为已经进入感知信号预算。</p>
+<h3>4.6 静电：接收目标电场变化</h3>
+<p>理想点电荷原理为<code>E=|Q|/(4πεr²)</code>。真实近地电场还取决于电荷分布、介质、接地和背景场；仅凭距离无法预测设备检出能力。</p>
+<p>项目没有目标电荷、背景电场和灵敏度输入。当前CRSC-ER-1仿真只显示距离及<code>r/R</code>，不进行电场求解或实体遮挡追踪，不输出检出概率。厂商标称距离≥100 m、响应≤80 ms、静态功耗≤50 mW，分别不是最大量程、更新周期和工作功耗。[5]</p>
+<h2 id="section-5">5. 默认值在哪里起作用，是否合理</h2>
+<h3>5.1 雷达：可用于趋势演示，8 km能力尚未自洽</h3>
+<table>
+<thead>
+<tr>
+<th>参数组</th>
+<th>当前默认值</th>
+<th>作用与判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>两型距离</td>
+<td>02C、03D均8000 m</td>
+<td>资料下限被取作模型裁剪上限，不是独立算出的距离</td>
+</tr>
+<tr>
+<td>02C物理参数</td>
+<td>9.4 GHz、1000 W、2 μs、切换1 μs、收发各35 dB、NF 3 dB、系统损耗4 dB、128脉冲</td>
+<td>进入波长、能量预算和盲区；具体物理值为假设，未标定</td>
+</tr>
+<tr>
+<td>03D物理参数</td>
+<td>15 GHz、2200 W、收发各38 dB、NF 4 dB、40脉冲，其余同上</td>
+<td>同上，不能称为型号实测硬件参数</td>
+</tr>
+<tr>
+<td>检出门限</td>
+<td>Pfa=10⁻⁶、Pdreq=0.9</td>
+<td>对应约21.14 dB统计SNR门限，是模型选择</td>
+</tr>
+<tr>
+<td>传播</td>
+<td>杂波3 dB、雨衰k=0.01、α=1.2、反射幅度0.4</td>
+<td>杂波和雨衰为简化假设；设备仿真反射默认关闭</td>
+</tr>
+</tbody>
+</table>
+<p>用目标RCS=0.01 m²、斜距8000 m、不计传播损耗复算：02C约22.03 dB、03D约21.35 dB；减默认3 dB杂波后约19.03和18.35 dB，均低于21.14 dB。由2 μs脉宽和1 μs切换时间还得到约449.69 m盲区，因此编辑页50 m近距下限并不能使450 m以内可探测。</p>
+<p>合理性结论：默认参数有演示用途，不能认定为已验证8 km检出能力。雨衰系数应按频率、极化等选取，ITU-R P.838给出对应方法；当前两型共用系数只适合敏感性试算。[3] 后续应按指定RCS、环境和实测SNR/Pd曲线标定，而非只改显示半径。</p>
+<h3>5.2 无线电：标称距离的相对标定依赖参考波形</h3>
+<p>TDOA-X1B、mini、X1C默认4000、1250、3500 m，是资料范围2–6 km、0.5–2 km、2–5 km的中值；是参考选值，不是统计均值或保证距离。参考波形取5.8 GHz、25.5 dBm，目标取2.4 GHz、20 dBm。同距离时频率差带来约+7.66 dB，功率差−5.5 dB，净裕量约+2.16 dB；结论显著依赖该假设。</p>
+<p>默认观测0.1 s、驻留0.01 s给出捕获代理约0.999955，几乎不构成限制；墙损15 dB/栋、20 MHz离散频点半带宽和反射幅度0.4尚无场景标定。4站、GDOP=1是有利网络条件；20/20/10 m参考定位误差不是本平台求解真实站网后的验证结果。</p>
+<p>合理性结论：适合在共同参考条件下比较位置和信号变化；不足以作为真实接收灵敏度、跳频捕获率和定位精度证明。</p>
+<h3>5.3 光电：分辨率有资料，视场和识别门限仍缺失</h3>
+<p>1920×1080、640×512、可见光6.5–312 mm和热成像75 mm来自项目资料转录。目录中最大/最近距离、宽/窄/热视场、最低照度及识别像素门限保留空值，符合资料缺项。当前仿真回退60°，半径400 m、仰角10°、安装高度30 m是展示假设。</p>
+<p>部署简化模型另有2000 m上限、60°/2°/9°视场、0.1 lux、8 px和雨衰0.03的假设。35 cm目标在可见光1920 px、60°视场下，忽略大气时达到8 px只约72.75 m；窄2°时理想值约2406 m，随后受2000 m裁剪和传播衰减限制。2000 m不是宽视场识别距离。</p>
+<p>Python显式假设示例另取可见光传感器6.4×3.6 mm、12 px；热成像10.88×8.704 mm、6 px。这些值与前端8 px属于不同试算配置。合理性结论：资料值可作规格约束，展示假设可演示几何变化；识别距离需要真实视场、传感器和识别样本补齐后标定。</p>
+<h3>5.4 声学：500 m默认点处在临界预算附近</h3>
+<p>0.01–500 m、28–132 dB、最高40 dB动态范围、110 cm阵列的20 Hz–20 kHz来自项目资料转录，测试目标和声学计权条件仍须保留。94°×76°未确认为声学波束，当前设备仿真按全向处理；旧简化部署预设仍有该角度约束，不能把两条路径的覆盖画面混作同一物理结论。</p>
+<p>当前假设声源100 dB SPL@1m；参考背景35、交通35、施工20、人群25、风噪20、雨噪20 dB，合成约38.41 dB。空气吸收3 dB/km、门限6 dB，在500 m、无遮挡且不加其他损失时，接收约44.52 dB、裕量约+0.11 dB。噪声略升即可能低于阈值。</p>
+<p>合理性结论：这是临界场景演示，不能证明任意无人机均能探测500 m。还需目标声谱、频带/计权一致的噪声测量和检出门限标定。Python默认0.001 dB/m空气损耗、风/雨代理和−10至+10 dB的Q范围，不能与前端3 dB/km、6 dB判据混用。</p>
+<h3>5.5 5G-A与静电：资料规格与展示范围分开</h3>
+<p>5G-A目录保存1500 m以上、600 m以上、65°、128通道和通信空间流等资料转录。仿真另取1500 m半径、120°水平张角、+10°俯仰；65°仅作为初始垂直张角。业务高度600 m没有裁剪仿真高度，仿真仍默认800 m上限。合理性结论：几何展示可用，不能据此验证真实感知距离或定位精度。中兴官网方案族的现有技术说明，也不能自动替代A9650 S49型号参数。[4]</p>
+<p>静电默认展示100 m半径；≥100 m标称距离、≤80 ms响应、≤50 mW静态功耗及−25至60℃工作温度属于规格资料。[5] 这些值没有构成当前电场预算。合理性结论：100 m只可作为距离示意，缺电荷、背景和噪声灵敏度时无法验证检出边界。</p>
+<h3>5.6 公共目标、环境与可视化参数</h3>
+<table>
+<thead>
+<tr>
+<th>默认设置</th>
+<th>作用位置</th>
+<th>判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>尺寸0.35 m、RCS 0.01 m²、EIRP 20 dBm、声源100 dB@1m、热对比0.8</td>
+<td>分别用于光学、雷达、无线电、声学、简化热成像</td>
+<td>独立目标假设；几何外形不会自动推导其他签名，切换机型也不会自动标定它们</td>
+</tr>
+<tr>
+<td>无雨、20 km能见度、500 lux、20℃、沿传播风速0</td>
+<td>对应传播、照度与声速</td>
+<td>有利基准，不代表城市全天候环境；光电当前几何像素指标不受照度影响</td>
+</tr>
+<tr>
+<td>电磁底噪抬升/同频干扰/串扰均0 dB</td>
+<td>雷达/无线电附加损失</td>
+<td>表示不增加这些损失，不等于真实城市没有背景干扰</td>
+</tr>
+<tr>
+<td>六类展示半径1500/1000/400/500/1500/100 m</td>
+<td>按雷达/无线电/光电/声学/5G-A/静电顺序限制仿真区域</td>
+<td>计算范围选择，不能替代标称量程</td>
+</tr>
+<tr>
+<td>安装高度30 m、离地上限800 m、最多24000点</td>
+<td>点位、体素区域和计算成本</td>
+<td>展示设置；自动放大网格可能掩盖局部结构</td>
+</tr>
+<tr>
+<td>反射默认关闭、剖切1、像素显示下限1 px</td>
+<td>传播项开关和显示过滤</td>
+<td>关闭时反射系数不影响当前仿真，显示下限不是识别像素门限</td>
+</tr>
+</tbody>
+</table>
+<h2 id="section-6">6. 组会可直接使用的讲述顺序</h2>
+<ol>
+<li>用光电30 m高度、+10°俯仰和视场下缘示例，解释“近处不一定进入画面”。</li>
+<li>依次讲雷达四次方回波衰减、无线电链路预算、光学视场与像素、声学声源减损耗减噪声。</li>
+<li>说明5G-A和静电目前只到几何/距离示意层；原理公式不等于已实现完整信号模型。</li>
+<li>用雷达8 km预算和声学500 m临界裕量说明默认值需要标定，展示参数逐项表中“有效、条件生效、静态规格、兼容隐藏”的区别。</li>
+</ol>
+<h2 id="section-7">7. 代码与依据</h2>
+<p>实际数值快照、当前提交号、各型号逐项默认值及作用位置见本文HTML版附录和同目录<code>default-parameters.json</code>。快照读取内置默认配置，用户浏览器中已保存的自定义参数可能覆盖默认值。</p>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>项目文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目录字段、空值与编辑分组</td>
+<td><code>src/sensors/equipment-catalog.js</code>、<code>equipment-models.js</code></td>
+</tr>
+<tr>
+<td>简化默认值、目标与环境</td>
+<td><code>src/sensors/presets.js</code>、<code>target-profiles.js</code></td>
+</tr>
+<tr>
+<td>雷达和无线电预算</td>
+<td><code>src/sensors/physics.js</code>、<code>engine.js</code></td>
+</tr>
+<tr>
+<td>设备仿真与空白区域</td>
+<td><code>src/sensors/equipment-demo-model.js</code>、<code>equipment-demo.js</code>、<code>volume.js</code>、<code>volume-renderer.js</code></td>
+</tr>
+<tr>
+<td>资料核对与默认假设</td>
+<td><code>equipment_models/optical/config</code>、<code>equipment_models/acoustic/config</code>及各自<code>src</code></td>
+</tr>
+<tr>
+<td>原始装备资料的项目内转录依据</td>
+<td>两个模块的<code>docs/*data_inventory.md</code>与YAML中的来源记录；资料标称不等于现场实测</td>
+</tr>
+</tbody>
+</table>
+<p>外部原理依据：</p>
+<ul>
+<li>[1] <a href="https://www.mathworks.com/help/radar/ref/radareqsnr.html">MathWorks：radareqsnr雷达信噪比方程</a>。支持基本能量依赖关系，不为本项目型号假设背书。</li>
+<li>[2] <a href="https://www.edmundoptics.com/knowledge-center/application-notes/imaging/understanding-focal-length-and-field-of-view/">Edmund Optics：焦距与视场关系</a>。支持针孔/镜头几何关系，不证明实际识别距离。</li>
+<li>[3] <a href="https://www.itu.int/rec/R-REC-P.838-3-200503-I">ITU-R P.838-3：雨衰模型</a>。系数取决于频率与极化；本项目尚未按该方法为型号标定。</li>
+<li>[4] <a href="https://www.zte.com.cn/china/solutions_latest/5g-advanced/synaesthesia.html">中兴通讯：通感算控一体化方案</a>。用于原理核对，型号默认值仍以当前目录来源记录为准。</li>
+<li>[5] <a href="https://dk.crsc.cn/thdk/zyyw/znkjcp/wrj/2026/4/I1491750685232857088.html">通号低空：CRSC-ER-1产品页</a>。用于核对静电标称距离、响应、静态功耗与温度的限定含义。</li>
+</ul>
+<h2 id="section-8">8. 本轮验证记录</h2>
+<p>2026年11月23日，<code>npm test</code>通过164项，0失败、0跳过；<code>npm run build</code>通过。现有测试包含雷达隐藏旧字段不改变能量结果、真实目标RCS仍有效、无线电接收常数抵消、光电近地空白随俯仰改变、六类设备指标与掩码等验证。</p>
+<p>交互代码确认已有单次选点、同步俯视与成功反馈。本轮Edge无头浏览器在启动阶段退出；备用浏览器连接本地服务超时，未完成新的页面端回归。<code>python -m pytest backend/test_capabilities.py -q</code>有20项通过，1项HTTP测试因系统拒绝本地套接字连接（WinError 10013）失败；光电/声学独立模型测试因缺少GeoPandas等依赖未完成收集，不能计为通过。2026年11月18日既有浏览器通过记录保留为历史记录，不作为本轮新验证。</p>
+<p>本轮仅补充可追溯的核查文档与当前默认值快照，未重复改动已完成的业务功能，未修改设备物理默认值。</p>
+<h2 id="appendix">附录：当前默认参数逐项对照</h2><p class="appendix-intro">9个内置型号，共207个目录字段。档案默认值来自当前代码，不读取浏览器保存参数。“兼容隐藏”字段已从当前编辑页移除；资料规格、当前仿真有效参数和条件生效参数均在作用列区分。最大距离、参考距离和展示半径不得混用。</p><div class="controls"><label for="filter">筛选参数</label><input id="filter" type="search" placeholder="输入型号、字段、中文名称或作用"><button id="expand" type="button">展开全部</button><button id="collapse" type="button">收起全部</button></div><details class="model"><summary>02C 三坐标雷达 <span>28项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>8000 m</td><td>资料</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>50 m</td><td>假设</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>方位覆盖角
+parameters.azimuthFov</td><td>360 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎方位覆盖裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>相对最低俯仰
+parameters.elevationMin</td><td>0 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎相对俯仰下界。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>相对最高俯仰
+parameters.elevationMax</td><td>40 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎相对俯仰上界。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>500 个</td><td>资料</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>3 s</td><td>资料</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>标称距离参考信噪比
+parameters.referenceSnrDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；旧参考距离分支参数；活动雷达/无线电physics分支覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>工作频率
+parameters.frequencyGHz</td><td>9.4 GHz</td><td>假设</td><td>雷达波长、地面双径与立面反射相位。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考 RCS
+parameters.referenceRcs</td><td>0.01 m²</td><td>假设</td><td>兼容隐藏；旧雷达参考距离缩放；活动能量方程不使用该参考值。真实目标rcs仍有效。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>雨衰系数 k
+parameters.rainCoefficient</td><td>0.01 dB/km</td><td>假设</td><td>雷达往返雨衰系数，当前不随频率或极化自动变化。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>雨衰指数 α
+parameters.rainExponent</td><td>1.2</td><td>假设</td><td>雷达雨衰幂指数。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.4</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>城市杂波附加损耗
+parameters.clutterDb</td><td>3 dB</td><td>假设</td><td>雷达附加杂波损失，进入SNR。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考距离误差
+parameters.rangeAccuracy</td><td>8 m</td><td>资料</td><td>JS雷达距离误差退化、反射虚警可分辨性参考；不控制当前设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考方位误差
+parameters.azimuthAccuracy</td><td>0.6 °</td><td>资料</td><td>JS雷达参考方位误差及退化；不控制设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考俯仰误差
+parameters.elevationAccuracy</td><td>0.4 °</td><td>资料</td><td>JS雷达/声学参考俯仰误差及退化；声学目录默认缺失，不控制设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>峰值发射功率
+physics.peakPowerW</td><td>1000 W</td><td>假设</td><td>雷达发射能量，与脉宽、增益、RCS和脉冲数共同进入radarSnr。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>脉宽
+physics.pulseWidthUs</td><td>2 μs</td><td>假设</td><td>雷达脉冲能量和物理盲区；μs转换为s。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>收发切换时间
+physics.switchTimeUs</td><td>1 μs</td><td>假设</td><td>雷达收发切换盲区；不进入发射能量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>发射增益
+physics.txGainDb</td><td>35 dB</td><td>假设</td><td>雷达能量方程发射增益，转换为线性。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>接收增益
+physics.rxGainDb</td><td>35 dB</td><td>假设</td><td>雷达能量方程接收增益；无线电参考反标定后在最终SNR中抵消。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>噪声系数
+physics.noiseFigureDb</td><td>3 dB</td><td>假设</td><td>雷达等效噪声因子；无线电影响中间噪声，参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>系统损耗
+physics.systemLossDb</td><td>4 dB</td><td>假设</td><td>雷达能量方程的系统损耗。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相参积累脉冲数
+physics.pulses</td><td>128 个</td><td>假设</td><td>雷达假设相参积累能量增益N，未模拟积累失配。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>假设虚警概率
+physics.pfa</td><td>1e-06</td><td>假设</td><td>requiredSnr门限与统计Pd映射；无线电参考反标定也同步改变门限，不独立改变最终裕量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型检出概率门限
+physics.pdRequired</td><td>0.9</td><td>假设</td><td>requiredSnr门限及统计Pd判定；无线电FHSS还乘捕获代理后判断。</td><td>演示/代理假设，须按设备和场景标定。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>02C 三坐标雷达 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1500</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>360</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>03D 三坐标雷达 <span>28项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>8000 m</td><td>资料</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>50 m</td><td>假设</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>方位覆盖角
+parameters.azimuthFov</td><td>360 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎方位覆盖裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>相对最低俯仰
+parameters.elevationMin</td><td>0 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎相对俯仰下界。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>相对最高俯仰
+parameters.elevationMax</td><td>60 °</td><td>资料</td><td>雷达/无线电设备仿真及JS引擎相对俯仰上界。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>500 个</td><td>资料</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>2 s</td><td>资料</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>标称距离参考信噪比
+parameters.referenceSnrDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；旧参考距离分支参数；活动雷达/无线电physics分支覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>工作频率
+parameters.frequencyGHz</td><td>15 GHz</td><td>假设</td><td>雷达波长、地面双径与立面反射相位。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考 RCS
+parameters.referenceRcs</td><td>0.01 m²</td><td>假设</td><td>兼容隐藏；旧雷达参考距离缩放；活动能量方程不使用该参考值。真实目标rcs仍有效。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>雨衰系数 k
+parameters.rainCoefficient</td><td>0.01 dB/km</td><td>假设</td><td>雷达往返雨衰系数，当前不随频率或极化自动变化。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>雨衰指数 α
+parameters.rainExponent</td><td>1.2</td><td>假设</td><td>雷达雨衰幂指数。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.4</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>城市杂波附加损耗
+parameters.clutterDb</td><td>3 dB</td><td>假设</td><td>雷达附加杂波损失，进入SNR。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考距离误差
+parameters.rangeAccuracy</td><td>6 m</td><td>资料</td><td>JS雷达距离误差退化、反射虚警可分辨性参考；不控制当前设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考方位误差
+parameters.azimuthAccuracy</td><td>0.3 °</td><td>资料</td><td>JS雷达参考方位误差及退化；不控制设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考俯仰误差
+parameters.elevationAccuracy</td><td>0.3 °</td><td>资料</td><td>JS雷达/声学参考俯仰误差及退化；声学目录默认缺失，不控制设备仿真标量场。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>峰值发射功率
+physics.peakPowerW</td><td>2200 W</td><td>假设</td><td>雷达发射能量，与脉宽、增益、RCS和脉冲数共同进入radarSnr。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>脉宽
+physics.pulseWidthUs</td><td>2 μs</td><td>假设</td><td>雷达脉冲能量和物理盲区；μs转换为s。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>收发切换时间
+physics.switchTimeUs</td><td>1 μs</td><td>假设</td><td>雷达收发切换盲区；不进入发射能量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>发射增益
+physics.txGainDb</td><td>38 dB</td><td>假设</td><td>雷达能量方程发射增益，转换为线性。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>接收增益
+physics.rxGainDb</td><td>38 dB</td><td>假设</td><td>雷达能量方程接收增益；无线电参考反标定后在最终SNR中抵消。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>噪声系数
+physics.noiseFigureDb</td><td>4 dB</td><td>假设</td><td>雷达等效噪声因子；无线电影响中间噪声，参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>系统损耗
+physics.systemLossDb</td><td>4 dB</td><td>假设</td><td>雷达能量方程的系统损耗。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相参积累脉冲数
+physics.pulses</td><td>40 个</td><td>假设</td><td>雷达假设相参积累能量增益N，未模拟积累失配。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>假设虚警概率
+physics.pfa</td><td>1e-06</td><td>假设</td><td>requiredSnr门限与统计Pd映射；无线电参考反标定也同步改变门限，不独立改变最终裕量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型检出概率门限
+physics.pdRequired</td><td>0.9</td><td>假设</td><td>requiredSnr门限及统计Pd判定；无线电FHSS还乘捕获代理后判断。</td><td>演示/代理假设，须按设备和场景标定。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>03D 三坐标雷达 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1500</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>360</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>TDOA-X1B <span>28项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>4000 m</td><td>假设</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>0 m</td><td>假设</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>方位覆盖角
+parameters.azimuthFov</td><td>360 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎方位覆盖裁剪。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最低俯仰
+parameters.elevationMin</td><td>-90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰下界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最高俯仰
+parameters.elevationMax</td><td>90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰上界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>35 个</td><td>假设</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>1 s</td><td>假设</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考信噪比
+parameters.referenceSnrDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；旧参考距离分支参数；活动雷达/无线电physics分支覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>最低接收频率
+parameters.bandMinGHz</td><td>0.1 GHz</td><td>资料</td><td>无线电接收频率下界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>最高接收频率
+parameters.bandMaxGHz</td><td>6 GHz</td><td>资料</td><td>无线电接收频率上界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考路径损耗指数
+parameters.pathExponent</td><td>2.7</td><td>假设</td><td>兼容隐藏；仅旧无线电参考模型使用；活动physics自由空间分支取距离指数2。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>每栋建筑穿透损耗
+parameters.wallLossDb</td><td>15 dB</td><td>假设</td><td>每栋相交建筑的额外损耗，进入无线电/声学预算。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考发射 EIRP
+parameters.referenceEirpDbm</td><td>20 dBm</td><td>假设</td><td>兼容隐藏；parameters中的旧参考EIRP被活动physics字段覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.4</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考 TDOA 网络定位误差
+parameters.networkAccuracy</td><td>20 m</td><td>资料</td><td>给定≥4站/GDOP时的参考定位误差，未解算真实时差。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>离散频点接收半带宽
+parameters.bandToleranceMHz</td><td>20 MHz</td><td>假设</td><td>X1C离散频点半带宽，其他无线电型号不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考测向误差
+parameters.bearingAccuracy</td><td>2 °</td><td>假设</td><td>JS无线电/声学参考测向误差；不控制当前设备仿真标量场。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>噪声系数
+physics.noiseFigureDb</td><td>4 dB</td><td>假设</td><td>兼容隐藏；雷达等效噪声因子；无线电影响中间噪声，参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>接收天线增益
+physics.rxGainDb</td><td>2 dBi</td><td>假设</td><td>兼容隐藏；雷达能量方程接收增益；无线电参考反标定后在最终SNR中抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>检测信道带宽
+physics.bandwidthMHz</td><td>20 MHz</td><td>假设</td><td>兼容隐藏；无线电中间热噪声带宽；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>馈线与失配损耗
+physics.receiverLossDb</td><td>2 dB</td><td>假设</td><td>兼容隐藏；无线电中间接收功率/参考功率；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>反推参考波形频率
+physics.referenceFrequencyGHz</td><td>5.8 GHz</td><td>假设</td><td>无线电标称距离的参考波形自由空间损耗。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>反推参考波形 EIRP
+physics.referenceEirpDbm</td><td>25.5 dBm</td><td>假设</td><td>无线电反标定所用参考波形EIRP；活动分支真正使用此字段。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>假设虚警概率
+physics.pfa</td><td>0.0001</td><td>假设</td><td>requiredSnr门限与统计Pd映射；无线电参考反标定也同步改变门限，不独立改变最终裕量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型检出概率门限
+physics.pdRequired</td><td>0.9</td><td>假设</td><td>requiredSnr门限及统计Pd判定；无线电FHSS还乘捕获代理后判断。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频观测窗口
+physics.observationSeconds</td><td>0.1 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理观测窗口。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频驻留周期
+physics.hopSeconds</td><td>0.01 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理驻留时间。</td><td>演示/代理假设，须按设备和场景标定。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>TDOA-X1B · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1000</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>360</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>OA-X1Bmini <span>28项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>1250 m</td><td>假设</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>0 m</td><td>假设</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>方位覆盖角
+parameters.azimuthFov</td><td>360 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎方位覆盖裁剪。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最低俯仰
+parameters.elevationMin</td><td>-90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰下界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最高俯仰
+parameters.elevationMax</td><td>90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰上界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>30 个</td><td>假设</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>1 s</td><td>假设</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考信噪比
+parameters.referenceSnrDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；旧参考距离分支参数；活动雷达/无线电physics分支覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>最低接收频率
+parameters.bandMinGHz</td><td>0.1 GHz</td><td>资料</td><td>无线电接收频率下界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>最高接收频率
+parameters.bandMaxGHz</td><td>6 GHz</td><td>资料</td><td>无线电接收频率上界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考路径损耗指数
+parameters.pathExponent</td><td>2.7</td><td>假设</td><td>兼容隐藏；仅旧无线电参考模型使用；活动physics自由空间分支取距离指数2。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>每栋建筑穿透损耗
+parameters.wallLossDb</td><td>15 dB</td><td>假设</td><td>每栋相交建筑的额外损耗，进入无线电/声学预算。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考发射 EIRP
+parameters.referenceEirpDbm</td><td>20 dBm</td><td>假设</td><td>兼容隐藏；parameters中的旧参考EIRP被活动physics字段覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.4</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考 TDOA 网络定位误差
+parameters.networkAccuracy</td><td>20 m</td><td>资料</td><td>给定≥4站/GDOP时的参考定位误差，未解算真实时差。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>离散频点接收半带宽
+parameters.bandToleranceMHz</td><td>20 MHz</td><td>假设</td><td>X1C离散频点半带宽，其他无线电型号不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考测向误差
+parameters.bearingAccuracy</td><td>2 °</td><td>假设</td><td>JS无线电/声学参考测向误差；不控制当前设备仿真标量场。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>噪声系数
+physics.noiseFigureDb</td><td>5 dB</td><td>假设</td><td>兼容隐藏；雷达等效噪声因子；无线电影响中间噪声，参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>接收天线增益
+physics.rxGainDb</td><td>2 dBi</td><td>假设</td><td>兼容隐藏；雷达能量方程接收增益；无线电参考反标定后在最终SNR中抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>检测信道带宽
+physics.bandwidthMHz</td><td>20 MHz</td><td>假设</td><td>兼容隐藏；无线电中间热噪声带宽；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>馈线与失配损耗
+physics.receiverLossDb</td><td>2 dB</td><td>假设</td><td>兼容隐藏；无线电中间接收功率/参考功率；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>反推参考波形频率
+physics.referenceFrequencyGHz</td><td>5.8 GHz</td><td>假设</td><td>无线电标称距离的参考波形自由空间损耗。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>反推参考波形 EIRP
+physics.referenceEirpDbm</td><td>25.5 dBm</td><td>假设</td><td>无线电反标定所用参考波形EIRP；活动分支真正使用此字段。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>假设虚警概率
+physics.pfa</td><td>0.0001</td><td>假设</td><td>requiredSnr门限与统计Pd映射；无线电参考反标定也同步改变门限，不独立改变最终裕量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型检出概率门限
+physics.pdRequired</td><td>0.9</td><td>假设</td><td>requiredSnr门限及统计Pd判定；无线电FHSS还乘捕获代理后判断。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频观测窗口
+physics.observationSeconds</td><td>0.1 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理观测窗口。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频驻留周期
+physics.hopSeconds</td><td>0.01 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理驻留时间。</td><td>演示/代理假设，须按设备和场景标定。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>OA-X1Bmini · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1000</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>360</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>X1C 侦测设备 <span>28项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>3500 m</td><td>假设</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>0 m</td><td>假设</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>方位覆盖角
+parameters.azimuthFov</td><td>360 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎方位覆盖裁剪。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最低俯仰
+parameters.elevationMin</td><td>-90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰下界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>相对最高俯仰
+parameters.elevationMax</td><td>90 °</td><td>假设</td><td>雷达/无线电设备仿真及JS引擎相对俯仰上界。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>15 个</td><td>假设</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>1 s</td><td>假设</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考信噪比
+parameters.referenceSnrDb</td><td>13 dB</td><td>假设</td><td>兼容隐藏；旧参考距离分支参数；活动雷达/无线电physics分支覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>最低接收频率
+parameters.bandMinGHz</td><td>0.9 GHz</td><td>资料</td><td>无线电接收频率下界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>最高接收频率
+parameters.bandMaxGHz</td><td>5.8 GHz</td><td>资料</td><td>无线电接收频率上界，活动引擎硬门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考路径损耗指数
+parameters.pathExponent</td><td>2.7</td><td>假设</td><td>兼容隐藏；仅旧无线电参考模型使用；活动physics自由空间分支取距离指数2。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>每栋建筑穿透损耗
+parameters.wallLossDb</td><td>15 dB</td><td>假设</td><td>每栋相交建筑的额外损耗，进入无线电/声学预算。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>标称距离参考发射 EIRP
+parameters.referenceEirpDbm</td><td>20 dBm</td><td>假设</td><td>兼容隐藏；parameters中的旧参考EIRP被活动physics字段覆盖。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.4</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考 TDOA 网络定位误差
+parameters.networkAccuracy</td><td>10 m</td><td>资料</td><td>给定≥4站/GDOP时的参考定位误差，未解算真实时差。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>离散频点接收半带宽
+parameters.bandToleranceMHz</td><td>20 MHz</td><td>假设</td><td>X1C离散频点半带宽，其他无线电型号不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考测向误差
+parameters.bearingAccuracy</td><td>2 °</td><td>假设</td><td>JS无线电/声学参考测向误差；不控制当前设备仿真标量场。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>噪声系数
+physics.noiseFigureDb</td><td>3 dB</td><td>假设</td><td>兼容隐藏；雷达等效噪声因子；无线电影响中间噪声，参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>接收天线增益
+physics.rxGainDb</td><td>3 dBi</td><td>假设</td><td>兼容隐藏；雷达能量方程接收增益；无线电参考反标定后在最终SNR中抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>检测信道带宽
+physics.bandwidthMHz</td><td>20 MHz</td><td>假设</td><td>兼容隐藏；无线电中间热噪声带宽；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>馈线与失配损耗
+physics.receiverLossDb</td><td>2 dB</td><td>假设</td><td>兼容隐藏；无线电中间接收功率/参考功率；参考反标定后最终SNR抵消。</td><td>演示/代理假设，须按设备和场景标定。当前编辑页已隐藏，保留兼容或中间量用途。</td></tr><tr><td>反推参考波形频率
+physics.referenceFrequencyGHz</td><td>5.8 GHz</td><td>假设</td><td>无线电标称距离的参考波形自由空间损耗。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>反推参考波形 EIRP
+physics.referenceEirpDbm</td><td>25.5 dBm</td><td>假设</td><td>无线电反标定所用参考波形EIRP；活动分支真正使用此字段。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>假设虚警概率
+physics.pfa</td><td>1e-05</td><td>假设</td><td>requiredSnr门限与统计Pd映射；无线电参考反标定也同步改变门限，不独立改变最终裕量。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型检出概率门限
+physics.pdRequired</td><td>0.9</td><td>假设</td><td>requiredSnr门限及统计Pd判定；无线电FHSS还乘捕获代理后判断。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频观测窗口
+physics.observationSeconds</td><td>0.1 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理观测窗口。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>跳频驻留周期
+physics.hopSeconds</td><td>0.01 s</td><td>假设</td><td>无线电目标fhss开启时的捕获代理驻留时间。</td><td>演示/代理假设，须按设备和场景标定。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>X1C 侦测设备 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1000</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>360</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>NVT-951 双光谱光电 <span>20项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>未提供 m</td><td>未提供</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>未提供 m</td><td>未提供</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>1 个</td><td>假设</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>0.1 s</td><td>假设</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>宽视场水平角
+parameters.wideHfov</td><td>未提供 °</td><td>未提供</td><td>光电仿真初次设置水平视场的来源，空值回退60°；之后用独立/已记忆的仿真水平角。JS部署宽视场参数。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>窄视场水平角
+parameters.narrowHfov</td><td>未提供 °</td><td>未提供</td><td>JS部署窄视场；当前设备仿真不切换该参数。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>可见光图像宽度
+parameters.imageWidth</td><td>1920 px</td><td>资料</td><td>光电可见光水平像素数，参与水平像素和垂直视场比例。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>可见光图像高度
+parameters.imageHeight</td><td>1080 px</td><td>资料</td><td>参与可见光垂直视场比例，不单独提供识别高度判据。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>热成像图像宽度
+parameters.thermalWidth</td><td>640 px</td><td>资料</td><td>热成像水平像素数及垂直视场比例。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>热成像图像高度
+parameters.thermalHeight</td><td>512 px</td><td>资料</td><td>热成像垂直视场比例。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>热成像水平视场
+parameters.thermalHfov</td><td>未提供 °</td><td>未提供</td><td>热通道仿真初次水平视场来源，空值回退60°；JS部署热视场参数。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>可见光最低照度
+parameters.minLux</td><td>未提供 lux</td><td>未提供</td><td>JS光电最低照度门控与有效像素系数；当前设备仿真不使用。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>识别所需有效像素
+parameters.requiredPixels</td><td>未提供 px</td><td>未提供</td><td>JS光电有效像素识别代理门限；当前设备仿真不使用，不能与1px显示下限混淆。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>降雨每 mm/h 附加消光
+parameters.rainDbKm</td><td>0.03 dB/km</td><td>假设</td><td>设备仿真透射系数及JS光电有效像素雨衰；几何像素本身不乘透射系数。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>成像通道
+working.channel</td><td>visible</td><td>资料</td><td>当前光电设备仿真选用可见/热分辨率；仿真水平角可能有独立记忆。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>工作焦距
+working.focalMm</td><td>6.5 mm</td><td>资料</td><td>目录工作设置；当前设备仿真不由它推导视场。Python资料核对从设备capability设置读取焦距，不自动消费此working字段。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>云台水平下限
+working.yawMin</td><td>0 °</td><td>资料</td><td>云台机械规格；当前设备仿真未按此裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>云台水平上限
+working.yawMax</td><td>360 °</td><td>资料</td><td>云台机械规格；当前设备仿真未按此裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>云台俯仰下限
+working.pitchMin</td><td>-90 °</td><td>资料</td><td>云台机械规格；当前设备仿真未按此裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>云台俯仰上限
+working.pitchMax</td><td>90 °</td><td>资料</td><td>云台机械规格；当前设备仿真未按此裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>NVT-951 双光谱光电 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>400</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>25</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>10</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>60</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>pixels</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>CRY8500 声学相机 <span>17项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称距离上限
+parameters.maxRange</td><td>500 m</td><td>资料</td><td>JS引擎距离硬门限；设备仿真雷达/无线电经evaluate裁剪，光电/声学直接裁剪。不是独立算出的可检出距离。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>0.01 m</td><td>资料</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>判定所需信噪比
+parameters.thresholdDb</td><td>6 dB</td><td>假设</td><td>声学设备仿真和JS引擎检出裕量门限；雷达/无线电活动physics分支覆盖旧门限。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>模型并发容量
+parameters.capacity</td><td>1 个</td><td>假设</td><td>JS引擎并发门限，声学设备仿真也判断；光电几何仿真不使用。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>0.2 s</td><td>假设</td><td>JS声学时延漂移及部署飞行更新相关设置；不控制当前设备仿真采样周期。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>最低输入声压
+parameters.minSoundDb</td><td>28 dB SPL</td><td>资料</td><td>设备仿真与JS声学模型接收声压下限门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>最高输入声压
+parameters.maxSoundDb</td><td>132 dB SPL</td><td>资料</td><td>设备仿真与JS声学模型接收声压上限门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>动态范围
+parameters.dynamicRangeDb</td><td>40 dB</td><td>资料</td><td>JS声学动态范围警告，当前设备仿真不使用。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>参考背景声压
+parameters.referenceNoiseDb</td><td>35 dB SPL</td><td>假设</td><td>声学噪声功率叠加的固定基线项。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>空气吸收
+parameters.absorptionDbKm</td><td>3 dB/km</td><td>假设</td><td>声学空气吸收×距离，当前为固定系数代理。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>每栋建筑额外损耗
+parameters.wallLossDb</td><td>6 dB</td><td>假设</td><td>每栋相交建筑的额外损耗，进入无线电/声学预算。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>地面反射幅度系数
+parameters.reflection</td><td>0.3</td><td>假设</td><td>地面/立面反射幅度；设备仿真默认关闭，开启后才生效。</td><td>演示/代理假设，须按设备和场景标定。</td></tr><tr><td>参考方位误差
+parameters.bearingAccuracy</td><td>未提供 °</td><td>未提供</td><td>JS无线电/声学参考测向误差；不控制当前设备仿真标量场。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>参考俯仰误差
+parameters.elevationAccuracy</td><td>未提供 °</td><td>未提供</td><td>JS雷达/声学参考俯仰误差及退化；声学目录默认缺失，不控制设备仿真标量场。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>阵列规格
+working.arrayDiameter</td><td>1.1 m</td><td>资料</td><td>阵列资料选型；当前设备仿真未实现真实阵列波束形成，Python路径另读capability设置。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>频率下限
+working.frequencyMin</td><td>20 Hz</td><td>资料</td><td>资料频带；当前设备仿真不作频带门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>频率上限
+working.frequencyMax</td><td>20000 Hz</td><td>资料</td><td>资料频带；当前设备仿真不作频带门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>CRY8500 声学相机 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>500</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>50</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>60</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>margin</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>A9650 S49 大张角通感设备 <span>14项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>单站覆盖距离
+parameters.coverageDistance</td><td>≥1500 m</td><td>部署报道</td><td>5G-A资料中的距离下限；设备仿真使用独立radius，不把该值当最大量程。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 原文为 1.5 km 以上；1500 m 为报道门槛。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>未提供 m</td><td>未公开</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>并发目标数
+parameters.capacity</td><td>未提供 个</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>未提供 s</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>垂直覆盖张角
+parameters.verticalBeamAngle</td><td>65 °</td><td>部署报道</td><td>5G-A仿真初始垂直张角，之后使用独立/已记忆vertical。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 总垂直覆盖波束张角，不代表俯仰上下限。</td></tr><tr><td>业务覆盖高度
+parameters.coverageHeight</td><td>≥600 m</td><td>部署报道</td><td>5G-A资料业务高度下限；当前设备仿真使用独立ceiling，不以此裁剪。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 原文为业务高度 600 m 以上。</td></tr><tr><td>测距误差
+parameters.rangeAccuracy</td><td>未提供 m</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>测角误差
+parameters.bearingAccuracy</td><td>未提供 °</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>收发通道数
+parameters.channelCount</td><td>128 通道</td><td>部署报道</td><td>5G-A静态规格；未参与阵列信号处理。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 128 通道自发自收通感一体设备。</td></tr><tr><td>工作频率
+parameters.frequencyGHz</td><td>未提供 GHz</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>工作带宽
+parameters.bandwidthMHz</td><td>未提供 MHz</td><td>未公开</td><td>5G-A静态规格；未接入感知信号预算。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>上行空间流
+parameters.uplinkStreams</td><td>12 流</td><td>部署报道</td><td>通信选型规格，未接入感知计算。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>下行空间流
+parameters.downlinkStreams</td><td>32 流</td><td>部署报道</td><td>通信选型规格，未接入感知计算。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>小区峰值吞吐
+parameters.cellPeakGbps</td><td>10+ Gbps</td><td>部署报道</td><td>小区通信吞吐规格，未接入感知计算。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 原文为 10 Gbps+；属于小区峰值能力。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>A9650 S49 大张角通感设备 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>1500</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>100</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>10</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>120</td></tr><tr><td>vertical</td><td>65</td></tr><tr><td>metric</td><td>distance</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><details class="model"><summary>CRSC-ER-1 静电探测设备 <span>16项</span></summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>档案默认值</th><th>来源</th><th>作用位置和生效条件</th><th>合理性与限定</th></tr></thead><tbody><tr><td>标称探测距离
+parameters.detectionDistance</td><td>≥ 100 m</td><td>厂商标称</td><td>静电厂商标称距离下限；当前设备仿真独立radius默认100m，不是电场检出边界。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 厂商标称静电监测距离；目标与环境测试条件未公开。</td></tr><tr><td>响应时间
+parameters.responseTimeMs</td><td>≤ 80 ms</td><td>厂商标称</td><td>响应时间上限规格；不是更新周期，当前示意场不使用。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 信号响应时间，不等于更新周期。</td></tr><tr><td>并发目标数
+parameters.capacity</td><td>未提供 个</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>更新周期
+parameters.updateSeconds</td><td>未提供 s</td><td>未公开</td><td>目录静态规格或待补值；当前几何/距离示意不使用，也未实现信号或定位求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>近距盲区
+parameters.minRange</td><td>未提供 m</td><td>未公开</td><td>设备仿真和JS引擎近距裁剪；空值按0。雷达还取与脉冲物理盲区的较大值。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>场强量程下限
+parameters.fieldMinVpm</td><td>未提供 V/m</td><td>未公开</td><td>静电静态规格/待补值；当前没有电场求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>场强量程上限
+parameters.fieldMaxVpm</td><td>未提供 V/m</td><td>未公开</td><td>静电静态规格/待补值；当前没有电场求解。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>场强灵敏度
+parameters.sensitivityVpm</td><td>未提供 V/m</td><td>未公开</td><td>静电待补灵敏度；当前没有检出门限预算。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>场强测量误差
+parameters.fieldAccuracyVpm</td><td>未提供 V/m</td><td>未公开</td><td>静电静态测量规格/待补值；未计算场强误差。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>采样频率
+parameters.samplingHz</td><td>未提供 Hz</td><td>未公开</td><td>静电采样规格/待补值，当前距离示意未使用。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>组网节点数
+parameters.stationCount</td><td>未提供 个</td><td>未公开</td><td>静电组网规格/待补值，当前未求解定位。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>节点间距
+parameters.nodeSpacingMeters</td><td>未提供 m</td><td>未公开</td><td>静电组网规格/待补值，当前未求解定位。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>静态功耗
+parameters.staticPowerMw</td><td>≤ 50 mW</td><td>厂商标称</td><td>静态功耗上限规格；不是工作功耗，当前示意场不使用。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。 静态功耗，不代表整机工作功耗。</td></tr><tr><td>整机工作功耗
+parameters.operatingPowerW</td><td>未提供 W</td><td>未公开</td><td>静电工作功耗规格/待补值，当前未做供电预算。</td><td>保留空值符合资料缺项；不能将回退假设当作已知设备值。</td></tr><tr><td>工作温度下限
+parameters.temperatureMin</td><td>-25 ℃</td><td>厂商标称</td><td>工作温度规格，当前未作温度门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr><tr><td>工作温度上限
+parameters.temperatureMax</td><td>60 ℃</td><td>厂商标称</td><td>工作温度规格，当前未作温度门控。</td><td>项目资料转录或厂商/部署规格；仅在其限定条件下合理，不等于实测检出能力。</td></tr></tbody></table></div><p class="small">主要计算位置：src/sensors/physics.js；src/sensors/engine.js/evaluate；src/sensors/equipment-demo-model.js/demoValue</p></details><details class="demo-defaults"><summary>CRSC-ER-1 静电探测设备 · 仿真展示默认值</summary><div class="table-scroll"><table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody><tr><td>radius</td><td>100</td></tr><tr><td>ceiling</td><td>800</td></tr><tr><td>heightDefaultVersion</td><td>1</td></tr><tr><td>spacing</td><td>25</td></tr><tr><td>heading</td><td>0</td></tr><tr><td>pitch</td><td>0</td></tr><tr><td>mountHeight</td><td>30</td></tr><tr><td>horizontal</td><td>60</td></tr><tr><td>vertical</td><td>40</td></tr><tr><td>metric</td><td>distance</td></tr><tr><td>style</td><td>volume</td></tr><tr><td>density</td><td>2</td></tr><tr><td>clip</td><td>1</td></tr><tr><td>autoscale</td><td>是</td></tr><tr><td>nominal</td><td>否</td></tr><tr><td>reflections</td><td>否</td></tr></tbody></table></div></details><h3>环境内置默认值</h3><div class="table-scroll"><table><thead><tr><th>字段</th><th>名称</th><th>默认值</th></tr></thead><tbody><tr><td>rainMmH</td><td>降雨强度</td><td>0 mm/h</td></tr><tr><td>visibilityKm</td><td>气象能见度</td><td>20 km</td></tr><tr><td>illuminanceLux</td><td>环境照度</td><td>500 lux</td></tr><tr><td>emNoiseDb</td><td>电磁底噪抬升</td><td>0 dB</td></tr><tr><td>cloudDbKm</td><td>雷达云雾比衰减</td><td>0 dB/km</td></tr><tr><td>cochannelDb</td><td>同频干扰损耗</td><td>0 dB</td></tr><tr><td>crosstalkDb</td><td>设备串扰损耗</td><td>0 dB</td></tr><tr><td>trafficDb</td><td>交通噪声</td><td>35 dB SPL</td></tr><tr><td>constructionDb</td><td>施工噪声</td><td>20 dB SPL</td></tr><tr><td>crowdDb</td><td>人群噪声</td><td>25 dB SPL</td></tr><tr><td>windNoiseDb</td><td>风噪</td><td>20 dB SPL</td></tr><tr><td>rainNoiseDb</td><td>雨噪</td><td>20 dB SPL</td></tr><tr><td>windSpeed</td><td>风速（沿传播方向）</td><td>0 m/s</td></tr><tr><td>temperatureC</td><td>空气温度</td><td>20 °C</td></tr><tr><td>refractionDb</td><td>折射附加损耗</td><td>0 dB</td></tr><tr><td>rfStations</td><td>参与 TDOA 的站数</td><td>4 个</td></tr><tr><td>gdop</td><td>网络几何误差系数</td><td>1 </td></tr></tbody></table></div><h3>目标内置默认值</h3><div class="table-scroll"><table><thead><tr><th>字段</th><th>名称</th><th>默认值</th></tr></thead><tbody><tr><td>position</td><td>位置/状态</td><td>[0, 150, -200]</td></tr><tr><td>emitting</td><td>发射无线电</td><td>是 </td></tr><tr><td>opticalMode</td><td>位置/状态</td><td>wide</td></tr><tr><td>acousticFrequencyHz</td><td>主声频</td><td>2000 Hz</td></tr><tr><td>rcs</td><td>目标雷达截面积</td><td>0.01 m²</td></tr><tr><td>size</td><td>等效可见尺寸</td><td>0.35 m</td></tr><tr><td>frequencyGHz</td><td>目标发射频率</td><td>2.4 GHz</td></tr><tr><td>eirpDbm</td><td>目标发射 EIRP</td><td>20 dBm</td></tr><tr><td>sourceDb</td><td>目标声压 / 1 m</td><td>100 dB SPL</td></tr><tr><td>thermalContrast</td><td>热对比系数</td><td>0.8 </td></tr><tr><td>speed</td><td>目标速度</td><td>10 m/s</td></tr><tr><td>count</td><td>同时目标数</td><td>1 个</td></tr></tbody></table></div><footer>各项数值演算由当前项目函数直接复算。完整字段定义、目录默认值、旧引擎预设、仿真默认值及数值检查保存在同目录default-parameters.json。</footer></main><script>const input=document.querySelector('#filter');input.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();document.querySelectorAll('details.model').forEach(d=>{let n=0;const all=d.querySelector('summary').textContent.toLowerCase().includes(q);d.querySelectorAll('tbody tr').forEach(r=>{r.hidden=!(all||r.textContent.toLowerCase().includes(q));if(!r.hidden)n++});d.hidden=n===0;if(q&&n)d.open=true})});document.querySelector('#expand').onclick=()=>document.querySelectorAll('details').forEach(d=>d.open=true);document.querySelector('#collapse').onclick=()=>document.querySelectorAll('details').forEach(d=>d.open=false);let prior;addEventListener('beforeprint',()=>{prior=[...document.querySelectorAll('details')].map(d=>d.open);document.querySelectorAll('details').forEach(d=>d.open=true)});addEventListener('afterprint',()=>document.querySelectorAll('details').forEach((d,i)=>d.open=prior?.[i]??false));</script></body></html>
