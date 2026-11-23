@@ -23,7 +23,7 @@ export function mountEquipmentManager(panel,{demo,onSelectionChange}={}){
  const savePending=()=>{
   clearTimeout(autosaveTimer);
   for(const draft of drafts.values())if(JSON.stringify(draft)!==JSON.stringify(store.get(draft.presetId))){
-   try{store.save(draft);persistSelection();tell('已自动保存');}catch(error){tell(`未保存：${error.message}`);}
+   try{store.save(draft);persistSelection();tell('设置成功，已自动保存');}catch(error){tell(`未保存：${error.message}`);}
   }
   status();
  };
@@ -143,7 +143,7 @@ demo?.profileChanged();updateQualifier();tell('');status();scheduleSave();
  }
 $('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='设备仿真')demo?.start();else $('equipment-profile-save').click();};
  if(demo)$('demo-start').onclick=()=>{if(groupName!=='设备仿真'){groupName='设备仿真';renderFields();status();}demo.start();};
-$('equipment-profile-save').onclick=()=>{try{store.save(profile());persistSelection();tell('已保存');status();}catch(error){if(error.field){const groups=profileGroups(presetId);groupName=error.field==='name'?groups[0].name:groups.find(group=>group.keys.includes(error.field))?.name??groupName;renderFields();const input=$(`profile-${error.field.replace('.','-')}`);input?.focus();}tell(error.message);const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();}};
+$('equipment-profile-save').onclick=()=>{try{store.save(profile());persistSelection();tell('设置成功，已保存参数');status();}catch(error){if(error.field){const groups=profileGroups(presetId);groupName=error.field==='name'?groups[0].name:groups.find(group=>group.keys.includes(error.field))?.name??groupName;renderFields();const input=$(`profile-${error.field.replace('.','-')}`);input?.focus();}tell(error.message);const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();}};
 $('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile(presetId);if(catalogModel(presetId).basePresetId)next.name=profile().name;drafts.set(presetId,next);tell('');render();scheduleSave();};
  $('equipment-profile-import').onclick=()=>$('equipment-profile-file').click();
  $('equipment-profile-file').onchange=async()=>{

@@ -24,7 +24,7 @@ export const ENV_FIELDS={
  rfStations:f('参与 TDOA 的站数','个',1,32,1,4),gdop:f('网络几何误差系数','',1,20,0.1,1),
 };
 export const TARGET_FIELDS={
- rcs:f('目标雷达截面积','m²',0.0001,100,0.001,0.01),size:f('目标可见尺寸','m',0.01,20,0.01,0.35),frequencyGHz:f('目标发射频率','GHz',0.001,100,0.001,2.4),eirpDbm:f('目标发射 EIRP','dBm',-40,80,1,20),sourceDb:f('目标声压 / 1 m','dB SPL',0,160,1,100),thermalContrast:f('热对比系数','',0,1,0.05,0.8),speed:f('目标速度','m/s',0,200,1,10),count:f('同时目标数','个',1,10000,1,1),
+ rcs:f('目标雷达截面积','m²',0.0001,100,0.001,0.01),size:f('等效可见尺寸','m',0.01,20,0.01,0.35),frequencyGHz:f('目标发射频率','GHz',0.001,100,0.001,2.4),eirpDbm:f('目标发射 EIRP','dBm',-40,80,1,20),sourceDb:f('目标声压 / 1 m','dB SPL',0,160,1,100),thermalContrast:f('热对比系数','',0,1,0.05,0.8),speed:f('目标速度','m/s',0,200,1,10),count:f('同时目标数','个',1,10000,1,1),
 };
 export const fieldsFor=type=>Object.fromEntries(Object.entries({...COMMON_FIELDS,...TYPE_FIELDS[type]}).filter(([key])=>type!=='optical'||!['thresholdDb','azimuthFov','elevationMin','elevationMax'].includes(key)));
 const values=fields=>Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.value]));

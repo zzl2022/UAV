@@ -1,0 +1,3635 @@
+{
+  "baseline": "27ea7fd2ba190d1bff2b838a8996764e1b0f764b",
+  "date": "2026-11-18",
+  "environment": {
+    "rainMmH": 0,
+    "visibilityKm": 20,
+    "illuminanceLux": 500,
+    "emNoiseDb": 0,
+    "cloudDbKm": 0,
+    "cochannelDb": 0,
+    "crosstalkDb": 0,
+    "trafficDb": 35,
+    "constructionDb": 20,
+    "crowdDb": 25,
+    "windNoiseDb": 20,
+    "rainNoiseDb": 20,
+    "windSpeed": 0,
+    "temperatureC": 20,
+    "refractionDb": 0,
+    "rfStations": 4,
+    "gdop": 1
+  },
+  "target": {
+    "position": [
+      0,
+      150,
+      -200
+    ],
+    "emitting": true,
+    "opticalMode": "wide",
+    "acousticFrequencyHz": 2000,
+    "rcs": 0.01,
+    "size": 0.35,
+    "frequencyGHz": 2.4,
+    "eirpDbm": 20,
+    "sourceDb": 100,
+    "thermalContrast": 0.8,
+    "speed": 10,
+    "count": 1
+  },
+  "models": [
+    {
+      "id": "radar-02c",
+      "name": "02C 三坐标雷达",
+      "type": "radar",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "radar-02c",
+        "type": "radar",
+        "name": "02C 三坐标雷达",
+        "parameters": {
+          "maxRange": 8000,
+          "minRange": 50,
+          "azimuthFov": 360,
+          "elevationMin": 0,
+          "elevationMax": 40,
+          "thresholdDb": 13,
+          "capacity": 500,
+          "updateSeconds": 3,
+          "referenceSnrDb": 13,
+          "frequencyGHz": 9.4,
+          "referenceRcs": 0.01,
+          "rainCoefficient": 0.01,
+          "rainExponent": 1.2,
+          "reflection": 0.4,
+          "clutterDb": 3,
+          "rangeAccuracy": 8,
+          "azimuthAccuracy": 0.6,
+          "elevationAccuracy": 0.4
+        },
+        "physics": {
+          "peakPowerW": 1000,
+          "pulseWidthUs": 2,
+          "switchTimeUs": 1,
+          "txGainDb": 35,
+          "rxGainDb": 35,
+          "noiseFigureDb": 3,
+          "systemLossDb": 4,
+          "pulses": 128,
+          "pfa": 0.000001,
+          "pdRequired": 0.9
+        },
+        "working": {}
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthFov": {
+          "label": "方位覆盖角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 360,
+          "step": 1,
+          "value": 360,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMin": {
+          "label": "相对最低俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 0,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMax": {
+          "label": "相对最高俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 40,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceSnrDb": {
+          "label": "标称距离参考信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 80,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.frequencyGHz": {
+          "label": "工作频率",
+          "unit": "GHz",
+          "min": 0.1,
+          "max": 100,
+          "step": 0.1,
+          "value": 10,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceRcs": {
+          "label": "标称距离参考 RCS",
+          "unit": "m²",
+          "min": 0.0001,
+          "max": 100,
+          "step": 0.001,
+          "value": 0.01,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rainCoefficient": {
+          "label": "雨衰系数 k",
+          "unit": "dB/km",
+          "min": 0,
+          "max": 1,
+          "step": 0.001,
+          "value": 0.01,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rainExponent": {
+          "label": "雨衰指数 α",
+          "unit": "",
+          "min": 0.1,
+          "max": 3,
+          "step": 0.1,
+          "value": 1.2,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.4,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.clutterDb": {
+          "label": "城市杂波附加损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": 0.5,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rangeAccuracy": {
+          "label": "参考距离误差",
+          "unit": "m",
+          "min": 0.1,
+          "max": 1000,
+          "step": 0.1,
+          "value": 8,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthAccuracy": {
+          "label": "参考方位误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 0.6,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationAccuracy": {
+          "label": "参考俯仰误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 0.4,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "physics.peakPowerW": {
+          "label": "峰值发射功率",
+          "unit": "W",
+          "min": 1,
+          "max": 1000000,
+          "step": "any",
+          "value": 1000,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pulseWidthUs": {
+          "label": "脉宽",
+          "unit": "μs",
+          "min": 0.01,
+          "max": 1000,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.switchTimeUs": {
+          "label": "收发切换时间",
+          "unit": "μs",
+          "min": 0,
+          "max": 100,
+          "step": "any",
+          "value": 1,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.txGainDb": {
+          "label": "发射增益",
+          "unit": "dB",
+          "min": 0,
+          "max": 80,
+          "step": "any",
+          "value": 35,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.rxGainDb": {
+          "label": "接收增益",
+          "unit": "dB",
+          "min": 0,
+          "max": 80,
+          "step": "any",
+          "value": 35,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.noiseFigureDb": {
+          "label": "噪声系数",
+          "unit": "dB",
+          "min": 0,
+          "max": 40,
+          "step": "any",
+          "value": 3,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.systemLossDb": {
+          "label": "系统损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 4,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pulses": {
+          "label": "相参积累脉冲数",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 128,
+          "source": "假设",
+          "integer": true
+        },
+        "physics.pfa": {
+          "label": "假设虚警概率",
+          "unit": "",
+          "min": 1e-12,
+          "max": 0.1,
+          "step": "any",
+          "value": 0.000001,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pdRequired": {
+          "label": "模型检出概率门限",
+          "unit": "",
+          "min": 0.1,
+          "max": 0.99999,
+          "step": "any",
+          "value": 0.9,
+          "source": "假设",
+          "integer": false
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测范围",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange",
+            "parameters.azimuthFov",
+            "parameters.elevationMin",
+            "parameters.elevationMax"
+          ]
+        },
+        {
+          "name": "测量精度",
+          "keys": [
+            "parameters.rangeAccuracy",
+            "parameters.azimuthAccuracy",
+            "parameters.elevationAccuracy"
+          ]
+        },
+        {
+          "name": "发射配置",
+          "keys": [
+            "parameters.frequencyGHz",
+            "physics.peakPowerW",
+            "physics.pulseWidthUs",
+            "physics.switchTimeUs",
+            "physics.txGainDb"
+          ]
+        },
+        {
+          "name": "接收积累",
+          "keys": [
+            "physics.rxGainDb",
+            "physics.noiseFigureDb",
+            "physics.systemLossDb",
+            "physics.pulses"
+          ]
+        },
+        {
+          "name": "检出判定",
+          "keys": [
+            "physics.pfa",
+            "physics.pdRequired"
+          ]
+        },
+        {
+          "name": "传播杂波",
+          "keys": [
+            "parameters.rainCoefficient",
+            "parameters.rainExponent",
+            "parameters.reflection",
+            "parameters.clutterDb"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [
+        "parameters.thresholdDb",
+        "parameters.referenceSnrDb",
+        "parameters.referenceRcs"
+      ],
+      "demoDefaults": {
+        "radius": 1500,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 360,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "radar-02c",
+        "type": "radar",
+        "name": "02C 三坐标雷达",
+        "parameters": {
+          "maxRange": 8000,
+          "minRange": 50,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 360,
+          "elevationMin": 0,
+          "elevationMax": 40,
+          "thresholdDb": 13,
+          "capacity": 500,
+          "updateSeconds": 3,
+          "referenceSnrDb": 13,
+          "frequencyGHz": 9.4,
+          "referenceRcs": 0.01,
+          "rainCoefficient": 0.01,
+          "rainExponent": 1.2,
+          "reflection": 0.4,
+          "clutterDb": 3,
+          "rangeAccuracy": 8,
+          "azimuthAccuracy": 0.6,
+          "elevationAccuracy": 0.4
+        },
+        "provenance": {
+          "maxRange": "文档",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "文档",
+          "elevationMin": "文档",
+          "elevationMax": "文档",
+          "thresholdDb": "假设",
+          "capacity": "文档",
+          "updateSeconds": "文档",
+          "referenceSnrDb": "假设",
+          "frequencyGHz": "假设",
+          "referenceRcs": "假设",
+          "rainCoefficient": "假设",
+          "rainExponent": "假设",
+          "reflection": "假设",
+          "clutterDb": "假设",
+          "rangeAccuracy": "文档",
+          "azimuthAccuracy": "文档",
+          "elevationAccuracy": "文档"
+        },
+        "notes": "文档距离 ≥8 km，模型保守取 8 km；新建设备接入 MATLAB 能量方程，脉冲盲区约 450 m，功率与收发参数为假设。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "radar-03d",
+      "name": "03D 三坐标雷达",
+      "type": "radar",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "radar-03d",
+        "type": "radar",
+        "name": "03D 三坐标雷达",
+        "parameters": {
+          "maxRange": 8000,
+          "minRange": 50,
+          "azimuthFov": 360,
+          "elevationMin": 0,
+          "elevationMax": 60,
+          "thresholdDb": 13,
+          "capacity": 500,
+          "updateSeconds": 2,
+          "referenceSnrDb": 13,
+          "frequencyGHz": 15,
+          "referenceRcs": 0.01,
+          "rainCoefficient": 0.01,
+          "rainExponent": 1.2,
+          "reflection": 0.4,
+          "clutterDb": 3,
+          "rangeAccuracy": 6,
+          "azimuthAccuracy": 0.3,
+          "elevationAccuracy": 0.3
+        },
+        "physics": {
+          "peakPowerW": 2200,
+          "pulseWidthUs": 2,
+          "switchTimeUs": 1,
+          "txGainDb": 38,
+          "rxGainDb": 38,
+          "noiseFigureDb": 4,
+          "systemLossDb": 4,
+          "pulses": 40,
+          "pfa": 0.000001,
+          "pdRequired": 0.9
+        },
+        "working": {}
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthFov": {
+          "label": "方位覆盖角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 360,
+          "step": 1,
+          "value": 360,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMin": {
+          "label": "相对最低俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 0,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMax": {
+          "label": "相对最高俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 40,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceSnrDb": {
+          "label": "标称距离参考信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 80,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.frequencyGHz": {
+          "label": "工作频率",
+          "unit": "GHz",
+          "min": 0.1,
+          "max": 100,
+          "step": 0.1,
+          "value": 10,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceRcs": {
+          "label": "标称距离参考 RCS",
+          "unit": "m²",
+          "min": 0.0001,
+          "max": 100,
+          "step": 0.001,
+          "value": 0.01,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rainCoefficient": {
+          "label": "雨衰系数 k",
+          "unit": "dB/km",
+          "min": 0,
+          "max": 1,
+          "step": 0.001,
+          "value": 0.01,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rainExponent": {
+          "label": "雨衰指数 α",
+          "unit": "",
+          "min": 0.1,
+          "max": 3,
+          "step": 0.1,
+          "value": 1.2,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.4,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.clutterDb": {
+          "label": "城市杂波附加损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": 0.5,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.rangeAccuracy": {
+          "label": "参考距离误差",
+          "unit": "m",
+          "min": 0.1,
+          "max": 1000,
+          "step": 0.1,
+          "value": 8,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthAccuracy": {
+          "label": "参考方位误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 0.6,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationAccuracy": {
+          "label": "参考俯仰误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 0.4,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "physics.peakPowerW": {
+          "label": "峰值发射功率",
+          "unit": "W",
+          "min": 1,
+          "max": 1000000,
+          "step": "any",
+          "value": 1000,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pulseWidthUs": {
+          "label": "脉宽",
+          "unit": "μs",
+          "min": 0.01,
+          "max": 1000,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.switchTimeUs": {
+          "label": "收发切换时间",
+          "unit": "μs",
+          "min": 0,
+          "max": 100,
+          "step": "any",
+          "value": 1,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.txGainDb": {
+          "label": "发射增益",
+          "unit": "dB",
+          "min": 0,
+          "max": 80,
+          "step": "any",
+          "value": 35,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.rxGainDb": {
+          "label": "接收增益",
+          "unit": "dB",
+          "min": 0,
+          "max": 80,
+          "step": "any",
+          "value": 35,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.noiseFigureDb": {
+          "label": "噪声系数",
+          "unit": "dB",
+          "min": 0,
+          "max": 40,
+          "step": "any",
+          "value": 3,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.systemLossDb": {
+          "label": "系统损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 4,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pulses": {
+          "label": "相参积累脉冲数",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 128,
+          "source": "假设",
+          "integer": true
+        },
+        "physics.pfa": {
+          "label": "假设虚警概率",
+          "unit": "",
+          "min": 1e-12,
+          "max": 0.1,
+          "step": "any",
+          "value": 0.000001,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pdRequired": {
+          "label": "模型检出概率门限",
+          "unit": "",
+          "min": 0.1,
+          "max": 0.99999,
+          "step": "any",
+          "value": 0.9,
+          "source": "假设",
+          "integer": false
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测范围",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange",
+            "parameters.azimuthFov",
+            "parameters.elevationMin",
+            "parameters.elevationMax"
+          ]
+        },
+        {
+          "name": "测量精度",
+          "keys": [
+            "parameters.rangeAccuracy",
+            "parameters.azimuthAccuracy",
+            "parameters.elevationAccuracy"
+          ]
+        },
+        {
+          "name": "发射配置",
+          "keys": [
+            "parameters.frequencyGHz",
+            "physics.peakPowerW",
+            "physics.pulseWidthUs",
+            "physics.switchTimeUs",
+            "physics.txGainDb"
+          ]
+        },
+        {
+          "name": "接收积累",
+          "keys": [
+            "physics.rxGainDb",
+            "physics.noiseFigureDb",
+            "physics.systemLossDb",
+            "physics.pulses"
+          ]
+        },
+        {
+          "name": "检出判定",
+          "keys": [
+            "physics.pfa",
+            "physics.pdRequired"
+          ]
+        },
+        {
+          "name": "传播杂波",
+          "keys": [
+            "parameters.rainCoefficient",
+            "parameters.rainExponent",
+            "parameters.reflection",
+            "parameters.clutterDb"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [
+        "parameters.thresholdDb",
+        "parameters.referenceSnrDb",
+        "parameters.referenceRcs"
+      ],
+      "demoDefaults": {
+        "radius": 1500,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 360,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "radar-03d",
+        "type": "radar",
+        "name": "03D 三坐标雷达",
+        "parameters": {
+          "maxRange": 8000,
+          "minRange": 50,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 360,
+          "elevationMin": 0,
+          "elevationMax": 60,
+          "thresholdDb": 13,
+          "capacity": 500,
+          "updateSeconds": 2,
+          "referenceSnrDb": 13,
+          "frequencyGHz": 15,
+          "referenceRcs": 0.01,
+          "rainCoefficient": 0.01,
+          "rainExponent": 1.2,
+          "reflection": 0.4,
+          "clutterDb": 3,
+          "rangeAccuracy": 6,
+          "azimuthAccuracy": 0.3,
+          "elevationAccuracy": 0.3
+        },
+        "provenance": {
+          "maxRange": "文档",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "文档",
+          "elevationMin": "文档",
+          "elevationMax": "文档",
+          "thresholdDb": "假设",
+          "capacity": "文档",
+          "updateSeconds": "文档",
+          "referenceSnrDb": "假设",
+          "frequencyGHz": "假设",
+          "referenceRcs": "假设",
+          "rainCoefficient": "假设",
+          "rainExponent": "假设",
+          "reflection": "假设",
+          "clutterDb": "假设",
+          "rangeAccuracy": "文档",
+          "azimuthAccuracy": "文档",
+          "elevationAccuracy": "文档"
+        },
+        "notes": "文档距离 ≥8 km；Ku 波段具体频率及噪声、雨衰参数需标定。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "radio-tdoa",
+      "name": "TDOA-X1B",
+      "type": "radio",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "radio-tdoa",
+        "type": "radio",
+        "name": "TDOA-X1B",
+        "parameters": {
+          "maxRange": 4000,
+          "minRange": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 35,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.1,
+          "bandMaxGHz": 6,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 20,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "physics": {
+          "noiseFigureDb": 4,
+          "rxGainDb": 2,
+          "bandwidthMHz": 20,
+          "receiverLossDb": 2,
+          "referenceFrequencyGHz": 5.8,
+          "referenceEirpDbm": 25.5,
+          "pfa": 0.0001,
+          "pdRequired": 0.9,
+          "observationSeconds": 0.1,
+          "hopSeconds": 0.01
+        },
+        "working": {}
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthFov": {
+          "label": "方位覆盖角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 360,
+          "step": 1,
+          "value": 360,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMin": {
+          "label": "相对最低俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 0,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMax": {
+          "label": "相对最高俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 40,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "假设",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceSnrDb": {
+          "label": "标称距离参考信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 80,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMinGHz": {
+          "label": "最低接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 0.1,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMaxGHz": {
+          "label": "最高接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 6,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.pathExponent": {
+          "label": "参考路径损耗指数",
+          "unit": "",
+          "min": 1,
+          "max": 6,
+          "step": 0.1,
+          "value": 2.7,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.wallLossDb": {
+          "label": "每栋建筑穿透损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 15,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceEirpDbm": {
+          "label": "标称距离参考发射 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": 1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.4,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.networkAccuracy": {
+          "label": "参考 TDOA 网络定位误差",
+          "unit": "m",
+          "min": 0.1,
+          "max": 1000,
+          "step": 1,
+          "value": 20,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandToleranceMHz": {
+          "label": "离散频点接收半带宽",
+          "unit": "MHz",
+          "min": 0.01,
+          "max": 500,
+          "step": 0.1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bearingAccuracy": {
+          "label": "参考测向误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 2,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "physics.noiseFigureDb": {
+          "label": "噪声系数",
+          "unit": "dB",
+          "min": 0,
+          "max": 40,
+          "step": "any",
+          "value": 4,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.rxGainDb": {
+          "label": "接收天线增益",
+          "unit": "dBi",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.bandwidthMHz": {
+          "label": "检测信道带宽",
+          "unit": "MHz",
+          "min": 0.001,
+          "max": 1000,
+          "step": "any",
+          "value": 20,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.receiverLossDb": {
+          "label": "馈线与失配损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceFrequencyGHz": {
+          "label": "反推参考波形频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": "any",
+          "value": 5.8,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceEirpDbm": {
+          "label": "反推参考波形 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": "any",
+          "value": 25.5,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pfa": {
+          "label": "假设虚警概率",
+          "unit": "",
+          "min": 1e-12,
+          "max": 0.1,
+          "step": "any",
+          "value": 0.0001,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pdRequired": {
+          "label": "模型检出概率门限",
+          "unit": "",
+          "min": 0.1,
+          "max": 0.99999,
+          "step": "any",
+          "value": 0.9,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.observationSeconds": {
+          "label": "跳频观测窗口",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.1,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.hopSeconds": {
+          "label": "跳频驻留周期",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.01,
+          "source": "假设",
+          "integer": false
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测范围",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange",
+            "parameters.azimuthFov",
+            "parameters.elevationMin",
+            "parameters.elevationMax"
+          ]
+        },
+        {
+          "name": "接收频段",
+          "keys": [
+            "parameters.bandMinGHz",
+            "parameters.bandMaxGHz",
+            "parameters.bandToleranceMHz"
+          ]
+        },
+        {
+          "name": "定位精度",
+          "keys": [
+            "parameters.networkAccuracy",
+            "parameters.bearingAccuracy"
+          ]
+        },
+        {
+          "name": "链路传播",
+          "keys": [
+            "parameters.wallLossDb",
+            "parameters.reflection",
+            "physics.referenceFrequencyGHz",
+            "physics.referenceEirpDbm"
+          ]
+        },
+        {
+          "name": "检出观测",
+          "keys": [
+            "physics.pfa",
+            "physics.pdRequired",
+            "physics.observationSeconds",
+            "physics.hopSeconds"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [
+        "parameters.thresholdDb",
+        "parameters.referenceSnrDb",
+        "parameters.referenceEirpDbm",
+        "parameters.pathExponent",
+        "physics.rxGainDb",
+        "physics.noiseFigureDb",
+        "physics.receiverLossDb",
+        "physics.bandwidthMHz"
+      ],
+      "demoDefaults": {
+        "radius": 1000,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 360,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "radio-tdoa",
+        "type": "radio",
+        "name": "TDOA-X1B",
+        "parameters": {
+          "maxRange": 4000,
+          "minRange": 0,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 35,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.1,
+          "bandMaxGHz": 6,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 20,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "provenance": {
+          "maxRange": "假设",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "假设",
+          "elevationMin": "假设",
+          "elevationMax": "假设",
+          "thresholdDb": "假设",
+          "capacity": "假设",
+          "updateSeconds": "假设",
+          "referenceSnrDb": "假设",
+          "bandMinGHz": "文档",
+          "bandMaxGHz": "文档",
+          "pathExponent": "假设",
+          "wallLossDb": "假设",
+          "referenceEirpDbm": "假设",
+          "reflection": "假设",
+          "networkAccuracy": "文档",
+          "bandToleranceMHz": "假设",
+          "bearingAccuracy": "假设"
+        },
+        "notes": "文档城市半径 2–6 km，默认取中值 4 km；并发 >35，保守取 35。定位误差 <20 m 属于 TDOA 网络，单站不输出三维定位误差。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "radio-mini",
+      "name": "OA-X1Bmini",
+      "type": "radio",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "radio-mini",
+        "type": "radio",
+        "name": "OA-X1Bmini",
+        "parameters": {
+          "maxRange": 1250,
+          "minRange": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 30,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.1,
+          "bandMaxGHz": 6,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 20,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "physics": {
+          "noiseFigureDb": 5,
+          "rxGainDb": 2,
+          "bandwidthMHz": 20,
+          "receiverLossDb": 2,
+          "referenceFrequencyGHz": 5.8,
+          "referenceEirpDbm": 25.5,
+          "pfa": 0.0001,
+          "pdRequired": 0.9,
+          "observationSeconds": 0.1,
+          "hopSeconds": 0.01
+        },
+        "working": {}
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthFov": {
+          "label": "方位覆盖角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 360,
+          "step": 1,
+          "value": 360,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMin": {
+          "label": "相对最低俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 0,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMax": {
+          "label": "相对最高俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 40,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "假设",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceSnrDb": {
+          "label": "标称距离参考信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 80,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMinGHz": {
+          "label": "最低接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 0.1,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMaxGHz": {
+          "label": "最高接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 6,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.pathExponent": {
+          "label": "参考路径损耗指数",
+          "unit": "",
+          "min": 1,
+          "max": 6,
+          "step": 0.1,
+          "value": 2.7,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.wallLossDb": {
+          "label": "每栋建筑穿透损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 15,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceEirpDbm": {
+          "label": "标称距离参考发射 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": 1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.4,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.networkAccuracy": {
+          "label": "参考 TDOA 网络定位误差",
+          "unit": "m",
+          "min": 0.1,
+          "max": 1000,
+          "step": 1,
+          "value": 20,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandToleranceMHz": {
+          "label": "离散频点接收半带宽",
+          "unit": "MHz",
+          "min": 0.01,
+          "max": 500,
+          "step": 0.1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bearingAccuracy": {
+          "label": "参考测向误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 2,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "physics.noiseFigureDb": {
+          "label": "噪声系数",
+          "unit": "dB",
+          "min": 0,
+          "max": 40,
+          "step": "any",
+          "value": 4,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.rxGainDb": {
+          "label": "接收天线增益",
+          "unit": "dBi",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.bandwidthMHz": {
+          "label": "检测信道带宽",
+          "unit": "MHz",
+          "min": 0.001,
+          "max": 1000,
+          "step": "any",
+          "value": 20,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.receiverLossDb": {
+          "label": "馈线与失配损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceFrequencyGHz": {
+          "label": "反推参考波形频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": "any",
+          "value": 5.8,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceEirpDbm": {
+          "label": "反推参考波形 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": "any",
+          "value": 25.5,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pfa": {
+          "label": "假设虚警概率",
+          "unit": "",
+          "min": 1e-12,
+          "max": 0.1,
+          "step": "any",
+          "value": 0.0001,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pdRequired": {
+          "label": "模型检出概率门限",
+          "unit": "",
+          "min": 0.1,
+          "max": 0.99999,
+          "step": "any",
+          "value": 0.9,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.observationSeconds": {
+          "label": "跳频观测窗口",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.1,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.hopSeconds": {
+          "label": "跳频驻留周期",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.01,
+          "source": "假设",
+          "integer": false
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测范围",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange",
+            "parameters.azimuthFov",
+            "parameters.elevationMin",
+            "parameters.elevationMax"
+          ]
+        },
+        {
+          "name": "接收频段",
+          "keys": [
+            "parameters.bandMinGHz",
+            "parameters.bandMaxGHz",
+            "parameters.bandToleranceMHz"
+          ]
+        },
+        {
+          "name": "定位精度",
+          "keys": [
+            "parameters.networkAccuracy",
+            "parameters.bearingAccuracy"
+          ]
+        },
+        {
+          "name": "链路传播",
+          "keys": [
+            "parameters.wallLossDb",
+            "parameters.reflection",
+            "physics.referenceFrequencyGHz",
+            "physics.referenceEirpDbm"
+          ]
+        },
+        {
+          "name": "检出观测",
+          "keys": [
+            "physics.pfa",
+            "physics.pdRequired",
+            "physics.observationSeconds",
+            "physics.hopSeconds"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [
+        "parameters.thresholdDb",
+        "parameters.referenceSnrDb",
+        "parameters.referenceEirpDbm",
+        "parameters.pathExponent",
+        "physics.rxGainDb",
+        "physics.noiseFigureDb",
+        "physics.receiverLossDb",
+        "physics.bandwidthMHz"
+      ],
+      "demoDefaults": {
+        "radius": 1000,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 360,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "radio-mini",
+        "type": "radio",
+        "name": "OA-X1Bmini",
+        "parameters": {
+          "maxRange": 1250,
+          "minRange": 0,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 30,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.1,
+          "bandMaxGHz": 6,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 20,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "provenance": {
+          "maxRange": "假设",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "假设",
+          "elevationMin": "假设",
+          "elevationMax": "假设",
+          "thresholdDb": "假设",
+          "capacity": "假设",
+          "updateSeconds": "假设",
+          "referenceSnrDb": "假设",
+          "bandMinGHz": "文档",
+          "bandMaxGHz": "文档",
+          "pathExponent": "假设",
+          "wallLossDb": "假设",
+          "referenceEirpDbm": "假设",
+          "reflection": "假设",
+          "networkAccuracy": "文档",
+          "bandToleranceMHz": "假设",
+          "bearingAccuracy": "假设"
+        },
+        "notes": "文档城市半径 0.5–2 km，默认取中值 1.25 km；并发 >30，保守取 30。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "radio-x1c",
+      "name": "X1C 侦测设备",
+      "type": "radio",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "radio-x1c",
+        "type": "radio",
+        "name": "X1C 侦测设备",
+        "parameters": {
+          "maxRange": 3500,
+          "minRange": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 15,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.9,
+          "bandMaxGHz": 5.8,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 10,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "physics": {
+          "noiseFigureDb": 3,
+          "rxGainDb": 3,
+          "bandwidthMHz": 20,
+          "receiverLossDb": 2,
+          "referenceFrequencyGHz": 5.8,
+          "referenceEirpDbm": 25.5,
+          "pfa": 0.00001,
+          "pdRequired": 0.9,
+          "observationSeconds": 0.1,
+          "hopSeconds": 0.01
+        },
+        "working": {}
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.azimuthFov": {
+          "label": "方位覆盖角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 360,
+          "step": 1,
+          "value": 360,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMin": {
+          "label": "相对最低俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 0,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.elevationMax": {
+          "label": "相对最高俯仰",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "value": 40,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "假设",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceSnrDb": {
+          "label": "标称距离参考信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 80,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMinGHz": {
+          "label": "最低接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 0.1,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandMaxGHz": {
+          "label": "最高接收频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": 0.001,
+          "value": 6,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.pathExponent": {
+          "label": "参考路径损耗指数",
+          "unit": "",
+          "min": 1,
+          "max": 6,
+          "step": 0.1,
+          "value": 2.7,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.wallLossDb": {
+          "label": "每栋建筑穿透损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 15,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceEirpDbm": {
+          "label": "标称距离参考发射 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": 1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.4,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.networkAccuracy": {
+          "label": "参考 TDOA 网络定位误差",
+          "unit": "m",
+          "min": 0.1,
+          "max": 1000,
+          "step": 1,
+          "value": 20,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bandToleranceMHz": {
+          "label": "离散频点接收半带宽",
+          "unit": "MHz",
+          "min": 0.01,
+          "max": 500,
+          "step": 0.1,
+          "value": 20,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bearingAccuracy": {
+          "label": "参考测向误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 2,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "physics.noiseFigureDb": {
+          "label": "噪声系数",
+          "unit": "dB",
+          "min": 0,
+          "max": 40,
+          "step": "any",
+          "value": 4,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.rxGainDb": {
+          "label": "接收天线增益",
+          "unit": "dBi",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.bandwidthMHz": {
+          "label": "检测信道带宽",
+          "unit": "MHz",
+          "min": 0.001,
+          "max": 1000,
+          "step": "any",
+          "value": 20,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.receiverLossDb": {
+          "label": "馈线与失配损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 60,
+          "step": "any",
+          "value": 2,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceFrequencyGHz": {
+          "label": "反推参考波形频率",
+          "unit": "GHz",
+          "min": 0.001,
+          "max": 100,
+          "step": "any",
+          "value": 5.8,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.referenceEirpDbm": {
+          "label": "反推参考波形 EIRP",
+          "unit": "dBm",
+          "min": -40,
+          "max": 80,
+          "step": "any",
+          "value": 25.5,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pfa": {
+          "label": "假设虚警概率",
+          "unit": "",
+          "min": 1e-12,
+          "max": 0.1,
+          "step": "any",
+          "value": 0.0001,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.pdRequired": {
+          "label": "模型检出概率门限",
+          "unit": "",
+          "min": 0.1,
+          "max": 0.99999,
+          "step": "any",
+          "value": 0.9,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.observationSeconds": {
+          "label": "跳频观测窗口",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.1,
+          "source": "假设",
+          "integer": false
+        },
+        "physics.hopSeconds": {
+          "label": "跳频驻留周期",
+          "unit": "s",
+          "min": 0.00001,
+          "max": 10,
+          "step": "any",
+          "value": 0.01,
+          "source": "假设",
+          "integer": false
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测范围",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange",
+            "parameters.azimuthFov",
+            "parameters.elevationMin",
+            "parameters.elevationMax"
+          ]
+        },
+        {
+          "name": "接收频段",
+          "keys": [
+            "parameters.bandMinGHz",
+            "parameters.bandMaxGHz",
+            "parameters.bandToleranceMHz"
+          ]
+        },
+        {
+          "name": "定位精度",
+          "keys": [
+            "parameters.networkAccuracy",
+            "parameters.bearingAccuracy"
+          ]
+        },
+        {
+          "name": "链路传播",
+          "keys": [
+            "parameters.wallLossDb",
+            "parameters.reflection",
+            "physics.referenceFrequencyGHz",
+            "physics.referenceEirpDbm"
+          ]
+        },
+        {
+          "name": "检出观测",
+          "keys": [
+            "physics.pfa",
+            "physics.pdRequired",
+            "physics.observationSeconds",
+            "physics.hopSeconds"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [
+        "parameters.thresholdDb",
+        "parameters.referenceSnrDb",
+        "parameters.referenceEirpDbm",
+        "parameters.pathExponent",
+        "physics.rxGainDb",
+        "physics.noiseFigureDb",
+        "physics.receiverLossDb",
+        "physics.bandwidthMHz"
+      ],
+      "demoDefaults": {
+        "radius": 1000,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 360,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "radio-x1c",
+        "type": "radio",
+        "name": "X1C 侦测设备",
+        "parameters": {
+          "maxRange": 3500,
+          "minRange": 0,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 360,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 13,
+          "capacity": 15,
+          "updateSeconds": 1,
+          "referenceSnrDb": 13,
+          "bandMinGHz": 0.9,
+          "bandMaxGHz": 5.8,
+          "pathExponent": 2.7,
+          "wallLossDb": 15,
+          "referenceEirpDbm": 20,
+          "reflection": 0.4,
+          "networkAccuracy": 10,
+          "bandToleranceMHz": 20,
+          "bearingAccuracy": 2
+        },
+        "provenance": {
+          "maxRange": "假设",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "假设",
+          "elevationMin": "假设",
+          "elevationMax": "假设",
+          "thresholdDb": "假设",
+          "capacity": "假设",
+          "updateSeconds": "假设",
+          "referenceSnrDb": "假设",
+          "bandMinGHz": "文档",
+          "bandMaxGHz": "文档",
+          "pathExponent": "假设",
+          "wallLossDb": "假设",
+          "referenceEirpDbm": "假设",
+          "reflection": "假设",
+          "networkAccuracy": "文档",
+          "bandToleranceMHz": "假设",
+          "bearingAccuracy": "假设"
+        },
+        "notes": "文档城市半径 2–5 km，默认取中值 3.5 km。仅接收列出的 0.9/1.2/2.4/5.2/5.8 GHz，带宽容差为模型假设。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "optical-nvt",
+      "name": "NVT-951 双光谱光电",
+      "type": "optical",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "optical-nvt",
+        "type": "optical",
+        "name": "NVT-951 双光谱光电",
+        "parameters": {
+          "maxRange": null,
+          "minRange": null,
+          "capacity": 1,
+          "updateSeconds": 0.1,
+          "wideHfov": null,
+          "narrowHfov": null,
+          "imageWidth": 1920,
+          "imageHeight": 1080,
+          "thermalWidth": 640,
+          "thermalHeight": 512,
+          "thermalHfov": null,
+          "minLux": null,
+          "requiredPixels": null,
+          "rainDbKm": 0.03
+        },
+        "physics": {},
+        "working": {
+          "channel": "visible",
+          "focalMm": 6.5,
+          "yawMin": 0,
+          "yawMax": 360,
+          "pitchMin": -90,
+          "pitchMax": 90
+        }
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "假设",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.wideHfov": {
+          "label": "宽视场水平角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 170,
+          "step": 0.1,
+          "value": 60,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.narrowHfov": {
+          "label": "窄视场水平角",
+          "unit": "°",
+          "min": 0.1,
+          "max": 170,
+          "step": 0.1,
+          "value": 2,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.imageWidth": {
+          "label": "可见光图像宽度",
+          "unit": "px",
+          "min": 16,
+          "max": 16384,
+          "step": 1,
+          "value": 1920,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.imageHeight": {
+          "label": "可见光图像高度",
+          "unit": "px",
+          "min": 16,
+          "max": 16384,
+          "step": 1,
+          "value": 1080,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.thermalWidth": {
+          "label": "热成像图像宽度",
+          "unit": "px",
+          "min": 16,
+          "max": 16384,
+          "step": 1,
+          "value": 640,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.thermalHeight": {
+          "label": "热成像图像高度",
+          "unit": "px",
+          "min": 16,
+          "max": 16384,
+          "step": 1,
+          "value": 512,
+          "source": "资料",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.thermalHfov": {
+          "label": "热成像水平视场",
+          "unit": "°",
+          "min": 0.1,
+          "max": 170,
+          "step": 0.1,
+          "value": 9,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.minLux": {
+          "label": "可见光最低照度",
+          "unit": "lux",
+          "min": 0.0001,
+          "max": 1000,
+          "step": 0.01,
+          "value": 0.1,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.requiredPixels": {
+          "label": "识别所需有效像素",
+          "unit": "px",
+          "min": 1,
+          "max": 200,
+          "step": 1,
+          "value": 8,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.rainDbKm": {
+          "label": "降雨每 mm/h 附加消光",
+          "unit": "dB/km",
+          "min": 0,
+          "max": 10,
+          "step": 0.01,
+          "value": 0.03,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "working.channel": {
+          "label": "成像通道",
+          "unit": "",
+          "min": 0,
+          "max": 0,
+          "value": "visible",
+          "step": "any",
+          "options": [
+            [
+              "visible",
+              "可见光"
+            ],
+            [
+              "thermal",
+              "热成像"
+            ]
+          ],
+          "source": "资料"
+        },
+        "working.focalMm": {
+          "label": "工作焦距",
+          "unit": "mm",
+          "min": 6.5,
+          "max": 312,
+          "value": 6.5,
+          "step": "any",
+          "source": "资料"
+        },
+        "working.yawMin": {
+          "label": "云台水平下限",
+          "unit": "°",
+          "min": 0,
+          "max": 360,
+          "value": 0,
+          "step": "any",
+          "source": "资料"
+        },
+        "working.yawMax": {
+          "label": "云台水平上限",
+          "unit": "°",
+          "min": 0,
+          "max": 360,
+          "value": 360,
+          "step": "any",
+          "source": "资料"
+        },
+        "working.pitchMin": {
+          "label": "云台俯仰下限",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "value": -90,
+          "step": "any",
+          "source": "资料"
+        },
+        "working.pitchMax": {
+          "label": "云台俯仰上限",
+          "unit": "°",
+          "min": -90,
+          "max": 90,
+          "value": 90,
+          "step": "any",
+          "source": "资料"
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测距离",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange"
+          ]
+        },
+        {
+          "name": "通道焦距",
+          "keys": [
+            "working.channel",
+            "working.focalMm"
+          ]
+        },
+        {
+          "name": "图像尺寸",
+          "keys": [
+            "parameters.imageWidth",
+            "parameters.imageHeight",
+            "parameters.thermalWidth",
+            "parameters.thermalHeight"
+          ]
+        },
+        {
+          "name": "成像条件",
+          "keys": [
+            "parameters.wideHfov",
+            "parameters.narrowHfov",
+            "parameters.thermalHfov",
+            "parameters.minLux",
+            "parameters.requiredPixels",
+            "parameters.rainDbKm"
+          ]
+        },
+        {
+          "name": "云台范围",
+          "keys": [
+            "working.yawMin",
+            "working.yawMax",
+            "working.pitchMin",
+            "working.pitchMax"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [],
+      "demoDefaults": {
+        "radius": 400,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 25,
+        "heading": 0,
+        "pitch": 10,
+        "mountHeight": 30,
+        "horizontal": 60,
+        "vertical": 40,
+        "metric": "pixels",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "optical-nvt",
+        "type": "optical",
+        "name": "NVT-951 双光谱光电",
+        "parameters": {
+          "maxRange": 2000,
+          "minRange": 0,
+          "heading": 0,
+          "pitch": 0,
+          "capacity": 1,
+          "updateSeconds": 0.1,
+          "wideHfov": 60,
+          "narrowHfov": 2,
+          "imageWidth": 1920,
+          "imageHeight": 1080,
+          "thermalWidth": 640,
+          "thermalHeight": 512,
+          "thermalHfov": 9,
+          "minLux": 0.1,
+          "requiredPixels": 8,
+          "rainDbKm": 0.03,
+          "elevationMin": -90,
+          "elevationMax": 90,
+          "thresholdDb": 0
+        },
+        "provenance": {
+          "maxRange": "假设",
+          "minRange": "假设",
+          "heading": "假设",
+          "pitch": "假设",
+          "capacity": "假设",
+          "updateSeconds": "假设",
+          "wideHfov": "假设",
+          "narrowHfov": "假设",
+          "imageWidth": "文档",
+          "imageHeight": "文档",
+          "thermalWidth": "文档",
+          "thermalHeight": "文档",
+          "thermalHfov": "假设",
+          "minLux": "假设",
+          "requiredPixels": "假设",
+          "rainDbKm": "假设"
+        },
+        "notes": "文档提供 1920×1080、640×512、48×光学变焦及 ≥35 cm 目标识别；未给最大识别距离、实际视场及最低照度，默认值均为假设。云台转动范围不等于瞬时视场。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "acoustic-cry",
+      "name": "CRY8500 声学相机",
+      "type": "acoustic",
+      "catalogOnly": false,
+      "profile": {
+        "presetId": "acoustic-cry",
+        "type": "acoustic",
+        "name": "CRY8500 声学相机",
+        "parameters": {
+          "maxRange": 500,
+          "minRange": 0.01,
+          "thresholdDb": 6,
+          "capacity": 1,
+          "updateSeconds": 0.2,
+          "minSoundDb": 28,
+          "maxSoundDb": 132,
+          "dynamicRangeDb": 40,
+          "referenceNoiseDb": 35,
+          "absorptionDbKm": 3,
+          "wallLossDb": 6,
+          "reflection": 0.3,
+          "bearingAccuracy": null,
+          "elevationAccuracy": null
+        },
+        "physics": {},
+        "working": {
+          "arrayDiameter": 1.1,
+          "frequencyMin": 20,
+          "frequencyMax": 20000
+        }
+      },
+      "fields": {
+        "parameters.maxRange": {
+          "label": "标称距离上限",
+          "unit": "m",
+          "min": 1,
+          "max": 30000,
+          "step": 10,
+          "value": 8000,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "min": 0,
+          "max": 30000,
+          "step": 1,
+          "value": 50,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.thresholdDb": {
+          "label": "判定所需信噪比",
+          "unit": "dB",
+          "min": -20,
+          "max": 60,
+          "step": 0.5,
+          "value": 13,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.capacity": {
+          "label": "模型并发容量",
+          "unit": "个",
+          "min": 1,
+          "max": 10000,
+          "step": 1,
+          "value": 500,
+          "source": "假设",
+          "integer": true,
+          "nullable": false
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "min": 0.01,
+          "max": 60,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.minSoundDb": {
+          "label": "最低输入声压",
+          "unit": "dB SPL",
+          "min": 0,
+          "max": 160,
+          "step": 1,
+          "value": 28,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.maxSoundDb": {
+          "label": "最高输入声压",
+          "unit": "dB SPL",
+          "min": 0,
+          "max": 180,
+          "step": 1,
+          "value": 132,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.dynamicRangeDb": {
+          "label": "动态范围",
+          "unit": "dB",
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "value": 40,
+          "source": "资料",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.referenceNoiseDb": {
+          "label": "参考背景声压",
+          "unit": "dB SPL",
+          "min": 0,
+          "max": 140,
+          "step": 1,
+          "value": 35,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.absorptionDbKm": {
+          "label": "空气吸收",
+          "unit": "dB/km",
+          "min": 0,
+          "max": 100,
+          "step": 0.1,
+          "value": 3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.wallLossDb": {
+          "label": "每栋建筑额外损耗",
+          "unit": "dB",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 6,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.reflection": {
+          "label": "地面反射幅度系数",
+          "unit": "",
+          "min": 0,
+          "max": 0.99,
+          "step": 0.05,
+          "value": 0.3,
+          "source": "假设",
+          "integer": false,
+          "nullable": false
+        },
+        "parameters.bearingAccuracy": {
+          "label": "参考方位误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 3,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "parameters.elevationAccuracy": {
+          "label": "参考俯仰误差",
+          "unit": "°",
+          "min": 0.01,
+          "max": 45,
+          "step": 0.1,
+          "value": 4,
+          "source": "未提供",
+          "integer": false,
+          "nullable": true
+        },
+        "working.arrayDiameter": {
+          "label": "阵列规格",
+          "unit": "m",
+          "min": 0.3,
+          "max": 1.1,
+          "value": 1.1,
+          "step": "any",
+          "options": [
+            [
+              "0.3",
+              "30 cm"
+            ],
+            [
+              "0.7",
+              "70 cm"
+            ],
+            [
+              "1.1",
+              "110 cm"
+            ]
+          ],
+          "source": "资料"
+        },
+        "working.frequencyMin": {
+          "label": "频率下限",
+          "unit": "Hz",
+          "min": 1,
+          "max": 100000,
+          "value": 20,
+          "step": "any",
+          "nullable": true,
+          "source": "资料"
+        },
+        "working.frequencyMax": {
+          "label": "频率上限",
+          "unit": "Hz",
+          "min": 1,
+          "max": 100000,
+          "value": 20000,
+          "step": "any",
+          "nullable": true,
+          "source": "资料"
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测距离",
+          "keys": [
+            "parameters.maxRange",
+            "parameters.minRange"
+          ]
+        },
+        {
+          "name": "阵列频带",
+          "keys": [
+            "working.arrayDiameter",
+            "working.frequencyMin",
+            "working.frequencyMax"
+          ]
+        },
+        {
+          "name": "声压范围",
+          "keys": [
+            "parameters.minSoundDb",
+            "parameters.maxSoundDb",
+            "parameters.dynamicRangeDb"
+          ]
+        },
+        {
+          "name": "测角精度",
+          "keys": [
+            "parameters.bearingAccuracy",
+            "parameters.elevationAccuracy"
+          ]
+        },
+        {
+          "name": "声学检出",
+          "keys": [
+            "parameters.absorptionDbKm",
+            "parameters.wallLossDb",
+            "parameters.reflection",
+            "parameters.referenceNoiseDb",
+            "parameters.thresholdDb"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [],
+      "demoDefaults": {
+        "radius": 500,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 50,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 60,
+        "vertical": 40,
+        "metric": "margin",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": {
+        "id": "acoustic-cry",
+        "type": "acoustic",
+        "name": "CRY8500 声学相机",
+        "parameters": {
+          "maxRange": 500,
+          "minRange": 0.01,
+          "heading": 0,
+          "pitch": 0,
+          "azimuthFov": 94,
+          "elevationMin": -38,
+          "elevationMax": 38,
+          "thresholdDb": 6,
+          "capacity": 1,
+          "updateSeconds": 0.2,
+          "minSoundDb": 28,
+          "maxSoundDb": 132,
+          "dynamicRangeDb": 40,
+          "referenceNoiseDb": 35,
+          "absorptionDbKm": 3,
+          "wallLossDb": 6,
+          "reflection": 0.3,
+          "bearingAccuracy": 3,
+          "elevationAccuracy": 4
+        },
+        "provenance": {
+          "maxRange": "文档",
+          "minRange": "文档",
+          "heading": "假设",
+          "pitch": "假设",
+          "azimuthFov": "文档",
+          "elevationMin": "文档",
+          "elevationMax": "文档",
+          "thresholdDb": "假设",
+          "capacity": "假设",
+          "updateSeconds": "假设",
+          "minSoundDb": "文档",
+          "maxSoundDb": "文档",
+          "dynamicRangeDb": "文档",
+          "referenceNoiseDb": "假设",
+          "absorptionDbKm": "假设",
+          "wallLossDb": "假设",
+          "reflection": "假设",
+          "bearingAccuracy": "假设",
+          "elevationAccuracy": "假设"
+        },
+        "notes": "文档探测距离 0.01–500 m、视场 94°×76°、20 Hz–20 kHz（110 cm 阵列）。无人机声谱、测角精度及传播参数为假设；声级能力不是无人机检出保证。",
+        "source": "创意二文件/创意二数据集/装备参数.doc"
+      }
+    },
+    {
+      "id": "fivega-zte-a9650-s49",
+      "name": "A9650 S49 大张角通感设备",
+      "type": "fivega",
+      "catalogOnly": true,
+      "profile": {
+        "presetId": "fivega-zte-a9650-s49",
+        "type": "fivega",
+        "name": "A9650 S49 大张角通感设备",
+        "parameters": {
+          "coverageDistance": 1500,
+          "minRange": null,
+          "capacity": null,
+          "updateSeconds": null,
+          "verticalBeamAngle": 65,
+          "coverageHeight": 600,
+          "rangeAccuracy": null,
+          "bearingAccuracy": null,
+          "channelCount": 128,
+          "frequencyGHz": null,
+          "bandwidthMHz": null,
+          "uplinkStreams": 12,
+          "downlinkStreams": 32,
+          "cellPeakGbps": 10
+        },
+        "physics": {},
+        "working": {}
+      },
+      "fields": {
+        "parameters.coverageDistance": {
+          "label": "单站覆盖距离",
+          "unit": "m",
+          "value": 1500,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "qualifier": "以上",
+          "statement": "原文为 1.5 km 以上；1500 m 为报道门槛。"
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.capacity": {
+          "label": "并发目标数",
+          "unit": "个",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": "",
+          "integer": true
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.verticalBeamAngle": {
+          "label": "垂直覆盖张角",
+          "unit": "°",
+          "value": 65,
+          "min": 0,
+          "max": 180,
+          "step": "any",
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "statement": "总垂直覆盖波束张角，不代表俯仰上下限。"
+        },
+        "parameters.coverageHeight": {
+          "label": "业务覆盖高度",
+          "unit": "m",
+          "value": 600,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "qualifier": "以上",
+          "statement": "原文为业务高度 600 m 以上。"
+        },
+        "parameters.rangeAccuracy": {
+          "label": "测距误差",
+          "unit": "m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.bearingAccuracy": {
+          "label": "测角误差",
+          "unit": "°",
+          "value": null,
+          "min": 0,
+          "max": 180,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.channelCount": {
+          "label": "收发通道数",
+          "unit": "通道",
+          "value": 128,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "integer": true,
+          "statement": "128 通道自发自收通感一体设备。"
+        },
+        "parameters.frequencyGHz": {
+          "label": "工作频率",
+          "unit": "GHz",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.bandwidthMHz": {
+          "label": "工作带宽",
+          "unit": "MHz",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.uplinkStreams": {
+          "label": "上行空间流",
+          "unit": "流",
+          "value": 12,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "integer": true
+        },
+        "parameters.downlinkStreams": {
+          "label": "下行空间流",
+          "unit": "流",
+          "value": 32,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "integer": true
+        },
+        "parameters.cellPeakGbps": {
+          "label": "小区峰值吞吐",
+          "unit": "Gbps",
+          "value": 10,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "部署报道",
+          "placeholder": "",
+          "sourceId": "guangzhou-2024",
+          "qualifier": "+",
+          "statement": "原文为 10 Gbps+；属于小区峰值能力。"
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "感知覆盖",
+          "keys": [
+            "parameters.coverageDistance",
+            "parameters.minRange",
+            "parameters.verticalBeamAngle",
+            "parameters.coverageHeight"
+          ]
+        },
+        {
+          "name": "定位精度",
+          "keys": [
+            "parameters.rangeAccuracy",
+            "parameters.bearingAccuracy"
+          ]
+        },
+        {
+          "name": "通感配置",
+          "keys": [
+            "parameters.channelCount",
+            "parameters.frequencyGHz",
+            "parameters.bandwidthMHz"
+          ]
+        },
+        {
+          "name": "通信性能",
+          "keys": [
+            "parameters.uplinkStreams",
+            "parameters.downlinkStreams",
+            "parameters.cellPeakGbps"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [],
+      "demoDefaults": {
+        "radius": 1500,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 100,
+        "heading": 0,
+        "pitch": 10,
+        "mountHeight": 30,
+        "horizontal": 120,
+        "vertical": 65,
+        "metric": "distance",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": null
+    },
+    {
+      "id": "electrostatic-crsc-er1",
+      "name": "CRSC-ER-1 静电探测设备",
+      "type": "electrostatic",
+      "catalogOnly": true,
+      "profile": {
+        "presetId": "electrostatic-crsc-er1",
+        "type": "electrostatic",
+        "name": "CRSC-ER-1 静电探测设备",
+        "parameters": {
+          "detectionDistance": 100,
+          "responseTimeMs": 80,
+          "capacity": null,
+          "updateSeconds": null,
+          "minRange": null,
+          "fieldMinVpm": null,
+          "fieldMaxVpm": null,
+          "sensitivityVpm": null,
+          "fieldAccuracyVpm": null,
+          "samplingHz": null,
+          "stationCount": null,
+          "nodeSpacingMeters": null,
+          "staticPowerMw": 50,
+          "operatingPowerW": null,
+          "temperatureMin": -25,
+          "temperatureMax": 60
+        },
+        "physics": {},
+        "working": {}
+      },
+      "fields": {
+        "parameters.detectionDistance": {
+          "label": "标称探测距离",
+          "unit": "m",
+          "value": 100,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "厂商标称",
+          "placeholder": "",
+          "sourceId": "crsc-er-1",
+          "qualifier": "≥",
+          "statement": "厂商标称静电监测距离；目标与环境测试条件未公开。"
+        },
+        "parameters.responseTimeMs": {
+          "label": "响应时间",
+          "unit": "ms",
+          "value": 80,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "厂商标称",
+          "placeholder": "",
+          "sourceId": "crsc-er-1",
+          "qualifier": "≤",
+          "statement": "信号响应时间，不等于更新周期。"
+        },
+        "parameters.capacity": {
+          "label": "并发目标数",
+          "unit": "个",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": "",
+          "integer": true
+        },
+        "parameters.updateSeconds": {
+          "label": "更新周期",
+          "unit": "s",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.minRange": {
+          "label": "近距盲区",
+          "unit": "m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.fieldMinVpm": {
+          "label": "场强量程下限",
+          "unit": "V/m",
+          "value": null,
+          "min": -1000000000,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.fieldMaxVpm": {
+          "label": "场强量程上限",
+          "unit": "V/m",
+          "value": null,
+          "min": -1000000000,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.sensitivityVpm": {
+          "label": "场强灵敏度",
+          "unit": "V/m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.fieldAccuracyVpm": {
+          "label": "场强测量误差",
+          "unit": "V/m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.samplingHz": {
+          "label": "采样频率",
+          "unit": "Hz",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.stationCount": {
+          "label": "组网节点数",
+          "unit": "个",
+          "value": null,
+          "min": 1,
+          "max": 1000000000,
+          "step": 1,
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": "",
+          "integer": true
+        },
+        "parameters.nodeSpacingMeters": {
+          "label": "节点间距",
+          "unit": "m",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.staticPowerMw": {
+          "label": "静态功耗",
+          "unit": "mW",
+          "value": 50,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "厂商标称",
+          "placeholder": "",
+          "sourceId": "crsc-er-1",
+          "qualifier": "≤",
+          "statement": "静态功耗，不代表整机工作功耗。"
+        },
+        "parameters.operatingPowerW": {
+          "label": "整机工作功耗",
+          "unit": "W",
+          "value": null,
+          "min": 0,
+          "max": 1000000000,
+          "step": "any",
+          "nullable": true,
+          "source": "未公开",
+          "placeholder": ""
+        },
+        "parameters.temperatureMin": {
+          "label": "工作温度下限",
+          "unit": "℃",
+          "value": -25,
+          "min": -273.15,
+          "max": 1000,
+          "step": "any",
+          "nullable": true,
+          "source": "厂商标称",
+          "placeholder": "",
+          "sourceId": "crsc-er-1"
+        },
+        "parameters.temperatureMax": {
+          "label": "工作温度上限",
+          "unit": "℃",
+          "value": 60,
+          "min": -273.15,
+          "max": 1000,
+          "step": "any",
+          "nullable": true,
+          "source": "厂商标称",
+          "placeholder": "",
+          "sourceId": "crsc-er-1"
+        }
+      },
+      "editorGroups": [
+        {
+          "name": "探测距离",
+          "keys": [
+            "parameters.detectionDistance",
+            "parameters.minRange"
+          ]
+        },
+        {
+          "name": "场强测量",
+          "keys": [
+            "parameters.fieldMinVpm",
+            "parameters.fieldMaxVpm",
+            "parameters.sensitivityVpm",
+            "parameters.fieldAccuracyVpm"
+          ]
+        },
+        {
+          "name": "组网配置",
+          "keys": [
+            "parameters.stationCount",
+            "parameters.nodeSpacingMeters"
+          ]
+        },
+        {
+          "name": "环境功耗",
+          "keys": [
+            "parameters.staticPowerMw",
+            "parameters.operatingPowerW",
+            "parameters.temperatureMin",
+            "parameters.temperatureMax"
+          ]
+        }
+      ],
+      "hiddenCompatibilityFields": [],
+      "demoDefaults": {
+        "radius": 100,
+        "ceiling": 800,
+        "heightDefaultVersion": 1,
+        "spacing": 25,
+        "heading": 0,
+        "pitch": 0,
+        "mountHeight": 30,
+        "horizontal": 60,
+        "vertical": 40,
+        "metric": "distance",
+        "style": "volume",
+        "density": 2,
+        "clip": 1,
+        "autoscale": true,
+        "nominal": false,
+        "reflections": false
+      },
+      "legacyEnginePreset": null
+    }
+  ]
+}

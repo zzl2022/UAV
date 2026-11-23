@@ -44,8 +44,8 @@ export function mountCapabilityAssessment({panel,city,getState,getSelected,getQu
    number(box,'工作焦距 / mm',s.focal_mm,range[0],range[1],.1,v=>s.focal_mm=v);
    number(box,'方位指向 / °',d.parameters.heading,0,360,.1,v=>d.parameters.heading=v);
    number(box,'俯仰指向 / °',d.parameters.pitch,-90,90,.1,v=>d.parameters.pitch=v);
-   number(box,'目标宽度 / m',t.width_m,.001,100,.001,v=>t.width_m=v);
-   number(box,'目标高度 / m',t.height_m,.001,100,.001,v=>t.height_m=v);
+   number(box,'成像水平尺寸 / m',t.width_m,.001,100,.001,v=>t.width_m=v);
+   number(box,'成像垂直尺寸 / m',t.height_m,.001,100,.001,v=>t.height_m=v);
    checkbox(box,'capability-custom-fov','启用自定义视场试算（场景假设）',s.use_custom_fov,v=>s.use_custom_fov=v);
    if(s.use_custom_fov){number(box,'水平视场 / °',s.custom_fov_deg[0],.001,179.999,.001,v=>s.custom_fov_deg[0]=v);
     number(box,'垂直视场 / °',s.custom_fov_deg[1],.001,179.999,.001,v=>s.custom_fov_deg[1]=v);

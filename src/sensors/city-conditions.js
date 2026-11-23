@@ -7,20 +7,24 @@ const environmentGroups=[
  ['噪声环境',['trafficDb','constructionDb','crowdDb','windNoiseDb','rainNoiseDb']],
  ['电磁环境',['emNoiseDb','cochannelDb','crosstalkDb']],
 ];
-const targetKeys=['size','width_m','height_m','rcs','speed','count','thermalContrast','emitting','fhss','frequencyGHz','eirpDbm','sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh'];
-export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
+const targetKeys=['east','north','up','size','width_m','height_m','rcs','speed','count','thermalContrast','emitting','fhss','frequencyGHz','eirpDbm','sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh'];
+const draftTarget=target=>({...targetDraft(target),east:target.position[0],up:target.position[1],north:-target.position[2]});
+const positionFields=Object.fromEntries(['east','north','up'].map((key,i)=>[key,{label:['东坐标','北坐标','上坐标'][i],unit:'m',min:i===2?-20000:-30000,max:i===2?20000:30000}]));
+export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPickTarget}){
  const scene=document.createElement('div');scene.id='city-scene-page';scene.className='city-page';scene.append(...panel.childNodes);
  const tabs=document.createElement('div');tabs.className='city-mode-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','城市建模');
  const pages=new Map([['scene',scene]]);let active='scene';
  const editors={
   environment:{name:'环境情况',groups:environmentGroups,fields:ENV_FIELDS,draft:structuredClone(getState().environment),dirty:false,group:'气象环境'},
-  target:{name:'侦测目标',fields:TARGET_EDITOR_FIELDS,draft:targetDraft(getState().target),dirty:false},
+  target:{name:'侦测目标',fields:{...TARGET_EDITOR_FIELDS,...positionFields},draft:draftTarget(getState().target),dirty:false},
  };
  function commitTarget(editor){
   try{
    const next=targetFromDraft(getState().target,editor.draft);
-   onTarget(next);editor.dirty=false;editor.message.textContent='';return true;
-  }catch(error){editor.message.textContent=error.message;return false;}
+   for(const [key,spec] of Object.entries(positionFields)){const v=editor.draft[key];if(!Number.isFinite(v)||v<spec.min||v>spec.max)throw Error('请检查'+spec.label);}
+   next.position=[editor.draft.east,editor.draft.up,-editor.draft.north];
+   onTarget(next);editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='设置成功，目标参数已生效';return true;
+  }catch(error){editor.apply.disabled=false;editor.message.textContent=error.message;return false;}
  }
  function activate(id){active=id;for(const [name,page] of pages)page.hidden=name!==id;for(const button of tabs.children){const selected=button.dataset.page===id;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;}}
  for(const [id,name] of [['scene','区域选择'],['environment','环境情况'],['target','侦测目标']]){
@@ -85,7 +89,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
     try{
      if(selected.size>1024*1024)throw Error('文件不能大于 1 MB');
      editor.draft=importTargetDraft(getState().target,editor.draft,JSON.parse(await selected.text()));
-     editor.dirty=true;if(commitTarget(editor))editor.message.textContent='已导入';renderEditor(id);
+     editor.dirty=true;if(commitTarget(editor))editor.message.textContent='设置成功，已导入并生效';renderEditor(id);
     }catch(error){editor.message.textContent=`导入失败：${error.message}`;}
     finally{file.value='';}
    };
@@ -105,13 +109,13 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
     else{
      onTarget(targetFromDraft(getState().target,editor.draft));
     }
-    editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='已应用';
+    editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='设置成功，环境参数已生效';
    }catch(error){editor.message.textContent=error.message;editor.form.querySelector(':invalid')?.reportValidity();}
   };
   apply.onclick=applyValues;form.onsubmit=event=>{event.preventDefault();applyValues();};
   reset.onclick=()=>{
    if(id==='environment')for(const [,keys] of environmentGroups)for(const key of keys)editor.draft[key]=DEFAULT_ENV[key];
-   else editor.draft=targetDraft(DEFAULT_TARGET);
+   else editor.draft=draftTarget({...DEFAULT_TARGET,position:getState().target.position});
    editor.dirty=true;editor.apply.disabled=false;editor.message.textContent='未应用';renderEditor(id);
   };
   renderEditor(id);
@@ -128,6 +132,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
    const heading=document.createElement('h3');heading.textContent=editor.group;editor.form.append(heading);
   }
   const grid=document.createElement('div');grid.className='profile-field-grid';editor.form.append(grid);
+  if(id==='target'){const pick=document.createElement('button');pick.type='button';pick.id='city-target-pick';pick.textContent='地图选点';pick.onclick=()=>{editor.message.textContent='请选择目标位置';onPickTarget?.();};editor.form.append(pick);const hint=document.createElement('p');hint.textContent='尺寸为等效尺寸与成像投影尺寸；上坐标为场景局部高度。地图选点后目标位于表面上方 50 m。';editor.form.append(hint);}
   const keys=id==='target'?targetKeys:editor.groups.find(([name])=>name===editor.group)[1];
   for(const key of keys){
    if(id==='target'&&['bandLow','bandHigh'].includes(key)&&!editor.draft.check_band)continue;
@@ -157,6 +162,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
  });
  activate('scene');
  return {
-  refresh(){if(!editors.environment.dirty)editors.environment.draft=structuredClone(getState().environment);if(!editors.target.dirty)editors.target.draft=targetDraft(getState().target);for(const id of Object.keys(editors))renderEditor(id);},
+  setTargetPosition(position){const editor=editors.target;Object.assign(editor.draft,{east:position[0],up:position[1],north:-position[2]});editor.dirty=true;commitTarget(editor);activate('target');renderEditor('target');},
+  refresh(){if(!editors.environment.dirty)editors.environment.draft=structuredClone(getState().environment);if(!editors.target.dirty)editors.target.draft=draftTarget(getState().target);for(const id of Object.keys(editors))renderEditor(id);},
  };
 }

@@ -246,6 +246,8 @@ export function mountHudMenu(options) {
 
   const api = {
     kind,
+    minimize:()=>{root.style.setProperty("display","none","important");},
+    restore:()=>{root.style.removeProperty("display");},
     open: openMenu,
     openDetail,
     close: closeMenu,

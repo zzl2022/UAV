@@ -18,7 +18,7 @@ const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2
 const TYPE_METRICS={rangeMeters:'距离误差 / m',azimuthDegrees:'方位误差 / °',elevationDegrees:'俯仰误差 / °',multipathBiasDegrees:'多径角偏差指标 / °',networkLocalizationMeters:'三维站网定位误差估计 / m',angularPixelDegrees:'单像素角度 / °'};
 const LOSS_NAMES={facadeReflection:'Facade reflection',rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
 
-export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera}){
+export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,onPickView=()=>{}}){
  const panel=document.createElement('div');panel.id='equipment-panel';panel.hidden=true;
  panel.innerHTML=`
  <section><h2>当前装备</h2><select id="equipment-device" aria-label="当前装备"></select><div class="sensor-add"><select id="equipment-preset" aria-label="添加型号"></select><button id="equipment-add">＋ 添加</button></div><div class="buttons"><button id="equipment-remove">删除当前</button><button id="equipment-focus">聚焦点位</button></div><button id="equipment-reset" class="clear-devices">清空设备</button></section>
@@ -265,8 +265,8 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  $('equipment-fhss').onchange=()=>{state.target.fhss=$('equipment-fhss').checked;compute();};
  $('equipment-emitting').onchange=()=>{state.target.emitting=$('equipment-emitting').checked;compute();};
  $('equipment-optical-mode').onchange=()=>{state.target.opticalMode=$('equipment-optical-mode').value;compute();};
- $('equipment-pick-device').onclick=()=>{pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');workspace.minimizeWindow('equipment');};
- $('equipment-pick-target').onclick=()=>{pickMode='target';message('请点击城市地面或建筑表面设置目标位置。');workspace.minimizeWindow('equipment');};
+ $('equipment-pick-device').onclick=()=>{onPickView();pickMode='device';message('请点击城市地面或建筑表面设置当前装备位置。');workspace.minimizeWindow('equipment');};
+ $('equipment-pick-target').onclick=()=>{onPickView();pickMode='target';message('请点击城市地面或建筑表面设置目标位置。');workspace.minimizeWindow('equipment');};
  const heat=mountHeatmap({panel,scene,model:activeModel,getState:()=>state,getSelected:()=>selectedId,isActive:()=>scenePanelVisible()&&!panel.hidden&&valid&&!['optical','acoustic'].includes(selected()?.type),
   getQuery:reflections=>reflections?query:(heatQuery??=createSceneQuery(activeModel)),
   onNominalChange:visible=>{for(const child of layer.children)if(child.userData.kind==='nominal-range-shade')child.visible=visible;},onProbeChange:()=>{}});
@@ -307,7 +307,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  }
  let down;
  renderer.domElement.addEventListener('pointerdown',event=>{
-  down=[event.clientX,event.clientY];if(panel.hidden||event.button!==0||pickMode)return;
+  down=[event.clientX,event.clientY];if(panel.hidden||event.button!==0||pickMode||cityTargetPick||demo?.isPicking())return;
   const marker=markerAt(event.clientX,event.clientY);if(!marker)return;
   event.stopImmediatePropagation();event.preventDefault();
   const position=marker.userData.kind==='device'?state.devices.find(d=>d.id===marker.userData.deviceId)?.position:state.target.position;if(!position)return;
@@ -316,7 +316,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
   controls.enabled=false;controls.enableDamping=false;hideProbe();renderer.domElement.setPointerCapture(event.pointerId);renderer.domElement.style.cursor='grabbing';renderForm();compute();
  },true);
  renderer.domElement.addEventListener('pointermove',event=>{
-  if(panel.hidden)return;
+  if(panel.hidden||cityTargetPick||demo?.isPicking())return;
   if(drag){
    event.stopImmediatePropagation();const hit=surfaceAt(event.clientX,event.clientY);if(!hit)return;
    const position=hit.point.toArray();position[1]+=drag.offset;
@@ -352,7 +352,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  capabilities=mountCapabilityAssessment({panel,city,getState:()=>state,getSelected:()=>selectedId,getQuery:()=>query,isVisible:()=>!panel.hidden,sceneMatches:()=>activeMode==='recon',onChange:(reform=false)=>{if(reform)renderForm();compute();},onUpdate:()=>{renderResults();$('equipment-export').disabled=!valid||(state.devices.some(d=>capabilities.isDataset(d))&&!capabilities.exportData());}});
  renderForm();toggle.disabled=false;
  const demoModel={get buildings(){return activeModel.buildings;},get ground(){return activeModel.ground;}};
- demo=createEquipmentDemo({app,scene,camera,controls,renderer,model:demoModel,workspace,getScenario:()=>state,
+ demo=createEquipmentDemo({app,scene,camera,controls,renderer,model:demoModel,workspace,onPickView,getScenario:()=>state,
   getQuery:reflections=>demoQueries[reflections?'reflections':'direct']??=(createSceneQuery(activeModel,{reflections})),
   getSignalProbe:position=>signalProbeRows(position),
   onStart:()=>{heat.hide();layer.visible=false;hideProbe();},
@@ -361,11 +361,20 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
  const scenarioListeners=new Set(),getScenarioSnapshot=()=>structuredClone(state);
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
  const publishScenario=()=>{publishConfiguration();const snapshot=getScenarioSnapshot();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
+ let cityTargetPick=false;
  const cityConditions=mountCityConditions({panel:app.querySelector('#city-panel'),getState:()=>state,
+  onPickTarget:()=>{demo.stop();pickMode=null;down=null;onPickView();cityTargetPick=true;renderer.domElement.style.cursor='crosshair';workspace.minimizeWindow('city');window.__ac8SceneMenu?.minimize();},
   onEnvironment:value=>{state.environment=structuredClone(value);capabilities.invalidate();publishScenario();},
   onTarget:value=>{state.target=structuredClone(value);capabilities.invalidate();publishScenario();},
  });
  publishConfiguration();
+ renderer.domElement.addEventListener('pointerup',event=>{
+  if(!cityTargetPick||event.button!==0||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
+  const hit=surfaceAt(event.clientX,event.clientY);if(!hit)return;
+  event.stopImmediatePropagation();cityTargetPick=false;down=null;renderer.domElement.style.cursor='';const position=hit.point.toArray();position[1]+=50;cityConditions.setTargetPosition(position);workspace.restoreWindow('city');window.__ac8SceneMenu?.restore();
+ },true);
+ window.addEventListener('keydown',event=>{if(event.key==='Escape'&&cityTargetPick){cityTargetPick=false;renderer.domElement.style.cursor='';workspace.restoreWindow('city');window.__ac8SceneMenu?.restore();}});
+ app.querySelector('#model-select')?.addEventListener('change',()=>{cityTargetPick=false;renderer.domElement.style.cursor='';});
  app.querySelector('#open-city-model').addEventListener('click',()=>cityConditions.refresh());
  app.addEventListener('view-change',event=>{if(event.detail!=='sensors'){capabilities.invalidate();workspace.closeWindow('equipment');layer.visible=false;pickMode=null;endDrag();hideProbe();heat.hide();}});
  return {panel,activate,deactivate,focusType,startDemo,showDemoHud,hideDemoHud,stopDemo,render:()=>demo.render()||heat.render(renderer,scene,camera),getScenario:getScenarioSnapshot,getScenarioSnapshot,getEquipmentSnapshot:manager.getSnapshot,subscribeEquipmentChanges:manager.subscribe,subscribeScenarioChanges(listener){scenarioListeners.add(listener);return()=>scenarioListeners.delete(listener);},setActiveScene,applyScenario(value){demo.stop();state=validateScenario(value,activeOrigin);selectedId=state.devices[0]?.id??null;serial=Math.max(4,...state.devices.map(d=>Number(d.id.replace('sensor-',''))||0));renderForm();cityConditions.refresh();publishConfiguration();app.dataset.activeView='sensors';if(window.__ac8EquipmentMenu?.openDetail)window.__ac8EquipmentMenu.openDetail('radar');else show();}};

@@ -539,7 +539,7 @@ try {
     window.__ac8Hud?.render?.();
   });
   disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeLayers();updateStatus();
-  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera});
+  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,onPickView:()=>{cancelAnimationFrame(equipmentShiftFrame);equipmentShift=0;applyEquipmentShift(0);return frameObject(activeGroup(),true,1,{animate:false});}});
   function coreCoordinateText(){
     const transform=city?.metadata?.ecefTransform;
     let position=null;

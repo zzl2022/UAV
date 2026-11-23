@@ -43,7 +43,7 @@ export function mountStudentCapabilities({app,scene,camera,controls,renderer,mod
    number($('student-optics'),'方位指向 / °',d.heading_deg,'heading_deg',0,360,.1);number($('student-optics'),'俯仰指向 / °',d.pitch_deg,'pitch_deg',-90,90,.1);
    number($('student-fov'),'补充水平视场 / °',d.direct_fov_deg?.[0],'fov.0',.001,179.999,.1);number($('student-fov'),'补充垂直视场 / °',d.direct_fov_deg?.[1],'fov.1',.001,179.999,.1);
   }else $('student-array').value=d.array_diameter_m;
-  const t=$('student-target-settings');t.replaceChildren();number(t,'目标宽度 / m',target.width_m,'width_m',.001,100,.01);number(t,'目标高度 / m',target.height_m,'height_m',.001,100,.01);number(t,'频带下限 / Hz',target.band_hz?.[0],'band.0',1,100000,1);number(t,'频带上限 / Hz',target.band_hz?.[1],'band.1',1,100000,1);
+  const t=$('student-target-settings');t.replaceChildren();number(t,'成像水平尺寸 / m',target.width_m,'width_m',.001,100,.01);number(t,'成像垂直尺寸 / m',target.height_m,'height_m',.001,100,.01);number(t,'频带下限 / Hz',target.band_hz?.[0],'band.0',1,100000,1);number(t,'频带上限 / Hz',target.band_hz?.[1],'band.1',1,100000,1);
  }
  function addMetric(parent,label,value){const row=document.createElement('div');row.className='student-metric';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=label;b.textContent=value;row.append(a,b);parent.append(row);}
  function results(){

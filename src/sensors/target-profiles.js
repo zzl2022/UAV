@@ -11,7 +11,7 @@ export const DRONE_TARGET_PRESETS=[
 ];
 const extra=(label,unit,min,max,options={})=>({label,unit,min,max,...options});
 export const TARGET_EDITOR_FIELDS={...TARGET_FIELDS,
- width_m:extra('目标宽度','m',.001,100,{nullable:true}),height_m:extra('目标高度','m',.001,100,{nullable:true}),
+ width_m:extra('成像水平尺寸','m',.001,100,{nullable:true}),height_m:extra('成像垂直尺寸','m',.001,100,{nullable:true}),
  emitting:{label:'发射无线电',boolean:true},fhss:{label:'跳频发射',boolean:true},
  acousticFrequencyHz:extra('主声频','Hz',20,20000),check_band:{label:'核对声学频带',boolean:true},bandLow:extra('频带下限','Hz',1,100000),bandHigh:extra('频带上限','Hz',1,100000),
 };

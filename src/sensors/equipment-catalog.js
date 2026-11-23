@@ -66,10 +66,14 @@ export function defaultProfile(presetId){
 }
 export function getProfileValue(profile,key){const [scope,name]=key.split('.');return profile[scope]?.[name];}
 export function setProfileValue(profile,key,value){const [scope,name]=key.split('.');if(!Object.hasOwn(catalogFields(profile.presetId),key))throw Error('参数无效');profile[scope][name]=value;}
+export const INACTIVE_EDITOR_FIELDS={
+ radar:params('thresholdDb','referenceSnrDb','referenceRcs'),
+ radio:[...params('thresholdDb','referenceSnrDb','referenceEirpDbm','pathExponent'),...physics('rxGainDb','noiseFigureDb','receiverLossDb','bandwidthMHz')],
+};
 export function profileGroups(presetId){
  const preset=catalogModel(presetId),definitions=catalogFields(presetId);
  const entries=preset.catalogOnly?preset.groups.map(([name,keys])=>[name,params(...keys)]):modelGroups[preset.type];
- return entries.map(([name,keys])=>({name,keys:keys.filter(key=>Object.hasOwn(definitions,key))})).filter(group=>group.keys.length);
+ return entries.map(([name,keys])=>({name,keys:keys.filter(key=>Object.hasOwn(definitions,key)&&!(INACTIVE_EDITOR_FIELDS[preset.type]??[]).includes(key))})).filter(group=>group.keys.length);
 }
 export function validateProfile(profile){
  const base=defaultProfile(profile?.presetId);

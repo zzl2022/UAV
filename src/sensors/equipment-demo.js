@@ -7,7 +7,7 @@ import './equipment-demo.css';
 
 const DEMO_RAMP_START=.22;
 
-export function createEquipmentDemo({app,scene,camera,controls,renderer,model,workspace,getScenario,getQuery,onStart,getSignalProbe}){
+export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls,renderer,model,workspace,getScenario,getQuery,onStart,getSignalProbe}){
  const group=new THREE.Group();group.name='Equipment_Demonstration';group.visible=false;scene.add(group);
  const positions=new Map(),settings=new Map();let root=null,getProfile=null,current=null,active=null,field=null,volume=null,worker=null,generation=0,picking=false,down=null,range=null,openSettings=null;
  let activeScenario=null,lastPointer=null,probeDirty=false,lastProbeTime=0,probeMarker=null,signalRows=null;
@@ -68,7 +68,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
   window.equipmentDemoDiagnostics.probe={...value,source:useVolume?'volume':'surface'};
  }
  function buttons(){if($('stop'))$('stop').disabled=!active&&!picking;}
- function stop(){generation++;worker?.terminate();worker=null;active=null;picking=false;clear();group.visible=false;hud.hidden=true;renderer.domElement.style.cursor='';buttons();publish('stopped');message('仿真已停止');}
+ function stop(){window.__ac8EquipmentMenu?.restore();generation++;worker?.terminate();worker=null;active=null;picking=false;clear();group.visible=false;hud.hidden=true;renderer.domElement.style.cursor='';buttons();publish('stopped');message('仿真已停止');}
  function pointLabel(){const p=positions.get(current);if($('position'))$('position').textContent=p?`东 ${p[0].toFixed(0)} m · 北 ${(-p[2]).toFixed(0)} m · 高 ${p[1].toFixed(0)} m`:'未选择点位';}
  function anchor(){
   if(positions.has(current))return;
@@ -183,7 +183,7 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
   for(const button of pageButtons)button.onclick=()=>selectPage(button.dataset.page);
   root.querySelector('.demo-setting-tabs').onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();event.stopPropagation();const next=event.key==='Home'?0:event.key==='End'?1:pageButtons.findIndex(b=>b.getAttribute('aria-selected')==='true')===0?1:0;selectPage(pageButtons[next].dataset.page);pageButtons[next].focus();};
   $('stop').onclick=()=>stop();
-  $('pick').onclick=()=>{stop();picking=true;buttons();message('请在城市地图中选择点位');renderer.domElement.style.cursor='crosshair';workspace.minimizeWindow('equipment');publish('picking');};
+  $('pick').onclick=()=>{stop();onPickView();picking=true;down=null;buttons();message('请在城市地图中选择点位');renderer.domElement.style.cursor='crosshair';workspace.minimizeWindow('equipment');window.__ac8EquipmentMenu?.minimize();publish('picking');};
   anchor();pointLabel();buttons();selectPage('field');if(active)$('status').textContent=hud.querySelector('[role=status]').textContent;
  }
  renderer.domElement.addEventListener('pointerdown',event=>{down=[event.clientX,event.clientY];});
@@ -191,13 +191,13 @@ export function createEquipmentDemo({app,scene,camera,controls,renderer,model,wo
  renderer.domElement.addEventListener('pointerleave',()=>{lastPointer=null;probeDirty=false;clearProbe();});
  controls.addEventListener('change',()=>{if(lastPointer)probeDirty=true;});
  renderer.domElement.addEventListener('pointerup',event=>{
-  if(!picking||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
+  if(event.button!==0||!picking||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
   const rect=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster();ray.firstHitOnly=true;ray.setFromCamera(new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1),camera);
   const hit=ray.intersectObjects([model.buildings,model.ground])[0];if(!hit)return;
-  event.stopImmediatePropagation();positions.set(current,[hit.point.x,hit.point.y+opts().mountHeight,hit.point.z]);picking=false;renderer.domElement.style.cursor='';pointLabel();buttons();message('已选择仿真点位');workspace.restoreWindow('equipment');publish('located');
+  event.stopImmediatePropagation();positions.set(current,[hit.point.x,hit.point.y+opts().mountHeight,hit.point.z]);picking=false;down=null;renderer.domElement.style.cursor='';pointLabel();buttons();message('已选择仿真点位');workspace.restoreWindow('equipment');window.__ac8EquipmentMenu?.restore();publish('located');
  },true);
  app.querySelector('#equipment-window').addEventListener('close',()=>stop());
  app.addEventListener('view-change',()=>stop());app.querySelector('#model-select')?.addEventListener('change',()=>stop());
  publish('stopped');
- return {mount,start,stop,setPosition,setCenter,showHud,hideHud,setOpenSettings:callback=>{openSettings=callback;},render:()=>{if(probeDirty&&performance.now()-lastProbeTime>80){lastProbeTime=performance.now();refreshProbe();}return volume?.render(renderer,scene,camera)??false;},profileChanged:()=>{if(active)stop();}};
+ return {isPicking:()=>picking,mount,start,stop,setPosition,setCenter,showHud,hideHud,setOpenSettings:callback=>{openSettings=callback;},render:()=>{if(probeDirty&&performance.now()-lastProbeTime>80){lastProbeTime=performance.now();refreshProbe();}return volume?.render(renderer,scene,camera)??false;},profileChanged:()=>{if(active)stop();}};
 }
