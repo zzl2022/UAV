@@ -46,6 +46,12 @@ test('task3 pipeline: 一键串联产出 ≥3 套差异化方案、盲区分类�
    assert.equal(rows.reduce((sum,row)=>sum+row.independentSamples,0),p.coverage[c].filter(count=>count===1).length);
    assert.ok(rows.reduce((sum,row)=>sum+row.coveredSamples,0)>=p.metrics[c].covered);
   }
+  for(const device of p.devices)for(const example of p.linkExamples[device.id]){
+   assert.deepEqual(example.position,report.sampling.samples[example.sampleIndex].position);
+   assert.equal(example.covered,example.status==='within-model'&&example.marginDb!==null&&example.marginDb>=report.settings.marginReserveDb,'链路实判应与最终覆盖矩阵一致');
+   assert.ok(p.coverageContributions[device.id].find(row=>row.condition===example.condition).coveredSamples>0||!example.covered);
+  }
+  assert.deepEqual(run.linkExamples[p.id],p.linkExamples);
  }
  assert.ok(report.emc.enhanced.remediation.before.counts.fail>0);assert.ok(report.emc.enhanced.remediation.actions.length>0);
  // 过程数据

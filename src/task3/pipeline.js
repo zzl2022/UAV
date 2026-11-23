@@ -15,6 +15,7 @@ import {createRun,finalizeRun} from './runs.js';
 import {TASK3_VERSION,METRIC_WEIGHTS,EQUIPMENT_FACTS,EQUIPMENT_CHANNELS_GHZ,EMC_RULES} from './constants.js';
 import {TASK3_DEFAULT_SETTINGS,resolveTask3Settings,createScopeMetadata} from './scope.js';
 import {createDeploymentExclusion} from './building-constraints.js';
+import {collectDecisionEvidence} from './decision-evidence.js';
 
 export const PIPELINE_STAGES=['candidates','coverage','scoring','threats','emc'];
 export const STAGE_NAMES={candidates:'候选方案生成',coverage:'覆盖推演',scoring:'多指标择优',threats:'威胁场景验证',emc:'电磁兼容校核'};
@@ -291,7 +292,16 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
    for(let index=0;index<n;index++)if(deviceCoverage[k][c][index]){coveredSamples++;if(coverage[c][index]===1)independentSamples++;}
    return {condition:condition.id,coveredSamples,independentSamples};
   })]));
-  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds};
+  // 每工况保留一项覆盖/未覆盖实判，优先核心采样；只作解释证据，不参与选点。
+  const linkExamples=Object.fromEntries(devices.map((device,k)=>[device.id,conditions.flatMap((condition,c)=>[true,false].flatMap(covered=>{
+   let index=sampling.samples.findIndex((sample,j)=>sample.core&&!!deviceCoverage[k][c][j]===covered);
+   if(index<0)index=sampling.samples.findIndex((_,j)=>!!deviceCoverage[k][c][j]===covered);
+   if(index<0)return [];
+   const sample=sampling.samples[index],penalty=emc.penalties[device.id]??0;
+   const result=evaluate(device,{...target,position:sample.position,...condition.target},{...condition.environment,cochannelDb:condition.environment.cochannelDb+penalty},query.trace(device.position,sample.position));
+   return [{condition:condition.id,sampleId:sample.id??`sample-${index}`,sampleIndex:index,position:[...sample.position],core:!!sample.core,covered,marginReserveDb:settings.marginReserveDb,emcPenaltyDb:penalty,...result}];
+  }))]));
+  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds,linkExamples};
  }
  function candidateCoverageValue(pool){
   return (_devices,_sites,indices)=>{const covered=new Uint8Array(weights1.length);for(const i of indices)if(i>=0)for(const j of pool[i].cover)covered[j]=1;return covered.reduce((sum,v,j)=>sum+v*weights1[j],0);};
@@ -308,6 +318,8 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   remediation.after=emcSnapshot(finalCoverage.emc);remediation.unresolved=remediation.after.conflicts.filter(c=>c.severity==='fail');remediation.deployable=!finalCoverage.emc.counts.fail;
   remediation.coverageReview={before:beforeCoverage?coverageSummary(beforeCoverage.metrics):null,after:coverageSummary(finalCoverage.metrics),reevaluatedDeviceIds:finalCoverage.reevaluatedDeviceIds};
   plans.push({id:policy.id,name:policy.name,budget:policy.budget,maxDevices:policy.maxDevices,presetSubset:policy.presetSubset,devices:finalState.devices,cost:finalState.indices.reduce((sum,i)=>sum+pool[i].cost,0),installationProxy:finalState.sites.reduce((sum,s)=>sum+s.installationProxy,0),sites:finalState.sites,metrics:finalCoverage.metrics,coverage:finalCoverage.coverage.map(counts=>Array.from(counts)),coverageContributions:finalCoverage.coverageContributions,deployable:remediation.deployable,optimizationTrace:{policy:structuredClone(policy),poolSize:pool.length,events:chosen.events},emcRemediation:remediation});
+  plans.at(-1).decisionEvidence=collectDecisionEvidence({plan:plans.at(-1),pool,candidates,sampling,conditions,settings});
+  plans.at(-1).linkExamples=finalCoverage.linkExamples;
  }
  // 四类盲区分类（每方案 × 每工况）
  const blindspots={};
@@ -351,5 +363,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const rulesInput={candidateStats,perHeightBlind,recommendedId:recId,nominalCondition:nominal};
  const runRecord=finalizeRun(run,{summary:{samples:n,candidates:candidates.length,sites:sites.length,plans:plans.map(p=>({id:p.id,name:p.name,devices:p.devices.length,cost:p.cost,feasibility:scoring.plans.find(r=>r.id===p.id)?.indicators.feasibility??null,score:scoring.plans.find(r=>r.id===p.id)?.score??null,rank:scoring.plans.find(r=>r.id===p.id)?.rank??null,emcVerdict:emcByPlan[p.id].verdict,deployable:p.deployable,emcResolutionStatus:p.emcRemediation.status,metrics:p.metrics})) ,recommendedId:recId},blindspots:Object.fromEntries(Object.entries(blindspots).map(([pid,rows])=>[pid,rows.map(r=>({conditionId:r.conditionId,stats:r.stats,points:r.points.map(p=>({sampleId:p.sampleId,position:p.position,agl:p.agl,core:p.core,category:p.category,cause:p.cause}))}))])),threats:Object.fromEntries(Object.entries(threats).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}])),threatsByPlan:Object.fromEntries(Object.entries(threatsByPlan).map(([pid,byKey])=>[pid,Object.fromEntries(Object.entries(byKey).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}]))])),emc:Object.fromEntries(Object.entries(emcReports).map(([pid,r])=>[pid,{verdict:r.verdict,counts:r.counts,conflicts:r.conflicts,remediation:r.remediation}])),durationMs:report.durationMs,limitations:report.limitations});
  runRecord.rulesInput=rulesInput;runRecord.scope=structuredClone(scope);
+ runRecord.decisionEvidence=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.decisionEvidence)]));
+ runRecord.linkExamples=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.linkExamples)]));
  return {report,run:runRecord};
 }
