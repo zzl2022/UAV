@@ -1,5 +1,5 @@
 import {CATALOG_MODELS,CATALOG_TYPES,catalogModel} from './equipment-models.js';
-import {CATALOG_SCHEMA,catalogFields,defaultProfile,getProfileValue,setProfileValue,profileGroups,createCatalogStore,createCustomProfile} from './equipment-catalog.js';
+import {CATALOG_SCHEMA,catalogFields,defaultProfile,getProfileValue,setProfileValue,profileGroups,createCatalogStore,createCustomProfile,validateCatalogFile} from './equipment-catalog.js';
 import './equipment-manager.css';
 
 const order=Object.keys(CATALOG_TYPES);
@@ -19,17 +19,6 @@ export function mountEquipmentManager(panel,{demo,onSelectionChange}={}){
  const selectionKey='uav.equipment-selection.v1';
  try{const selected=JSON.parse(storage?.getItem(selectionKey)??'{}');for(const kind of order)if(drafts.get(selected[kind])?.type===kind)remembered[kind]=selected[kind];}catch{}
  const persistSelection=()=>{try{storage?.setItem(selectionKey,JSON.stringify(remembered));}catch{tell('型号选择无法保存，请检查浏览器存储空间');}};
- let autosaveTimer;
- const savePending=()=>{
-  clearTimeout(autosaveTimer);
-  for(const draft of drafts.values())if(JSON.stringify(draft)!==JSON.stringify(store.get(draft.presetId))){
-   try{store.save(draft);persistSelection();tell('设置成功，已自动保存');}catch(error){tell(`未保存：${error.message}`);}
-  }
-  status();
- };
- const scheduleSave=()=>{clearTimeout(autosaveTimer);autosaveTimer=setTimeout(savePending,400);};
- window.addEventListener('pagehide',savePending);
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')savePending();});
  const selectionListeners=new Set(),getSnapshot=()=>{
   const snapshot=store.getSnapshot(),selectedPresetIds=[];
   for(const id of Object.values(remembered)){
@@ -59,7 +48,7 @@ export function mountEquipmentManager(panel,{demo,onSelectionChange}={}){
   if(!menuType)return;try{if(menu.matches(':popover-open'))menu.hidePopover();}catch{}
   menu.hidden=true;menuType=null;menuTrigger?.setAttribute('aria-expanded','false');if(restore)menuTrigger?.focus();menuTrigger=null;
  }
-function choose(nextType,id=remembered[nextType]){savePending();const selectionChanged=remembered[nextType]!==id;closeMenu();demo?.stop();const inDemo=groupName==='设备仿真';type=nextType;presetId=id;remembered[type]=id;persistSelection();groupName=inDemo?'设备仿真':null;tell('');render();if(selectionChanged)publishSelection();onSelectionChange?.({type:nextType,presetId:id,selectionChanged});}
+function choose(nextType,id=remembered[nextType]){const selectionChanged=remembered[nextType]!==id;closeMenu();demo?.stop();const inDemo=groupName==='设备仿真';type=nextType;presetId=id;remembered[type]=id;persistSelection();groupName=inDemo?'设备仿真':null;tell('');render();if(selectionChanged)publishSelection();onSelectionChange?.({type:nextType,presetId:id,selectionChanged});}
  function openMenu(nextType,trigger){
   if(menuType===nextType){closeMenu(true);return;}closeMenu();menuType=nextType;menuTrigger=trigger;menu.replaceChildren();
   const label=document.createElement('div');label.className='model-menu-title';label.textContent=`${CATALOG_TYPES[nextType]}型号`;menu.append(label);
@@ -110,7 +99,7 @@ const groups=profileGroups(presetId),available=[...groups,...(demo?[{name:'设�
   if(catalogModel(presetId).basePresetId&&groupName===groups[0].name){
    const label=document.createElement('label');label.className='profile-field equipment-name-field';const title=document.createElement('span');title.className='profile-field-label';title.textContent='装备名称';
    const control=document.createElement('div');control.className='profile-field-control';const input=document.createElement('input');input.type='text';input.id='profile-name';input.required=true;input.maxLength=120;input.value=profile().name;input.setAttribute('aria-label','装备名称');
-   input.oninput=()=>{profile().name=input.value;$('equipment-model-name').textContent=input.value;demo?.profileChanged();tell('');status();scheduleSave();};control.append(input);label.append(title,control);grid.append(label);
+   input.oninput=()=>{profile().name=input.value;$('equipment-model-name').textContent=input.value;demo?.profileChanged();tell('');status();};control.append(input);label.append(title,control);grid.append(label);
   }
   for(const key of selected.keys){
    const spec=defs[key],label=document.createElement('label');label.className='profile-field';
@@ -131,7 +120,7 @@ const groups=profileGroups(presetId),available=[...groups,...(demo?[{name:'设�
     const raw=input.value,value=spec.options&&key==='working.channel'?raw:raw.trim()===''?null:Number(raw);setProfileValue(profile(),key,value);input.setCustomValidity('');
     if(key==='working.channel'){profile().working.focalMm=value==='thermal'?75:6.5;renderFields();}
     if(key==='working.arrayDiameter'){profile().working.frequencyMin=value===1.1?20:null;profile().working.frequencyMax=value===1.1?20000:null;renderFields();}
-demo?.profileChanged();updateQualifier();tell('');status();scheduleSave();
+demo?.profileChanged();updateQualifier();tell('');status();
    };
    input.addEventListener(spec.options?'change':'input',edit);
   }
@@ -141,14 +130,14 @@ demo?.profileChanged();updateQualifier();tell('');status();scheduleSave();
   root.querySelector('.equipment-type-icon').innerHTML=icons[type];root.querySelector('.equipment-type-label').textContent=CATALOG_TYPES[type];$('equipment-model-name').textContent=profile().name;
   $('equipment-profile-form').setAttribute('aria-labelledby',`equipment-tab-${type}`);renderFields();status();
  }
-$('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='设备仿真')demo?.start();else $('equipment-profile-save').click();};
+$('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='设备仿真')demo?.start();};
  if(demo)$('demo-start').onclick=()=>{if(groupName!=='设备仿真'){groupName='设备仿真';renderFields();status();}demo.start();};
 $('equipment-profile-save').onclick=()=>{try{store.save(profile());persistSelection();tell('设置成功，已保存参数');status();}catch(error){if(error.field){const groups=profileGroups(presetId);groupName=error.field==='name'?groups[0].name:groups.find(group=>group.keys.includes(error.field))?.name??groupName;renderFields();const input=$(`profile-${error.field.replace('.','-')}`);input?.focus();}tell(error.message);const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();}};
-$('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile(presetId);if(catalogModel(presetId).basePresetId)next.name=profile().name;drafts.set(presetId,next);tell('');render();scheduleSave();};
+$('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile(presetId);if(catalogModel(presetId).basePresetId)next.name=profile().name;drafts.set(presetId,next);tell('');render();};
  $('equipment-profile-import').onclick=()=>$('equipment-profile-file').click();
  $('equipment-profile-file').onchange=async()=>{
   const input=$('equipment-profile-file'),file=input.files[0];if(!file)return;
-  try{if(file.size>1024*1024)throw Error('参数文件不能超过 1 MB');const profiles=store.importAsNew(JSON.parse(await file.text()));for(const p of profiles)drafts.set(p.presetId,structuredClone(p));groupName=null;choose(profiles[0].type,profiles[0].presetId);tell(`已新增 ${profiles.length} 个装备`);}catch(error){tell(`导入失败：${error.message}`);}finally{input.value='';}
+  try{if(file.size>1024*1024)throw Error('参数文件不能超过 1 MB');const profiles=validateCatalogFile(JSON.parse(await file.text())).map(p=>createCustomProfile(p));if(drafts.size+profiles.length>200)throw Error('装备型号不能超过 200 个');for(const p of profiles)drafts.set(p.presetId,structuredClone(p));groupName=null;choose(profiles[0].type,profiles[0].presetId);tell(`已新增 ${profiles.length} 个装备草稿，请点击保存参数`);}catch(error){tell(`导入失败：${error.message}`);}finally{input.value='';}
  };
  const download=(data,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  $('equipment-profile-template').onclick=()=>{

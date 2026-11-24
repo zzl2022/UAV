@@ -7,22 +7,19 @@ const environmentGroups=[
  ['噪声环境',['trafficDb','constructionDb','crowdDb','windNoiseDb','rainNoiseDb']],
  ['电磁环境',['emNoiseDb','cochannelDb','crosstalkDb']],
 ];
-const targetKeys=['east','north','up','size','width_m','height_m','rcs','speed','count','thermalContrast','emitting','fhss','frequencyGHz','eirpDbm','sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh'];
-const draftTarget=target=>({...targetDraft(target),east:target.position[0],up:target.position[1],north:-target.position[2]});
-const positionFields=Object.fromEntries(['east','north','up'].map((key,i)=>[key,{label:['东坐标','北坐标','上坐标'][i],unit:'m',min:i===2?-20000:-30000,max:i===2?20000:30000}]));
-export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPickTarget}){
+const targetKeys=['size','width_m','height_m','rcs','speed','count','thermalContrast','emitting','fhss','frequencyGHz','eirpDbm','sourceDb','acousticFrequencyHz','check_band','bandLow','bandHigh'];
+const draftTarget=targetDraft;
+export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
  const scene=document.createElement('div');scene.id='city-scene-page';scene.className='city-page';scene.append(...panel.childNodes);
  const tabs=document.createElement('div');tabs.className='city-mode-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','城市建模');
  const pages=new Map([['scene',scene]]);let active='scene';
  const editors={
   environment:{name:'环境情况',groups:environmentGroups,fields:ENV_FIELDS,draft:structuredClone(getState().environment),dirty:false,group:'气象环境'},
-  target:{name:'侦测目标',fields:{...TARGET_EDITOR_FIELDS,...positionFields},draft:draftTarget(getState().target),dirty:false},
+  target:{name:'侦测目标',fields:TARGET_EDITOR_FIELDS,draft:draftTarget(getState().target),dirty:false},
  };
  function commitTarget(editor){
   try{
    const next=targetFromDraft(getState().target,editor.draft);
-   for(const [key,spec] of Object.entries(positionFields)){const v=editor.draft[key];if(!Number.isFinite(v)||v<spec.min||v>spec.max)throw Error('请检查'+spec.label);}
-   next.position=[editor.draft.east,editor.draft.up,-editor.draft.north];
    onTarget(next);editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='设置成功，目标参数已生效';return true;
   }catch(error){editor.apply.disabled=false;editor.message.textContent=error.message;return false;}
  }
@@ -132,7 +129,7 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPic
    const heading=document.createElement('h3');heading.textContent=editor.group;editor.form.append(heading);
   }
   const grid=document.createElement('div');grid.className='profile-field-grid';editor.form.append(grid);
-  if(id==='target'){const pick=document.createElement('button');pick.type='button';pick.id='city-target-pick';pick.textContent='地图选点';pick.onclick=()=>{editor.message.textContent='请选择目标位置';onPickTarget?.();};editor.form.append(pick);const hint=document.createElement('p');hint.textContent='尺寸为等效尺寸与成像投影尺寸；上坐标为场景局部高度。地图选点后目标位于表面上方 50 m。';editor.form.append(hint);}
+  if(id==='target'){const hint=document.createElement('p');hint.textContent='尺寸为等效尺寸与成像投影尺寸。';editor.form.append(hint);}
   const keys=id==='target'?targetKeys:editor.groups.find(([name])=>name===editor.group)[1];
   for(const key of keys){
    if(id==='target'&&['bandLow','bandHigh'].includes(key)&&!editor.draft.check_band)continue;
@@ -162,7 +159,6 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget,onPic
  });
  activate('scene');
  return {
-  setTargetPosition(position){const editor=editors.target;Object.assign(editor.draft,{east:position[0],up:position[1],north:-position[2]});editor.dirty=true;commitTarget(editor);activate('target');renderEditor('target');},
   refresh(){if(!editors.environment.dirty)editors.environment.draft=structuredClone(getState().environment);if(!editors.target.dirty)editors.target.draft=draftTarget(getState().target);for(const id of Object.keys(editors))renderEditor(id);},
  };
 }

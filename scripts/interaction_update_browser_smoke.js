@@ -11,19 +11,12 @@ try{
  await page.locator('#city-target-speed').fill('13');
  await page.waitForFunction(()=>window.sceneConfigurationDiagnostics.target.speed===13);
  assert.match(await page.locator('#city-target-message').innerText(),/设置成功/);
- const initial=await page.evaluate(()=>JSON.stringify(window.sceneConfigurationDiagnostics.target.position));
- await page.locator('#city-target-pick').click();await page.waitForTimeout(700);
- assert.equal(await page.locator('#viewport canvas').evaluate(e=>e.style.cursor),'crosshair');
- const canvas=await page.locator('#viewport canvas').boundingBox();let selected=false;
- for(const [x,y] of [[.5,.5],[.55,.55],[.45,.55],[.6,.6],[.4,.6]]){
-  await page.mouse.click(canvas.x+canvas.width*x,canvas.y+canvas.height*y);
-  if(await page.evaluate(value=>JSON.stringify(window.sceneConfigurationDiagnostics.target.position)!==value,initial)){selected=true;break;}
- }
- assert.ok(selected,'a valid surface selects one point');
+ assert.equal(await page.locator('#city-target-pick,#city-target-east,#city-target-north,#city-target-up').count(),0);
  const before=await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position);
  await closeSceneMenu(page);
+ const canvas=await page.locator('#viewport canvas').boundingBox();
  await page.mouse.click(canvas.x+canvas.width*.6,canvas.y+canvas.height*.65);
- assert.deepEqual(await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position),before,'second click must not move target');
+ assert.deepEqual(await page.evaluate(()=>window.sceneConfigurationDiagnostics.target.position),before,'scene click must not move target');
  await openSceneMenu(page,'environment');await page.locator('#city-environment-rainMmH').fill('3');await page.locator('#city-environment-apply').click();
  assert.match(await page.locator('#city-environment-message').innerText(),/设置成功/);
  assert.equal(await page.evaluate(()=>window.sceneConfigurationDiagnostics.environment.rainMmH),3);
@@ -39,6 +32,6 @@ try{
  assert.equal(await page.evaluate(()=>window.equipmentDemoDiagnostics.status),'located');
  const located=await page.evaluate(()=>JSON.stringify(window.equipmentDemoDiagnostics.position));await page.mouse.click(canvas.x+canvas.width*.65,canvas.y+canvas.height*.7);
  assert.equal(await page.evaluate(()=>JSON.stringify(window.equipmentDemoDiagnostics.position)),located);
- assert.deepEqual(errors,[]);console.log('PASS: target naming, immediate feedback, target and device one-shot picking, environment apply, inactive controls, no page errors');
+ assert.deepEqual(errors,[]);console.log('PASS: target naming, immediate feedback, target position controls removed, device one-shot picking, environment apply, inactive controls, no page errors');
  await page.screenshot({path:'artifacts/interaction-update.png'});
 }finally{await browser.close();}

@@ -65,6 +65,7 @@ try{
  await selectEquipmentType(page,'optical');await selectEquipmentType(page,'radio');
  await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await page.locator('#equipment-profile-save').click();
  await page.waitForFunction(()=>document.querySelector('#equipment-save-state').innerText==='已保存',null,{timeout:5000});
  await page.locator('#profile-parameters-maxRange').fill('0');await page.locator('.equipment-group-nav').getByRole('button',{name:'接收频段',exact:true}).click();await page.locator('#equipment-profile-save').click();
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'0');assert.ok((await page.locator('#equipment-profile-message').innerText()).includes('标称距离上限'));await page.locator('#profile-parameters-maxRange').fill('5000');
@@ -75,6 +76,7 @@ try{
  await page.locator('.equipment-group-nav').getByRole('button',{name:'探测范围',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
  await page.locator('#equipment-profile-file').setInputFiles({name:'scene.json',mimeType:'application/json',buffer:Buffer.from('{"devices":[]}')});
  await page.waitForFunction(()=>document.querySelector('#equipment-profile-message').textContent.includes('导入失败'));assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5000');
+ await page.locator('#equipment-profile-save').click();
  await selectEquipmentType(page,'optical');
  await page.locator('.equipment-group-nav').getByRole('button',{name:'探测距离',exact:true}).click();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'');
  await page.locator('.equipment-group-nav').getByRole('button',{name:'通道焦距',exact:true}).click();await page.locator('#profile-working-channel').selectOption('thermal');assert.equal(await page.locator('#profile-working-focalMm').inputValue(),'75');

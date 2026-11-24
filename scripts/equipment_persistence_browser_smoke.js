@@ -21,6 +21,8 @@ try{
  await page.getByRole('button',{name:'选择雷达型号',exact:true}).click();
  await page.locator('#equipment-model-menu [data-preset-id="radar-03d"]').click();
  await group('探测范围');await page.locator('#profile-parameters-maxRange').fill('6300');
+ await page.waitForTimeout(650);assert.equal(await page.evaluate(()=>window.equipmentManagerDiagnostics.dirty),true);
+ await page.locator('#equipment-profile-save').click();
  await page.waitForFunction(()=>window.equipmentManagerDiagnostics.dirty===false);
  await group('设备仿真');assert.equal(await page.locator('#demo-mountHeight').inputValue(),'30');
  await page.locator('#demo-mountHeight').fill('45');await page.locator('#demo-radius').fill('900');
@@ -30,22 +32,27 @@ try{
  assert.equal(await page.evaluate(()=>window.equipmentManagerDiagnostics.presetId),'radar-03d');
  assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6300');
  await group('设备仿真');assert.equal(await page.locator('#demo-mountHeight').inputValue(),'45');assert.equal(await page.locator('#demo-radius').inputValue(),'900');
- // Flush a valid edit on immediate navigation, before the debounce timer fires.
+ // Unsaved edits survive model switches, but never reload or pagehide.
  await group('探测范围');await page.locator('#profile-parameters-maxRange').fill('6100');
+ await page.evaluate(()=>{document.querySelector('#equipment-tab-optical').click();document.querySelector('#equipment-tab-radar').click();});
+ await group('探测范围');assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6100');
+ await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.equipmentManagerDiagnostics,null,{timeout:120000});await openEquipment();
- assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6100');
+ assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6300');
  // Invalid edits must not overwrite the last valid saved profile.
  await page.locator('#profile-parameters-maxRange').fill('-1');await page.waitForTimeout(600);
  const saved=await context.storageState();await context.close();context=await browser.newContext({storageState:saved});page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
- await ready();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6100');
+ await ready();assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'6300');
  await group('设备仿真');assert.equal(await page.locator('#demo-mountHeight').inputValue(),'45');assert.equal(await page.locator('#demo-radius').inputValue(),'900');
  await page.getByRole('button',{name:'选择雷达型号',exact:true}).click();await page.locator('.equipment-model-create').click();
  const customId=await page.evaluate(()=>window.equipmentManagerDiagnostics.presetId);
  await page.locator('#profile-name').fill('持久保存测试雷达');await page.locator('#profile-parameters-maxRange').fill('5800');
+ await page.waitForTimeout(650);assert.equal(await page.evaluate(()=>window.equipmentManagerDiagnostics.dirty),true);
+ await page.locator('#equipment-profile-save').click();
  await page.waitForFunction(()=>window.equipmentManagerDiagnostics.dirty===false);
  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.equipmentManagerDiagnostics,null,{timeout:120000});await openEquipment();
  assert.equal(await page.evaluate(()=>window.equipmentManagerDiagnostics.presetId),customId);
  assert.equal(await page.locator('#profile-name').inputValue(),'持久保存测试雷达');assert.equal(await page.locator('#profile-parameters-maxRange').inputValue(),'5800');
  assert.deepEqual(errors,[]);
- console.log('PASS: 30 m default; automatic profile save; selected model, demo settings and valid edits survive reload and a new browser context; invalid edits preserve saved data.');
+ console.log('PASS: 30 m default; explicit profile save; unsaved edits are discarded on reload; selected model, demo settings and valid edits survive reload and a new browser context; invalid edits preserve saved data.');
 }finally{await browser.close();}
