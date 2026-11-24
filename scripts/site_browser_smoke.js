@@ -12,11 +12,9 @@ try{
  await page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:180000});
  await openSceneMenu(page,'scene');
  const sites=[
-  ['beijing','太和殿'],
   ['shenzhen','深圳国际交流中心'],
-  ['daxing','大兴机场航站楼'],
+  ['wuxi','无锡市市民中心'],
   ['hangzhou','杭州萧山机场航站楼'],
-  ['railway','北京站'],
  ];
  for(const [site,coreName] of sites){
   await page.selectOption('#model-select',site);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {DEMO_METRICS,demoDefaults,prepareDemo,demoShape,probeDemo} from './equipment-demo-model.js';
+import {DEMO_METRICS,demoDefaults,prepareDemo,demoShape,probeDemo,sampleDemo} from './equipment-demo-model.js';
 import {volumeGrid,rampColor} from './volume.js';
 import {createVolumeRenderer} from './volume-renderer.js';
 import {nominalCoverage} from './coverage.js';
@@ -9,7 +9,7 @@ const DEMO_RAMP_START=.22;
 
 export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls,renderer,model,workspace,getScenario,getQuery,onStart,getSignalProbe}){
  const group=new THREE.Group();group.name='Equipment_Demonstration';group.visible=false;scene.add(group);
- const positions=new Map(),settings=new Map();let root=null,getProfile=null,current=null,active=null,field=null,volume=null,worker=null,generation=0,picking=false,down=null,range=null,openSettings=null;
+ const positions=new Map(),settings=new Map();let root=null,getProfile=null,current=null,active=null,field=null,volume=null,generation=0,picking=false,down=null,range=null,openSettings=null;
  let activeScenario=null,lastPointer=null,probeDirty=false,lastProbeTime=0,probeMarker=null,signalRows=null;
  const settingsKey='uav.equipment-demo-settings.v1';let storage,storedSettings={};
  try{storage=localStorage;const parsed=JSON.parse(storage.getItem(settingsKey)??'{}');if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))storedSettings=parsed;}catch{}
@@ -68,7 +68,7 @@ export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls
   window.equipmentDemoDiagnostics.probe={...value,source:useVolume?'volume':'surface'};
  }
  function buttons(){if($('stop'))$('stop').disabled=!active&&!picking;}
- function stop(){window.__ac8EquipmentMenu?.restore();generation++;worker?.terminate();worker=null;active=null;picking=false;clear();group.visible=false;hud.hidden=true;renderer.domElement.style.cursor='';buttons();publish('stopped');message('仿真已停止');}
+ function stop(){window.__ac8EquipmentMenu?.restore();generation++;active=null;picking=false;app.classList.remove('demo-picking');clear();group.visible=false;hud.hidden=true;renderer.domElement.style.cursor='';buttons();publish('stopped');message('仿真已停止');}
  function pointLabel(){const p=positions.get(current);if($('position'))$('position').textContent=p?`东 ${p[0].toFixed(0)} m · 北 ${(-p[2]).toFixed(0)} m · 高 ${p[1].toFixed(0)} m`:'未选择点位';}
  function anchor(){
   if(positions.has(current))return;
@@ -121,7 +121,7 @@ export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls
   probeMarker=new THREE.Mesh(new THREE.SphereGeometry(Math.max(2,active.settings.radius/180),10,8),new THREE.MeshBasicMaterial({color:0xffe29b,depthTest:false}));probeMarker.visible=false;probeMarker.renderOrder=61;group.add(probeMarker);
   message(field.counts.signal?`${field.counts.signal.toLocaleString()} 个有效采样 · 实际步长 ${field.grid.step.map(v=>v.toFixed(0)).join(' / ')} m`:'当前条件下没有可显示的采样');configure();buttons();
  }
- function start(options={}){
+ async function start(options={}){
   try{
    const invalid=root?.querySelector(':invalid');if(invalid){invalid.reportValidity();throw Error('请检查仿真设置');}
    anchor();const next=prepareDemo(getProfile(),opts(),positions.get(current)),scenario=structuredClone(getScenario());
@@ -130,12 +130,19 @@ export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls
    hud.querySelector('.demo-hud-metric').textContent=next.metric.label+(next.metric.unit?' / '+next.metric.unit:'');hud.querySelector('.demo-scale').replaceChildren();
    const b=model.ground.geometry.boundingBox,r=next.settings.radius,p=next.position,region={west:Math.max(b.min.x,p[0]-r),east:Math.min(b.max.x,p[0]+r),south:Math.max(b.min.z,p[2]-r),north:Math.min(b.max.z,p[2]+r)};
    const grid=volumeGrid(region,{spacing:next.settings.spacing,verticalSpacing:Math.max(10,next.settings.spacing/2),minY:b.min.y+1,maxY:Math.max(p[1]+10,b.max.y+next.settings.ceiling),maxSamples:24000});
-   const id=++generation;worker=new Worker(new URL('./equipment-demo-worker.js',import.meta.url),{type:'module'});
-   worker.onmessage=({data})=>{if(data.id!==generation)return;if(data.type==='progress'){message(`计算中 ${Math.round(data.done/data.total*100)}%`);publish('computing',{done:data.done,total:data.total});}else if(data.type==='error'){stop();message(data.message);publish('error',{error:data.message});workspace.restoreWindow('equipment');}else{try{install(data.result,id);}catch(error){stop();message(error.message);publish('error',{error:error.message});workspace.restoreWindow('equipment');}worker?.terminate();worker=null;}};
-   worker.onerror=event=>{stop();message('仿真计算失败，请重试');publish('error',{error:event.message});workspace.restoreWindow('equipment');};
-   worker.postMessage({id,baseURL:new URL(import.meta.env.BASE_URL,location.href).href,spec:next,grid,scenario});
+   // Sample against the scene that is actually on screen.  The old worker
+   // always rebuilt data/city.json (Henan Museum), so every other map traced
+   // the grid against the wrong terrain and produced no signal cells.
+   const id=++generation,query=getQuery(next.settings.reflections);
    message('正在计算城市仿真图层');publish('computing',{total:grid.total});buttons();
-  }catch(error){message(error.message);publish('error',{error:error.message});}
+   const result=await sampleDemo({
+    spec:next,grid,scenario,query,
+    cancelled:()=>id!==generation,
+    onProgress:(done,total)=>{if(id!==generation)return;message(`计算中 ${Math.round(done/total*100)}%`);publish('computing',{done,total});},
+   });
+   if(id!==generation||!result)return;
+   install(result,id);
+  }catch(error){stop();message(error.message);publish('error',{error:error.message});workspace.restoreWindow('equipment');}
  }
  function mount(container,{getProfile:readProfile}){
   getProfile=readProfile;const profile=getProfile();current=profile.presetId;if(!settings.has(current)){
@@ -183,7 +190,7 @@ export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls
   for(const button of pageButtons)button.onclick=()=>selectPage(button.dataset.page);
   root.querySelector('.demo-setting-tabs').onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();event.stopPropagation();const next=event.key==='Home'?0:event.key==='End'?1:pageButtons.findIndex(b=>b.getAttribute('aria-selected')==='true')===0?1:0;selectPage(pageButtons[next].dataset.page);pageButtons[next].focus();};
   $('stop').onclick=()=>stop();
-  $('pick').onclick=()=>{stop();onPickView();picking=true;down=null;buttons();message('请在城市地图中选择点位');renderer.domElement.style.cursor='crosshair';workspace.minimizeWindow('equipment');window.__ac8EquipmentMenu?.minimize();publish('picking');};
+  $('pick').onclick=()=>{stop();onPickView();picking=true;down=null;buttons();message('请在城市地图中选择点位');renderer.domElement.style.cursor='crosshair';app.classList.add('demo-picking');workspace.minimizeWindow('equipment');window.__ac8EquipmentMenu?.minimize();publish('picking');};
   anchor();pointLabel();buttons();selectPage('field');if(active)$('status').textContent=hud.querySelector('[role=status]').textContent;
  }
  renderer.domElement.addEventListener('pointerdown',event=>{down=[event.clientX,event.clientY];});
@@ -194,7 +201,7 @@ export function createEquipmentDemo({onPickView=()=>{},app,scene,camera,controls
   if(event.button!==0||!picking||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
   const rect=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster();ray.firstHitOnly=true;ray.setFromCamera(new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1),camera);
   const hit=ray.intersectObjects([model.buildings,model.ground])[0];if(!hit)return;
-  event.stopImmediatePropagation();positions.set(current,[hit.point.x,hit.point.y+opts().mountHeight,hit.point.z]);picking=false;down=null;renderer.domElement.style.cursor='';pointLabel();buttons();message('已选择仿真点位');workspace.restoreWindow('equipment');window.__ac8EquipmentMenu?.restore();publish('located');
+  event.stopImmediatePropagation();positions.set(current,[hit.point.x,hit.point.y+opts().mountHeight,hit.point.z]);picking=false;down=null;app.classList.remove('demo-picking');renderer.domElement.style.cursor='';pointLabel();buttons();message('已选择仿真点位');workspace.restoreWindow('equipment');window.__ac8EquipmentMenu?.restore();publish('located');
  },true);
  app.querySelector('#equipment-window').addEventListener('close',()=>stop());
  app.addEventListener('view-change',()=>stop());app.querySelector('#model-select')?.addEventListener('change',()=>stop());

@@ -1,0 +1,37 @@
+{
+  "name": "无锡市市民中心",
+  "source": "Esri World Imagery (ArcGIS Online World_Imagery MapServer)",
+  "license": "Esri, Maxar, Earthstar Geographics, and the GIS User Community; 仅用于演示/研究，保留署名",
+  "attribution": "Esri World Imagery",
+  "center": [
+    120.3115,
+    31.4935
+  ],
+  "halfMeters": 3800.0,
+  "bbox": [
+    120.271518,
+    31.459222,
+    120.351511,
+    31.527766
+  ],
+  "zoom": 17,
+  "tileRange": [
+    109325,
+    53429,
+    109354,
+    53458
+  ],
+  "tileCount": 900,
+  "image": "wuxi-imagery.jpg",
+  "width": 4096,
+  "height": 4096,
+  "localBounds": [
+    -3800.0,
+    3800.0,
+    -3800.0,
+    3800.0
+  ],
+  "projection": "local_tmerc",
+  "reprojected": "inverse TM pixel grid, bilinear Web Mercator sampling",
+  "normalized": false
+}

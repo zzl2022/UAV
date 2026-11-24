@@ -1,0 +1,19 @@
+[Unit]
+Description=UAV optical/acoustic capability API
+After=network.target
+
+[Service]
+Type=simple
+User=uav
+Group=uav
+WorkingDirectory=/opt/uav
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/uav/uav-web.env
+ExecStart=/opt/uav/.venv/bin/python -u backend/server.py --port 8765
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

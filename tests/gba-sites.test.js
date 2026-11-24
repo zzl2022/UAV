@@ -11,6 +11,7 @@ const sites=[
  {id:'nuclear',dir:'nuclear/',base:'nuclear-gba',imagery:'nuclear-imagery',name:/核/},
  {id:'changjiang',dir:'changjiang/',base:'changjiang-gba',imagery:'changjiang-imagery',name:/昌江|核电/},
  {id:'shenzhen',dir:'shenzhen/',base:'shenzhen-gba',imagery:'shenzhen-imagery',name:/深圳|交流/},
+ {id:'wuxi',dir:'wuxi/',base:'wuxi-gba',imagery:'wuxi-imagery',name:/无锡|市民/},
  {id:'railway',dir:'railway/',base:'railway-gba',imagery:'railway-imagery',name:/铁路/},
 ];
 for(const site of sites){
@@ -46,7 +47,12 @@ for(const site of sites){
    }
   }
   const imagery=JSON.parse(readFileSync(paths.imageryMeta,'utf8'));
-  assert.deepEqual(imagery.bbox,data.metadata.bbox);
+  // Basemaps may be fetched wider than the model so they reach the
+  // holographic frame; when they are, they must still cover the model bbox.
+  const [iw,is,ie,inn]=imagery.bbox,[bw,bs,be,bn]=data.metadata.bbox;
+  assert.ok(iw<=bw+1e-6&&is<=bs+1e-6&&ie>=be-1e-6&&inn>=bn-1e-6,
+   'imagery must cover the model bbox');
+  if(!imagery.localBounds)assert.deepEqual(imagery.bbox,data.metadata.bbox);
   assert.ok(statSync(paths.imagery).size>1000);
   assert.ok(imagery.width>=1024);
   assert.equal(meta.glb.file,`${site.base}.glb`);

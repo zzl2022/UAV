@@ -2,6 +2,7 @@
 *.bat -text
 *.cmd -text
 *.ps1 text eol=crlf
+*.sh text eol=lf
 
 # Raw competition data must stay byte-identical (source hashes).
 创意二文件/** -text

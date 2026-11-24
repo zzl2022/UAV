@@ -23,6 +23,7 @@ app.innerHTML=`<header id="platform-topbar">
   </div>
   <div class="topbar-center">
   <h1>反无装备优化部署与仿真推演平台</h1>
+  </div>
   <div class="topbar-drone" aria-hidden="true">
     <svg viewBox="0 0 140 92" role="img">
       <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -46,7 +47,6 @@ app.innerHTML=`<header id="platform-topbar">
         <path d="M119 39a23 23 0 0 1 0 14"/><path d="M125 33a33 33 0 0 1 0 26"/>
       </g>
     </svg>
-  </div>
   </div>
 </header>
 <div id="platform-body">
@@ -73,10 +73,8 @@ app.innerHTML=`<header id="platform-topbar">
   <label>模型<select id="model-select" aria-label="选择地图模型">
     <option value="recon" selected>复杂城市——河南博物院</option>
     <option value="shenzhen">复杂城市——深圳国际交流中心(APEC举办地)</option>
-    <option value="beijing">核心区域——北京故宫</option>
-    <option value="daxing">机场区域——大兴机场</option>
+    <option value="wuxi">复杂城市——无锡市市民中心</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
-    <option value="railway">铁路沿线——北京站到通州站</option>
   </select></label></section>
   <section id="layers-section"><h2>场景图层</h2>
   <label><input type="checkbox" id="buildings" checked>建筑</label>
@@ -137,32 +135,22 @@ let renderer,model,city,terrain,controls;
 let scene,camera,imageryTexture,imageryMaterial,grid;
 let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
 const SITES={
-  beijing:{
-    label:'核心区域——北京故宫',short:'北京故宫',
-    base:'./data/beijing/beijing-gba',
-    imagery:'./data/beijing/beijing-imagery.jpg',
-  },
   shenzhen:{
     label:'复杂城市——深圳国际交流中心(APEC举办地)',short:'深圳国际交流中心',
     base:'./data/sites/shenzhen/shenzhen-gba',
     imagery:'./data/sites/shenzhen/shenzhen-imagery.jpg',
   },
-  daxing:{
-    label:'机场区域——大兴机场',short:'大兴机场',
-    base:'./data/sites/daxing/daxing-gba',
-    imagery:'./data/sites/daxing/daxing-imagery.jpg',
+  wuxi:{
+    label:'复杂城市——无锡市市民中心',short:'无锡市市民中心',
+    base:'./data/sites/wuxi/wuxi-gba',
+    imagery:'./data/sites/wuxi/wuxi-imagery.jpg',
+    // The 3 km Wuxi model needs a wider square than 0.54×span.
+    frameHalf:4400,
   },
   hangzhou:{
     label:'机场区域——杭州萧山机场',short:'杭州萧山机场',
     base:'./data/sites/hangzhou/hangzhou-gba',
     imagery:'./data/sites/hangzhou/hangzhou-imagery.jpg',
-  },
-
-
-  railway:{
-    label:'铁路沿线——北京站到通州站',short:'铁路走廊',
-    base:'./data/sites/railway/railway-gba',
-    imagery:'./data/sites/railway/railway-imagery.jpg',
   },
 };
 const viewport=el('viewport');
@@ -278,8 +266,10 @@ try {
     const sites=Object.fromEntries(Object.keys(SITES).map(id=>[id,{loaded:!!siteGroups[id]?.children.length,buildingCount:siteMeta[id]?.buildingCount??null,maxHeight:siteMeta[id]?.maxHeight??null}]));
     window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:city.metadata.sourceFeatures},...sites}};
   }
-  function addGround(group,meta,texture){
-    const [x0,x1,z0,z1]=meta?.localBounds??[-5042,4974,-5054,4984];
+  function addGround(group,meta,texture,bounds){
+    // A site basemap may be fetched wider than meta.localBounds so it reaches
+    // the holographic frame; the sidecar carries its exact footprint.
+    const [x0,x1,z0,z1]=bounds??meta?.localBounds??[-5042,4974,-5054,4984];
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute([x0,-0.5,z0,x1,-0.5,z0,x1,-0.5,z1,x0,-0.5,z1],3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute([0,1,1,1,1,0,0,0],2));
@@ -301,15 +291,17 @@ try {
     const buildingData=site.buildings
       ?fetchJSON(site.buildings).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;})
       :Promise.resolve(null);
-    const [meta,gltf,buildingsData]=await Promise.all([
+    const [meta,gltf,buildingsData,imageryMeta]=await Promise.all([
       fetchJSON(`${site.base}-meta.json`),
       new GLTFLoader().loadAsync(`${site.base}.glb`),
       buildingData,
+      fetchJSON(site.imagery.replace(/\.jpe?g$/i,'.json')).catch(()=>null),
     ]);
     siteMeta[id]=meta;
     let buildingMesh=null;
     gltf.scene.traverse(child=>{if(child.isMesh&&child.material){child.material.side=THREE.DoubleSide;buildingMesh??=child;}});
     const group=new THREE.Group();group.name=`${id}_GBA_LoD1`;group.visible=false;group.add(gltf.scene);
+    if(site.frameHalf)group.userData.frameHalf=site.frameHalf;
     const origin=[meta.center?.[0]??0,meta.center?.[1]??0,0];
     group.userData={...group.userData,name:meta.name,origin,ecefTransform:null};
     siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData};
@@ -317,7 +309,7 @@ try {
       const texture=await new THREE.TextureLoader().loadAsync(site.imagery);
       texture.colorSpace=THREE.SRGBColorSpace;
       texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-      siteParts[id].ground=addGround(group,meta,texture);
+      siteParts[id].ground=addGround(group,meta,texture,imageryMeta?.localBounds);
     }catch(error){console.warn(`${site.short}影像底图加载失败`,error);}
     if(meta.route?.points?.length){
       const route=meta.route.points.map(point=>new THREE.Vector3(point[0],2,point[1]));
