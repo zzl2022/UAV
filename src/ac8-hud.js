@@ -433,13 +433,25 @@ export function createAc8Hud({scene: mainScene, camera, viewport, getActiveGroup
 
   function groupTarget(group) {
     if (!group) return null;
-    const box = new THREE.Box3().setFromObject(group);
+    // The site basemap is intentionally fetched wider than the buildings so it
+    // reaches the frame.  Exclude it from the frame calculation, otherwise the
+    // frame would grow to enclose the basemap and reopen the gap it just closed.
+    const box = new THREE.Box3();
+    group.updateWorldMatrix(true, true);
+    group.traverse(object => {
+      if (object.name === 'TianDiTu_Imagery') return;
+      if (object.isMesh || object.isLine || object.isPoints) {
+        box.expandByObject(object, true);
+      }
+    });
     if (box.isEmpty()) return null;
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     const span = Math.max(size.x, size.z, 1);
-    // The square is always slightly larger than the model, like the Henan scene.
-    const half = span * 0.54;
+    // A site may override the square size (e.g. Wuxi needs more breathing room).
+    const override = Number(group.userData?.frameHalf);
+    // The square is otherwise slightly larger than the model, like the Henan scene.
+    const half = Number.isFinite(override) && override > 0 ? override : span * 0.54;
     const groundY = groundHeightAt(group, center, box);
     return {
       position: new THREE.Vector3(center.x, groundY + Math.max(0.5, span * 0.00005), center.z),

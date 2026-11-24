@@ -1,9 +1,9 @@
 {
   "name": "北京 · 大兴国际机场 10 km · GBA LoD1",
-  "source": "GlobalBuildingAtlas LoD1 (per-building footprints + heights)",
+  "source": "GlobalBuildingAtlas LoD1 + Overture Maps East Asian Buildings",
   "sourceUrl": "https://huggingface.co/datasets/zhu-xlab/GBA.LoD1",
-  "license": "CC BY-NC 4.0",
-  "attribution": "GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors",
+  "license": "GBA CC BY-NC 4.0; Overture East Asian Buildings CC BY 4.0; OpenStreetMap ODbL",
+  "attribution": "GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors; East Asian Buildings (Shi et al., doi:10.5281/zenodo.8174931); Overture Maps",
   "center": [
     116.4105,
     39.5098
@@ -33,14 +33,17 @@
     -9998.82,
     9985.73
   ],
-  "buildingCount": 14286,
-  "blockCount": 14286,
+  "buildingCount": 31928,
+  "blockCount": 31928,
   "minHeight": 3,
   "maxHeight": 81.43,
   "filters": {
     "minHeight": 3,
     "maxHeight": 300,
-    "minAreaMeters2": 20
+    "minAreaMeters2": 20,
+    "overtureMinAreaMeters2": 20,
+    "overtureContainmentDedupe": 0.5,
+    "overtureAddIfNoGbaOverlap": 0.5
   },
   "skipped": {
     "height": 3584,
@@ -2545,8 +2548,10 @@
     "selection": "largest footprint within 1800 m of site center"
   },
   "sourceCounts": {
-    "osm": 1148,
-    "ours2": 14003
+    "osm": 1144,
+    "ours2": 12658,
+    "overture": 18126,
+    "overture_added": 18126
   },
   "heightSource": "GBA LoD1 heights (3D-GloBFP/OSM fusion)",
   "baseElevation": 0,
@@ -2556,17 +2561,19 @@
     "GBA LoD1 is a model product; heights are not surveyed.",
     "License is CC BY-NC 4.0: non-commercial use with attribution.",
     "Base is flat (no DEM); absolute elevations are not represented.",
-    "Low/tiny structures are filtered; roads are left to the imagery basemap."
+    "Low/tiny structures are filtered; roads are left to the imagery basemap.",
+    "Overture additions are CC BY 4.0 footprints; heights without source data are transferred from nearby GBA buildings and are indicative.",
+    "Overture and GBA captures may differ in date; recent demolitions or new construction can still differ from the basemap."
   ],
   "metricProjection": "local_tmerc",
   "glb": {
     "file": "daxing-gba.glb",
-    "bytes": 30174740,
-    "sha256": "b30f50fb6ba9bbee66b0fcaaa80ed955a59406d9ee2006e908742c61814dca37"
+    "bytes": 47769196,
+    "sha256": "51330cf3d5591dddf0c7898c652b28d5cb429c21438ebbb0cdbab795a98ebae8"
   },
   "mesh": {
-    "vertices": 1256790,
-    "triangles": 418930,
+    "vertices": 1989870,
+    "triangles": 663290,
     "drawCalls": 1
   }
 }

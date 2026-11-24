@@ -33,3 +33,13 @@
 #demo-hover-values dd{margin:0;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;color:#ddf3ec}
 #equipment-demo-hud{max-height:calc(100% - 102px);overflow:auto}
 @media(max-width:580px){#equipment-window.is-minimized{width:260px}#equipment-manager[data-demo=true] #equipment-profile-form{padding:16px}.equipment-demo-settings .demo-position{gap:8px;align-items:flex-start}.demo-position output{font-size:11px}.equipment-demo-settings button{font-size:12px;padding:8px 10px}.demo-actions{gap:8px}#equipment-demo-hud{right:10px;top:74px;width:290px;padding:12px;max-width:calc(100% - 20px)}}
+
+/* Point picking must see the map: the HUD menu renders the settings panel
+   directly over the viewport, so workspace.minimizeWindow alone cannot clear
+   it.  Fade the menu out while the crosshair is active. */
+#app.demo-picking #ac8-equipment-menu,
+#app.demo-picking #equipment-window {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
