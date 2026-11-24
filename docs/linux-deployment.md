@@ -88,3 +88,27 @@ ssh -i ~/.ssh/uav_server_ed25519 root@182.92.226.203 \
 - 当前 2C4G 足够 1–20 人演示；20–50 人评审建议先观察 `free -m` 与带宽。
 - 若带宽成为瓶颈，把 `dist/data` 迁到 OSS + CDN，Nginx 只保留页面与 API 反代。
 - 后端依赖 Python 3.11；系统默认 Python 3.6 不要替换，venv 使用 `/usr/bin/python3.11`。
+
+## SSH 登录账号
+
+- `uavadmin`：普通登录账号，已加入 `wheel` 组，可通过用户名 + 密码 SSH 登录，并用 `sudo` 管理系统服务。初始密码在交付消息中单独告知，建议首次登录后执行 `passwd` 修改。
+- `root`：保留原密钥登录；不要在日常运维中直接使用 root 密码登录。
+- `uav`：应用运行账号，`/sbin/nologin`，仅用于 `uav-api.service`，不要作为 SSH 登录账号。
+
+修改密码：
+
+```bash
+ssh uavadmin@182.92.226.203
+passwd
+```
+
+公网开放密码登录后，建议配合强密码、`fail2ban` 或仅允许固定来源 IP；如不需要 root 密码登录，可将 `/etc/ssh/sshd_config` 的 `PermitRootLogin` 改为 `prohibit-password`。
+
+## 网站登录
+
+- 登录页：`http://182.92.226.203/login.html`；未登录访问 `/`、`/data/`、`/assets/` 或 `/api/capabilities/` 会跳转到登录页。
+- 用户名：`uav`；密码保存在服务器 `/etc/uav/uav-web.env` 的 `UAV_WEB_PASSWORD` 中，不写入仓库。首次安装脚本会在该文件不存在时生成随机密码并打印；重复安装会保留现有文件。
+- 登录状态使用 HttpOnly、SameSite=Lax 的签名 Cookie，有效期 12 小时；退出登录访问 `/login.html?logout=1`。
+- 认证由 Python 后端 `/api/auth/login`、`/api/auth/check`、`/api/auth/logout` 提供，Nginx 用 `auth_request` 保护静态文件与能力接口。
+- 修改网站密码：编辑 `/etc/uav/uav-web.env` 中的 `UAV_WEB_PASSWORD`，然后 `systemctl restart uav-api`。
+- 当前为 HTTP + 公网 IP，登录密码在网络中明文传输；正式对外使用建议配置 HTTPS/域名。

@@ -84,10 +84,32 @@ if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" != "Disabled" ]; t
   setsebool -P httpd_can_network_connect 1 || true
 fi
 
+echo "==> 配置网站登录"
+AUTH_ENV="/etc/uav/uav-web.env"
+if [ ! -f "$AUTH_ENV" ]; then
+  install -d -m 0700 /etc/uav
+  WEB_PASS="$($PY -c "import secrets,string; a=string.ascii_letters+string.digits+'@#'; print(''.join(secrets.choice(a) for _ in range(16)))")"
+  WEB_SECRET="$($PY -c 'import secrets; print(secrets.token_hex(32))')"
+  cat > "$AUTH_ENV" <<EOF
+UAV_WEB_USER=uav
+UAV_WEB_PASSWORD=$WEB_PASS
+UAV_SESSION_SECRET=$WEB_SECRET
+EOF
+  chmod 600 "$AUTH_ENV"
+  echo "网站登录账号：uav"
+  echo "网站登录密码：$WEB_PASS"
+  echo "（已写入 $AUTH_ENV，可修改后重启 uav-api）"
+else
+  echo "保留现有网站登录配置：$AUTH_ENV"
+fi
+
 echo "==> 配置 systemd"
 install -m 0644 "$APP_DIR/deploy/uav-api.service" /etc/systemd/system/uav-api.service
 systemctl daemon-reload
-systemctl enable --now uav-api
+systemctl enable uav-api
+# `enable --now` does not restart an already-running service, so an update
+# would keep the old backend process (and its old routes) alive.
+systemctl restart uav-api
 
 echo "==> 配置 Nginx"
 install -m 0644 "$APP_DIR/deploy/nginx-uav.conf" /etc/nginx/conf.d/uav.conf
@@ -132,9 +154,14 @@ fi
 
 echo "==> 健康检查"
 sleep 2
-curl -fsS http://127.0.0.1:8765/api/capabilities/health
-echo
-curl -fsS -o /dev/null -w "首页 HTTP %{http_code}\n" http://127.0.0.1/
+AUTH_CODE="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/auth/check || true)"
+if [ "$AUTH_CODE" != "200" ] && [ "$AUTH_CODE" != "401" ]; then
+  echo "后端登录检查异常：HTTP $AUTH_CODE" >&2
+  exit 1
+fi
+echo "后端登录检查 HTTP $AUTH_CODE（200=未启用登录，401=登录门已启用）"
+curl -fsS -o /dev/null -w "登录页 HTTP %{http_code}\n" http://127.0.0.1/login.html
+curl -sS -o /dev/null -w "首页 HTTP %{http_code}（未登录应为 302）\n" http://127.0.0.1/
 echo
 echo "完成。请在阿里云轻量应用服务器控制台放行 80 端口，然后访问："
 echo "  http://<公网IP>/"
