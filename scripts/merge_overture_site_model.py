@@ -5,11 +5,10 @@ cities.  Overture's East Asian Buildings layer (CC BY 4.0, derived from
 high-resolution imagery) is much denser and aligns with the same basemap.
 
 Strategy:
-  * keep every GBA building (its footprint and height are the more reliable
-    OSM/3D-GloBFP measurement where present);
-  * add an Overture footprint only when it does not overlap a GBA building
-    (containment > 0.5), so no shifted duplicates are introduced;
-  * reject Overture additions that duplicate each other;
+  * Wuxi: prefer individual OSM and Overture building footprints to the
+    broad GBA machine-derived outlines. Resolve conflicting footprints before
+    extrusion and preserve the OSM civic centre.
+  * Daxing: keep GBA buildings and use Overture to fill coverage gaps.
   * additions inherit heights from Overture levels when available, otherwise
     from nearby matched GBA buildings (distance-weighted), with small
     structures capped to plausible shed/jet-bridge heights.
@@ -27,8 +26,10 @@ from collections import Counter
 import numpy as np
 from PIL import Image
 from pyproj import CRS, Transformer
+from shapely import make_valid
 from shapely.geometry import Point, Polygon, shape
 from shapely.strtree import STRtree
+from wuxi_footprints import conflate_wuxi, polygon_from_building, polygon_parts
 
 ROOT = Path(__file__).resolve().parents[1]
 MIN_AREA = 20.0
@@ -50,31 +51,26 @@ def project_polygons(features, to_metric, half):
     for feature in features:
         props = feature.get('properties') or {}
         geometry = shape(feature['geometry'])
-        parts = ([geometry] if geometry.geom_type == 'Polygon'
-                 else [p for p in getattr(geometry, 'geoms', [])
-                       if p.geom_type == 'Polygon'])
-        for part in parts:
-            q = Polygon([to_metric.transform(x, y) for x, y in part.exterior.coords])
-            if not q.is_valid:
-                q = q.buffer(0)
-            if q.is_empty or q.area < MIN_AREA:
-                continue
-            if (q.bounds[0] < -limit or q.bounds[2] > limit
-                    or q.bounds[1] < -limit or q.bounds[3] > limit):
-                continue
+        for part in polygon_parts(geometry):
             holes = [
-                [to_metric.transform(x, y) for x, y in ring.coords]
+                [to_metric.transform(x, y) for x, y, *_ in ring.coords]
                 for ring in part.interiors
             ]
-            out.append((q, holes, props))
+            poly = Polygon([to_metric.transform(x, y) for x, y, *_ in part.exterior.coords], holes)
+            for q in polygon_parts(poly if poly.is_valid else make_valid(poly)):
+                if q.area < MIN_AREA:
+                    continue
+                if (q.bounds[0] < -limit or q.bounds[2] > limit
+                        or q.bounds[1] < -limit or q.bounds[3] > limit):
+                    continue
+                out.append((q, props))
     return out
 
 
 def gba_polygons(payload):
     polygons = []
     for building in payload['buildings']:
-        exterior = [(p[0], -p[2]) for p in building['rings'][0]]
-        q = Polygon(exterior)
+        q = polygon_from_building(building)
         if not q.is_valid:
             q = q.buffer(0)
         polygons.append(q)
@@ -137,9 +133,9 @@ def vegetation_fraction(q, image, half):
 
 def dedupe_overture(overture):
     """Drop smaller copies of overlapping Overture footprints (rare)."""
-    tree = STRtree([q for q, _, _ in overture])
+    tree = STRtree([q for q, _ in overture])
     drop = set()
-    for i, (q, _, _) in enumerate(overture):
+    for i, (q, _) in enumerate(overture):
         if i in drop:
             continue
         for j in tree.query(q.buffer(0.5)):
@@ -209,8 +205,6 @@ def main():
             'input already contains Overture additions; rerun from the freshly '
             'prepared GBA JSON so buildings are not added twice')
     center = meta['center']
-    half = float(meta['radiusMeters']) + 100.0
-
     crs = CRS.from_proj4(
         f'+proj=tmerc +lat_0={center[1]} +lon_0={center[0]} '
         f'+k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
@@ -219,8 +213,8 @@ def main():
     overture_raw = project_polygons(
         load_geojson(args.overture)['features'], to_metric,
         float(meta['localBounds'][1]))
-    overture = dedupe_overture(overture_raw)
-    log(f'{site}: Overture candidates {len(overture_raw)} -> {len(overture)} after dedupe')
+    overture = overture_raw if site == 'wuxi' else dedupe_overture(overture_raw)
+    log(f'{site}: {len(overture)} Overture candidates')
 
     gba_polygons_list = gba_polygons(payload)
 
@@ -240,7 +234,7 @@ def main():
     # GBA footprint with no Overture counterpart and a tan, field-like
     # interior is dropped; village houses and greenhouses (roof-like or
     # matched) are kept, as is the core building.
-    overture_tree = STRtree([q for q, _, _ in overture])
+    overture_tree = STRtree([q for q, _ in overture])
     core_id = (meta.get('coreBuilding') or {}).get('id')
     kept_buildings, kept_polygons = [], []
     dropped = 0
@@ -266,27 +260,24 @@ def main():
         kept_polygons.append(q)
     payload['buildings'] = kept_buildings
     gba_polygons_list = kept_polygons
-    gba_tree = STRtree(gba_polygons_list)
+    gba_tree = STRtree(gba_polygons_list) if site != 'wuxi' else None
     log(f'{site}: dropped {dropped} bare-field GBA footprints; '
         f'{len(kept_buildings)} GBA buildings kept')
 
     additions = []
     skipped = 0
     vegetation = 0
-    for q, holes, props in overture:
-        hit = False
-        for j in gba_tree.query(q.buffer(0.5)):
-            if containment(q, gba_polygons_list[int(j)]) > 0.5:
-                hit = True
-                break
-        if hit:
+    for q, props in overture:
+        if gba_tree is not None and any(
+                containment(q, gba_polygons_list[j]) > 0.5 for j in gba_tree.query(q)):
             skipped += 1
             continue
-        if (imagery is not None and q.area >= 600
+        community_footprint = site == 'wuxi' and props.get('source') == 'OpenStreetMap'
+        if (imagery is not None and q.area >= 600 and not community_footprint
                 and vegetation_fraction(q, imagery, imagery_half) > 0.55):
             vegetation += 1
             continue
-        additions.append((q, holes, props))
+        additions.append((q, props))
     log(f'{site}: {len(additions)} Overture additions, {skipped} already '
         f'represented by GBA, {vegetation} rejected as vegetation/water')
 
@@ -302,29 +293,30 @@ def main():
 
     buildings = list(payload['buildings'])
     used_ids = {b['id'] for b in buildings}
-    for q, holes, props in additions:
+    for q, props in additions:
         height = None
         if props.get('height') is not None:
             try:
                 height = float(props['height'])
             except (TypeError, ValueError):
                 height = None
+        height_source = 'Overture height'
         if height is None and props.get('num_floors') is not None:
             try:
                 height = float(props['num_floors']) * 3.2
+                height_source = 'Overture floor count'
             except (TypeError, ValueError):
                 height = None
         if height is None:
+            height_source = 'local GBA neighbourhood estimate'
             height = height_for_addition(
                 q, gba_height_tree, gba_points, gba_areas, gba_heights,
                 global_median, max_height)
         height = round(max(3.0, min(height, max_height)), 2)
-        exterior = [[round(x, 2), 0.0, round(-y, 2)] for x, y in q.exterior.coords]
-        rings = [exterior]
-        for hole in holes:
-            rings.append([[round(x, 2), 0.0, round(-y, 2)] for x, y in hole])
+        rings = [[[round(x, 2), 0.0, round(-y, 2)] for x, y in ring.coords]
+                 for ring in [q.exterior, *q.interiors]]
         digest = hashlib.sha1(
-            f'{q.wkb_hex}|{props.get("id")}'.encode('ascii')).hexdigest()[:12]
+            f'{Polygon(q.exterior).wkb_hex}|{props.get("id")}'.encode('ascii')).hexdigest()[:12]
         building_id = f'ov-{digest}'
         while building_id in used_ids:
             building_id += 'x'
@@ -333,16 +325,21 @@ def main():
             'id': building_id,
             'sourceId': props.get('id'),
             'source': 'overture',
+            'sourceDataset': props.get('source'),
             'name': 'Overture building',
             'height': height,
-            'heightSource': ('Overture height' if props.get('height') is not None
-                             else 'local GBA neighbourhood median'),
+            'heightSource': height_source,
             'ground': 0.0,
             'foundation': 0.0,
             'foundationDepth': 0.0,
             'rings': rings,
         })
 
+    if site == 'wuxi':
+        buildings, stats = conflate_wuxi(buildings, core_id, MIN_AREA)
+        meta['footprintConflation'] = stats
+        stats['overtureInputSha256'] = hashlib.sha256(args.overture.read_bytes()).hexdigest()
+        log(f'{site}: footprint conflation {stats}')
     payload['buildings'] = buildings
     heights = [float(b['height']) for b in buildings]
     meta['source'] = ('GlobalBuildingAtlas LoD1 + Overture Maps '
@@ -358,13 +355,13 @@ def main():
     meta['maxHeight'] = round(max(heights), 2)
     meta['sourceCounts'] = {
         **dict(Counter(str(b.get('source') or 'unknown') for b in buildings)),
-        'overture_added': len(additions),
+        'overture_added': sum(b.get('source') == 'overture' for b in buildings),
     }
     meta['filters'] = {
         **(meta.get('filters') or {}),
         'overtureMinAreaMeters2': MIN_AREA,
-        'overtureContainmentDedupe': 0.5,
-        'overtureAddIfNoGbaOverlap': 0.5,
+        **({'overtureContainmentDedupe': 0.5, 'overtureAddIfNoGbaOverlap': 0.5}
+           if site != 'wuxi' else {}),
     }
     meta.setdefault('limitations', []).extend([
         'Overture additions are CC BY 4.0 footprints; heights without source '
@@ -380,9 +377,8 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
                         encoding='utf-8')
-    log(f'{site}: wrote {len(buildings)} buildings to {out_path} '
-        f'(GBA {len(buildings) - len(additions)}, '
-        f'Overture +{len(additions)})')
+    log(f"{site}: wrote {len(buildings)} buildings to {out_path} "
+        f"(Overture {meta['sourceCounts']['overture_added']})")
 
 
 if __name__ == '__main__':

@@ -34,17 +34,15 @@
     -2994.14,
     2982.18
   ],
-  "buildingCount": 11497,
-  "blockCount": 11497,
-  "minHeight": 3,
+  "buildingCount": 13193,
+  "blockCount": 13193,
+  "minHeight": 3.02,
   "maxHeight": 134.21,
   "filters": {
     "minHeight": 3,
     "maxHeight": 300,
     "minAreaMeters2": 20,
-    "overtureMinAreaMeters2": 20,
-    "overtureContainmentDedupe": 0.5,
-    "overtureAddIfNoGbaOverlap": 0.5
+    "overtureMinAreaMeters2": 20
   },
   "skipped": {
     "height": 230,
@@ -310,10 +308,10 @@
     "selection": "largest footprint within 500 m of target 120.311500,31.493500"
   },
   "sourceCounts": {
-    "ours2": 3235,
+    "ours2": 493,
     "osm": 559,
-    "overture": 7703,
-    "overture_added": 7703
+    "overture": 12141,
+    "overture_added": 12141
   },
   "heightSource": "GBA LoD1 heights (3D-GloBFP/OSM fusion)",
   "baseElevation": 0,
@@ -328,14 +326,28 @@
     "Overture additions are CC BY 4.0 footprints; heights without source data are transferred from nearby GBA buildings and are indicative.",
     "Overture and GBA captures may differ in date; recent demolitions or new construction can still differ from the basemap."
   ],
+  "footprintConflation": {
+    "inputCount": 16495,
+    "droppedBySource": {
+      "overture": 560,
+      "ours2": 2742
+    },
+    "trimmedBySource": {
+      "osm": 23,
+      "overture": 19,
+      "ours2": 140
+    },
+    "method": "OSM and detailed Overture roofs before GBA ML outlines; reject alternate outlines and trim minor edge overlaps.",
+    "overtureInputSha256": "fd34d3bbb1c1fc35c285286bcb0d47e8550f23ba4df136b9e73b890371315bf8"
+  },
   "glb": {
     "file": "wuxi-gba.glb",
-    "bytes": 13929216,
-    "sha256": "21caef774d320a756d16c9bffbd29ad8c3d77a8eeb799e8cfad2b62f7bac65b2"
+    "bytes": 14985312,
+    "sha256": "244eda0e7545f2c5b370942bb0c34d7647dd9ef2b9feb3504f82022fae6539d8"
   },
   "mesh": {
-    "vertices": 580212,
-    "triangles": 193404,
+    "vertices": 624204,
+    "triangles": 208068,
     "drawCalls": 1
   }
 }

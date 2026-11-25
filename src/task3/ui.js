@@ -4,6 +4,8 @@ import {BLIND_COLORS,BLIND_CATEGORIES,TASK3_VERSION,METRIC_WEIGHTS,THREAT_SCENAR
 import {STAGE_NAMES,resolveTask3EquipmentSelection} from './pipeline.js';
 import {parseTask3Spacing,resolveTask3Settings} from './scope.js';
 import {createTask3RequestSnapshot,createTask3RunScheduler} from './live-optimization.js';
+import {createPlanChatSummary} from './plan-chat-context.js';
+import {resolvePlanChatDevice} from './device-chat-context.js';
 import {createDeviceDisplayMap} from './device-display.js';
 import {createDeviceHover} from './device-hover.js';
 import {applyMobileRepairResult,restoreMobileRepairSnapshot} from './mobile-repair.js';
@@ -165,6 +167,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  }
  let report=null,run=null,originalRun=null,worker=null,busy=false,plan=null,blindMeshes={},deviceMeshes=[],deviceDisplay=createDeviceDisplayMap(),mobileSnapshots=new Map(),mobileRequestId=0,mobilePending=false,mobileReportRequestId=null,activePipelineRequest=null,lastRequestSnapshot=null,threatConfigs=structuredClone(DEFAULT_THREAT_CONFIGS);
  let task3SceneKey='recon',constraintsInvalid=false,explanationExporting=false;
+ let lastPlanChatStatus;
  const buildingContexts=new Map([['recon',{sceneKey:'recon',city,model}]]);
  let buildingLoad=null,buildingError='';
  const selectedDevices=new Set();
@@ -550,6 +553,22 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    if(e.conflicts.length>50)box.insertAdjacentHTML('beforeend',`<p class="hint">仅列前 50 条，共 ${e.conflicts.length} 条，完整清单见导出 JSON。</p>`);}
   box.insertAdjacentHTML('beforeend',`<p class="hint">${e.mobileRepair?`已按原方案 + ${plan.derivation?.addedDeviceCount??0} 台移动设备重算；新增 fail ${e.mobileRepair.newFailCount} 项。`:''} ${e.notes.join('；')||''} 工程代理规则，非频谱合规认证。</p>`);
  }
+ function planChatStatus(requestState){
+  if(mapSwitching)return 'switching';
+  if(busy)return 'working';
+  if(!report||!plan)return 'none';
+  return constraintsInvalid||requestState.staleResult?'stale':'ready';
+ }
+ function getPlanChatContext(){
+  const status=planChatStatus(scheduler.getState());
+  return {
+   revision:report?.requestId,
+   summary:createPlanChatSummary({status,report,activePlan:plan,conditionId:$('task3-condition').value,mobileSnapshots}),
+   lookupDevice:status==='ready'?(question,previous)=>resolvePlanChatDevice({
+    question,previous,report,activePlan:plan,activeDisplay:deviceDisplay,checkedIds:selectedDevices,
+   }):null,
+  };
+ }
  function updateDiagnostics(){
   const view=renderer.domElement.parentElement,requestState=scheduler.getState(),freshness=$('task3-result-freshness');camera.updateMatrixWorld();
   freshness.hidden=!requestState.staleResult||!report;freshness.textContent=freshness.hidden?'':constraintsInvalid?'建筑禁部署约束已变化，旧设备已隐藏，请重新生成方案。':'当前展示为上一轮成功结果，非最新参数结果。';
@@ -567,6 +586,11 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   };
   // 供浏览器冒烟测试读取完整数据（替代已移除的 JSON 导出按钮）。
   window.__task3Report=report;window.__task3Run=run;window.__task3Export=()=>({report,activePlanId:plan?.id,deviceDisplay:deviceDisplay.toJSON()});
+  const chatStatus=planChatStatus(requestState);
+  if(chatStatus!==lastPlanChatStatus){
+   lastPlanChatStatus=chatStatus;
+   app.dispatchEvent(new CustomEvent('project-chat-plan-status',{detail:chatStatus}));
+  }
  }
  let pdfExporting=false;
  function updatePdfVisibility(){
@@ -806,7 +830,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   if(value){resetCustomEditing();stopBuildingSelection();setThreatTracking(false);stopThreatPlayback();pendingThreatKey=null;}
   controlsEnabled();updateLayerVisibility();updateDiagnostics();
  }
- return {panel,layer,setStatus,setScene,setMapSwitching,showTab(id){if(!TABS[id])return;activeTab=id;activeSub=TABS[id].subs[0]?.[0]??null;applyTab();},setMapActive(value){mapActive=!!value;if(!mapActive){resetCustomEditing();stopBuildingSelection();}updateLayerVisibility();updateDiagnostics();},selectThreatScenario,startThreatSimulation,pauseThreatSimulation,getThreatPlayback,getThreatResult,setThreatSpeed,setThreatProgress,update(stamp){
+ return {panel,layer,setStatus,setScene,setMapSwitching,getPlanChatContext,showTab(id){if(!TABS[id])return;activeTab=id;activeSub=TABS[id].subs[0]?.[0]??null;applyTab();},setMapActive(value){mapActive=!!value;if(!mapActive){resetCustomEditing();stopBuildingSelection();}updateLayerVisibility();updateDiagnostics();},selectThreatScenario,startThreatSimulation,pauseThreatSimulation,getThreatPlayback,getThreatResult,setThreatSpeed,setThreatProgress,update(stamp){
   if(!layer.visible){if(buildingSelector.diagnostics().active)updateDiagnostics();return;}
   const pulse=.5+.5*Math.sin((Number(stamp)||0)*.006);
   for(const mesh of deviceMeshes){

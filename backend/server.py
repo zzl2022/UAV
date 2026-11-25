@@ -1,6 +1,7 @@
 """Loopback-only stdlib JSON service used through the Vite same-origin proxy."""
 import argparse
 from collections import defaultdict, deque
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -10,7 +11,7 @@ import time
 from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from backend import auth
+from backend import auth, project_chat
 from backend.capabilities import CapabilityService
 
 MAX_LOGIN_FAILURES = 5
@@ -75,6 +76,45 @@ def make_handler(service):
             self.reply(401, {'error': '未登录或登录已过期'})
             return False
 
+        def project_chat(self):
+            key = project_chat.api_key()
+            if not key:
+                self.reply(503, {'error': project_chat.UNCONFIGURED})
+                return
+            try:
+                payload = project_chat.upstream_payload(self.read_json())
+            except (ValueError, TypeError) as exc:
+                self.reply(400, {'error': str(exc)})
+                return
+
+            with closing(project_chat.answer(key, payload)) as events:
+                try:
+                    first = next(events)
+                except project_chat.ChatError as exc:
+                    self.reply(exc.status, {'error': str(exc)})
+                    return
+
+                def emit(event):
+                    line = json.dumps(event, ensure_ascii=False) + '\n'
+                    self.wfile.write(line.encode('utf-8'))
+                    self.wfile.flush()
+
+                self.close_connection = True
+                try:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/x-ndjson; charset=utf-8')
+                    self.send_header('Cache-Control', 'no-store')
+                    self.send_header('X-Accel-Buffering', 'no')
+                    self.end_headers()
+                    emit(first)
+                    try:
+                        for event in events:
+                            emit(event)
+                    except project_chat.ChatError as exc:
+                        emit({'error': str(exc)})
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    return
+
         def do_GET(self):
             path = urlsplit(self.path).path
             if path == '/api/auth/check':
@@ -88,6 +128,12 @@ def make_handler(service):
                     self.reply(200, {'ok': True, 'user': auth._config()[0]})
                 else:
                     self.reply(401, {'ok': False})
+                return
+            if path == '/api/project-chat':
+                if self.require_auth():
+                    available = bool(project_chat.api_key())
+                    self.reply(200, {'available': True} if available else
+                               {'available': False, 'error': project_chat.UNCONFIGURED})
                 return
             if path.startswith('/api/capabilities/'):
                 if not self.require_auth():
@@ -132,6 +178,10 @@ def make_handler(service):
                 return
             if path == '/api/auth/logout':
                 self.reply(200, {'ok': True}, {'Set-Cookie': auth.logout_cookie()})
+                return
+            if path == '/api/project-chat':
+                if self.require_auth():
+                    self.project_chat()
                 return
             if path == '/api/capabilities/evaluate':
                 if not self.require_auth():

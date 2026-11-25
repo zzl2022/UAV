@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createModel} from './model.js';
+import {siteImageBounds,siteGroundGeometry,roofHighlightGeometry} from './site-display.js';
 import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountSensorUI} from './sensors/ui.js';
@@ -13,6 +14,7 @@ import {mountIntro} from './intro.js';
 import {createAc8Hud} from './ac8-hud.js';
 import {mountSceneMenu} from './scene-menu.js';
 import {mountHudMenu} from './hud-menu.js';
+import {mountProjectChat} from './project-chat.js';
 import {flightTelemetry} from './planning/telemetry.js';
 import logoFullUrl from './assets/logo-full.png';
 const app=document.querySelector('#app');
@@ -127,9 +129,10 @@ function setSidebarCollapsed(value){
 sidebarCollapse.onclick=()=>setSidebarCollapsed(true);
 sidebarExpand.onclick=()=>setSidebarCollapsed(false);
 const deploymentButton=el('toggle-deployment');
-let renderer,model,city,terrain,controls;
+let renderer,model,city,terrain,controls,task3;
 let scene,camera,imageryTexture,imageryMaterial,grid;
 let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
+mountProjectChat(app,()=>({scene:mode,...task3?.getPlanChatContext()}));
 const SITES={
   shenzhen:{
     label:'复杂城市——深圳国际交流中心(APEC举办地)',short:'深圳国际交流中心',
@@ -255,8 +258,8 @@ try {
   grid=new THREE.GridHelper(Math.ceil(span/1000)*1000,Math.ceil(span/1000)*2,0x33515b,0x20333b);grid.position.y=reconBox.min.y-1;scene.add(grid);
   el('count').textContent=city.metadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=city.metadata.maxHeight;
   function updateStatus(){
-    // Model loading is indicated by the scene itself; no completion toast.
-    status('');
+    const imageError=mode==='recon'?imageryError:siteParts[mode]?.imageryError;
+    status(imageError?'影像底图未能加载，当前显示素色地面。':'');
   }
   function updateDiagnostics(){
     if(!city||!terrain||!model)return;
@@ -264,16 +267,12 @@ try {
     window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:city.metadata.sourceFeatures},...sites}};
   }
   function addGround(group,meta,texture,bounds){
-    // A site basemap may be fetched wider than meta.localBounds so it reaches
-    // the holographic frame; the sidecar carries its exact footprint.
-    const [x0,x1,z0,z1]=bounds??meta?.localBounds??[-5042,4974,-5054,4984];
-    const geometry=new THREE.BufferGeometry();
-    geometry.setAttribute('position',new THREE.Float32BufferAttribute([x0,-0.5,z0,x1,-0.5,z0,x1,-0.5,z1,x0,-0.5,z1],3));
-    geometry.setAttribute('uv',new THREE.Float32BufferAttribute([0,1,1,1,1,0,0,0],2));
-    geometry.setIndex([0,2,1,0,3,2]);
-    const textureMaterial=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});
-    const plainMaterial=new THREE.MeshStandardMaterial({color:0x243d46,roughness:1,side:THREE.DoubleSide});
-    const plane=new THREE.Mesh(geometry,textureMaterial);
+    const geometry=siteGroundGeometry(bounds,meta.baseElevation??0);
+    // The map meets the walls at grade. Depth bias separates coincident bottom faces.
+    const surface={side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
+    const textureMaterial=texture?new THREE.MeshBasicMaterial({...surface,map:texture}):null;
+    const plainMaterial=new THREE.MeshStandardMaterial({...surface,color:0x243d46,roughness:1});
+    const plane=new THREE.Mesh(geometry,textureMaterial??plainMaterial);
     plane.name='TianDiTu_Imagery';
     plane.userData.textureMaterial=textureMaterial;
     plane.userData.plainMaterial=plainMaterial;
@@ -288,9 +287,13 @@ try {
     const buildingData=site.buildings
       ?fetchJSON(site.buildings).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;})
       :Promise.resolve(null);
-    const [meta,gltf,buildingsData,imageryMeta]=await Promise.all([
-      fetchJSON(`${site.base}-meta.json`),
-      new GLTFLoader().loadAsync(`${site.base}.glb`),
+    const meshData=fetchJSON(`${site.base}-meta.json`).then(async meta=>{
+      const version=meta.glb?.sha256?`?v=${meta.glb.sha256}`:'';
+      const gltf=await new GLTFLoader().loadAsync(`${site.base}.glb${version}`);
+      return {meta,gltf};
+    });
+    const [{meta,gltf},buildingsData,imageryMeta]=await Promise.all([
+      meshData,
       buildingData,
       fetchJSON(site.imagery.replace(/\.jpe?g$/i,'.json')).catch(()=>null),
     ]);
@@ -302,12 +305,17 @@ try {
     const origin=[meta.center?.[0]??0,meta.center?.[1]??0,0];
     group.userData={...group.userData,name:meta.name,origin,ecefTransform:null};
     siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData};
+    let bounds=meta.localBounds,texture=null;
     try{
-      const texture=await new THREE.TextureLoader().loadAsync(site.imagery);
+      bounds=siteImageBounds(meta,imageryMeta);
+      texture=await new THREE.TextureLoader().loadAsync(site.imagery);
       texture.colorSpace=THREE.SRGBColorSpace;
       texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-      siteParts[id].ground=addGround(group,meta,texture,imageryMeta?.localBounds);
-    }catch(error){console.warn(`${site.short}影像底图加载失败`,error);}
+    }catch(error){
+      siteParts[id].imageryError=error;
+      console.warn(`${site.short}影像底图加载失败`,error);
+    }
+    siteParts[id].ground=addGround(group,meta,texture,bounds);
     if(meta.route?.points?.length){
       const route=meta.route.points.map(point=>new THREE.Vector3(point[0],2,point[1]));
       group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(route),new THREE.LineBasicMaterial({color:0x6ce5c3,depthTest:false,transparent:true,opacity:0.95})));
@@ -366,7 +374,7 @@ try {
         neighborHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roof),roofMaterial));
         neighborHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),baseMaterial));
       }
-      const cap=roofCap(building.rings[0],height+0.2,0xffc857,0.24);if(cap)neighborHighlight.add(cap);
+      const cap=roofCap(building.rings,height+0.2,0xffc857,0.24);if(cap)neighborHighlight.add(cap);
     }
     neighborHighlight.userData.buildingCount=Math.min(candidates.length,60);
     neighborHighlight.visible=true;
@@ -377,36 +385,34 @@ try {
     const xs=ring.map(point=>point[0]),zs=ring.map(point=>point[2]);
     return {x:(Math.min(...xs)+Math.max(...xs))/2,z:(Math.min(...zs)+Math.max(...zs))/2,size:Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...zs)-Math.min(...zs),30)};
   }
-  function roofCap(ring,y,color,opacity){
-    if(!ring?.length)return null;
-    const closed=ring.length>1&&ring[0][0]===ring[ring.length-1][0]&&ring[0][2]===ring[ring.length-1][2];
-    const points=(closed?ring.slice(0,-1):ring).map(point=>new THREE.Vector2(point[0],-point[2]));
-    if(points.length<3)return null;
-    const mesh=new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(points)),new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false}));
-    mesh.rotation.x=-Math.PI/2;mesh.position.y=y;mesh.renderOrder=7;
+  function roofCap(rings,y,color,opacity){
+    if(!rings?.[0]?.length)return null;
+    const material=new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+    const mesh=new THREE.Mesh(roofHighlightGeometry(rings,y),material);
+    mesh.renderOrder=7;
     return mesh;
+  }
+  function coreDisplayHeight(core){
+    return core.id==='synthetic-venue-footprint'?0:Math.max(0,Number(core.height)||0);
   }
   function setCoreHighlight(core){
     currentCore=core||null;
     disposeCoreHighlight();
     if(!core||!core.rings?.length){coreHighlight.visible=false;coreLabel.hidden=true;return;}
-    const height=Math.max(0,Number(core.height)||0);
+    const baseY=core.rings[0][0][1],height=coreDisplayHeight(core);
     const roofMaterial=new THREE.LineBasicMaterial({color:0xffd166,depthTest:false,transparent:true,opacity:0.95});
-    const glowMaterial=new THREE.LineBasicMaterial({color:0xfff3b0,depthTest:false,transparent:true,opacity:0.35});
+    const glowMaterial=height?new THREE.LineBasicMaterial({color:0xfff3b0,depthTest:false,transparent:true,opacity:0.35}):null;
     for(const ring of core.rings){
-      const roof=ring.map(point=>new THREE.Vector3(point[0],height+0.6,point[2]));
-      const base=ring.map(point=>new THREE.Vector3(point[0],0.4,point[2]));
+      const roof=ring.map(([x,,z])=>new THREE.Vector3(x,baseY+height,z));
       coreHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roof),roofMaterial));
-      coreHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),glowMaterial));
+      if(glowMaterial){
+        const base=ring.map(([x,,z])=>new THREE.Vector3(x,baseY,z));
+        coreHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),glowMaterial));
+      }
     }
-    const cap=roofCap(core.rings[0],height+0.2,0xffd166,0.32);if(cap)coreHighlight.add(cap);
-    const outer=core.rings[0]||[];
-    const xs=outer.map(point=>point[0]),zs=outer.map(point=>point[2]);
-    for(const [x,z] of [[Math.min(...xs),Math.min(...zs)],[Math.min(...xs),Math.max(...zs)],[Math.max(...xs),Math.min(...zs)],[Math.max(...xs),Math.max(...zs)]]){
-      coreHighlight.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,0.4,z),new THREE.Vector3(x,height+0.6,z)]),glowMaterial));
-    }
+    const cap=roofCap(core.rings,baseY+height,0xffd166,0.32);if(cap)coreHighlight.add(cap);
     coreHighlight.visible=true;
-    coreLabel.textContent=`⌖ ${core.name||'核心建筑'}`;
+    coreLabel.textContent=`⌖ ${core.name||'核心建筑'}${height?'':'（示意范围）'}`;
     coreLabel.title=`定位${core.name||'核心建筑'}`;
     coreLabel.hidden=false;
   }
@@ -422,15 +428,15 @@ try {
     if(!currentCore)return;
     const center=coreCenter(currentCore);
     if(!center)return;
-    const target=new THREE.Vector3(center.x,(Number(currentCore.height)||0)/2,center.z);
+    const target=new THREE.Vector3(center.x,currentCore.rings[0][0][1]+coreDisplayHeight(currentCore)/2,center.z);
     const span=Math.max(center.size*1.8,120);
     tweenCamera(target.clone().add(new THREE.Vector3(span*.7,span*.85,span*.9)),target,850);
   }
   function updateCoreLabel(){
-    if(!currentCore||mode==='recon'){coreLabel.hidden=true;return;}
+    if(!currentCore||mode==='recon'||!coreHighlight.visible){coreLabel.hidden=true;return;}
     const center=coreCenter(currentCore);
     if(!center){coreLabel.hidden=true;return;}
-    const point=new THREE.Vector3(center.x,(Number(currentCore.height)||0)+18,center.z);
+    const point=new THREE.Vector3(center.x,currentCore.rings[0][0][1]+coreDisplayHeight(currentCore)+18,center.z);
     camera.updateMatrixWorld();point.project(camera);
     const visible=point.z>=-1&&point.z<=1&&Math.abs(point.x)<0.95&&Math.abs(point.y)<0.92;
     coreLabel.hidden=!visible;
@@ -449,6 +455,7 @@ try {
         if(old!==model.ground.material&&old!==imageryMaterial&&old!==reconPlainMaterial)old.dispose();
       }
     }else{
+      coreHighlight.visible=showBuildings&&!!currentCore;
       const parts=siteParts[mode];
       if(parts){
         parts.buildings.visible=showBuildings;
@@ -534,7 +541,7 @@ try {
   for(const id of ['buildings','terrain','imagery'])el(id).onchange=applyModeLayers;
   const resize=()=>{camera.aspect=viewport.clientWidth/viewport.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewport.clientWidth,viewport.clientHeight);window.__ac8Hud?.resize?.();};
   new ResizeObserver(resize).observe(viewport);resize();
-  let sensors,task3;
+  let sensors;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport,tweenCamera});
   const museumFocus=el('museum-focus');if(museumFocus)el('city-views').append(museumFocus);
   let lastHudStamp=0;

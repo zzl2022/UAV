@@ -15,6 +15,18 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / '创意二文件/创意二数据集/区域数据'
 OUT = ROOT / 'public/data'
 
+# WGS84 shift measured on the supplied orthophoto at the apex and ends of
+# the northern arc (+10.7 columns, +3.8 rows on the original GeoTIFF).
+FOOTPRINT_CORRECTIONS = {
+    (13492, '2277988'): {
+        'name': '文博广场半圆长廊',
+        'longitudeOffset': 0.000229598,
+        'latitudeOffset': -0.000081542,
+        'source': 'Manual alignment to the supplied WGS84 orthophoto (raster.tif)',
+        'referenceUrl': 'https://ylj.zhengzhou.gov.cn/ylzx/9260170.jhtml',
+    },
+}
+
 def dump(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':'), allow_nan=False), encoding='utf-8')
 
@@ -38,8 +50,10 @@ def build():
         return [round(float(enu[0]), 3), round(float(enu[2]), 3), round(float(-enu[1]), 3)]
     shp_crs = CRS.from_wkt(shp.with_suffix('.prj').read_text())
     to_geo = Transformer.from_crs(shp_crs, 4326, always_xy=True)
-    reader = shapefile.Reader(str(shp), encoding=shp.with_suffix('.cpg').read_text().strip())
-    buildings, features = [], []
+    cpg = shp.with_suffix('.cpg')
+    # The supplied .cpg declares UTF-8, including for the minimal source bundle.
+    reader = shapefile.Reader(str(shp), encoding=cpg.read_text().strip() if cpg.exists() else 'utf-8')
+    buildings, features, applied_corrections = [], [], []
     repaired, excluded, missing_dem = 0, [], 0
     interpolated_dem = 0
     max_sample_distance = 0.0
@@ -71,6 +85,9 @@ def build():
             return float(heights[row, col])
         for index, record in enumerate(reader.iterShapeRecords()):
             props = record.record.as_dict()
+            source_id = str(props.get('ID') or index)
+            correction = FOOTPRINT_CORRECTIONS.get((index, source_id))
+            name = correction['name'] if correction else props.get('NAME') or ''
             height = float(props['high'])
             if not math.isfinite(height) or height <= 0: raise ValueError(f'Invalid high at {index}')
             shape = geometry.shape(record.shape.__geo_interface__)
@@ -86,12 +103,19 @@ def build():
                 rings = []
                 for ring in [poly.exterior, *poly.interiors]:
                     rings.append([list(to_geo.transform(x, y)) for x, y, *_ in ring.coords])
+                if correction:
+                    dx, dy = correction['longitudeOffset'], correction['latitudeOffset']
+                    rings = [[[lon+dx, lat+dy] for lon, lat in ring] for ring in rings]
                 ground = [sample(*p) for ring in rings for p in ring]
                 base, foundation = max(ground), min(ground)
                 local_rings = [[local(lon, lat, base) for lon, lat in ring] for ring in rings]
-                buildings.append({'id': str(props.get('ID') or index) + f'-{index}-{part}', 'name': props.get('NAME') or f'建筑 {index+1}', 'height': height, 'ground': base, 'foundation': foundation, 'rings': local_rings, 'foundationDepth': base-foundation})
+                buildings.append({'id': f'{source_id}-{index}-{part}', 'name': name or f'建筑 {index+1}', 'height': height, 'ground': base, 'foundation': foundation, 'rings': local_rings, 'foundationDepth': base-foundation})
                 geo_polygons.append(rings)
-            features.append({'type':'Feature','properties':{'source_index':index,'name':props.get('NAME') or '', 'height':height,'height_source':'DBF.high','base_elevation':min(b['ground'] for b in buildings[-len(polygons):]),'vertical_datum':'DEM source; unspecified'},'geometry':{'type':'MultiPolygon','coordinates':geo_polygons}})
+            properties = {'source_index':index,'name':name, 'height':height,'height_source':'DBF.high','base_elevation':min(b['ground'] for b in buildings[-len(polygons):]),'vertical_datum':'DEM source; unspecified'}
+            if correction:
+                properties['footprint_source'] = correction['source']
+                applied_corrections.append({'sourceIndex':index, 'sourceId':source_id, **correction})
+            features.append({'type':'Feature','properties':properties,'geometry':{'type':'MultiPolygon','coordinates':geo_polygons}})
         imagery = prepare_imagery(image, OUT/'terrain-imagery.png', raster)
         positions, indices, uvs = [], [], []
         vertex_ids = {}
@@ -111,7 +135,7 @@ def build():
                 if all(i in vertex_ids for i in [a,b,c,d]):
                     indices.extend(vertex_ids[i] for i in [a,c,b,b,c,d])
         terrain = {'positions':positions,'indices':indices,'uvs':uvs,'imagery':imagery,'rows':raster.height,'cols':raster.width,'min':float(heights.min()),'max':float(heights.max()),'crs':str(raster.crs),'resolution':list(raster.res),'bounds':list(raster.bounds)}
-    metadata = {'name':'郑州 · 河南博物院片区','origin':list(origin),'coordinateSystem':'Local ENU mapped to Three.js [east, up, -north], meters','ecefTransform':tile_data['root']['transform'],'buildingCRS':shp_crs.to_string(),'sourceFeatures':len(reader),'buildingParts':len(buildings),'repairedFeatures':repaired,'excludedFeatures':excluded,'missingDEMSamples':missing_dem,'nearestDEMSamples':interpolated_dem,'maxNearestDEMDistanceMeters':max_sample_distance,'terrainNodataCells':int(mask.sum()),'heightField':'high','minHeight':min(b['height'] for b in buildings),'maxHeight':max(b['height'] for b in buildings),'terrain':{k:v for k,v in terrain.items() if k not in ['positions','indices','uvs']},'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [shp,shp.with_suffix('.dbf'),shp.with_suffix('.prj'),dem,tiles]+([image] if image.exists() else [])},'limitations':['DEM vertical datum is not specified in source; elevations are used as supplied, without geoid correction.','Footprint roof base uses maximum DEM sample at vertices; walls extend to minimum sample for foundations.','DEM nodata cells are omitted from the terrain. Building vertices on small gaps use nearest valid samples within 100 m, counted in this report.','Imagery is optional and is a ground texture, not a source of new building geometry. No road centerlines are supplied.','Original white-model vertical semantics are not documented; it is a separate comparison layer.']}
+    metadata = {'name':'郑州 · 河南博物院片区','origin':list(origin),'coordinateSystem':'Local ENU mapped to Three.js [east, up, -north], meters','ecefTransform':tile_data['root']['transform'],'buildingCRS':shp_crs.to_string(),'sourceFeatures':len(reader),'buildingParts':len(buildings),'repairedFeatures':repaired,'excludedFeatures':excluded,'missingDEMSamples':missing_dem,'nearestDEMSamples':interpolated_dem,'maxNearestDEMDistanceMeters':max_sample_distance,'terrainNodataCells':int(mask.sum()),'heightField':'high','minHeight':min(b['height'] for b in buildings),'maxHeight':max(b['height'] for b in buildings),'terrain':{k:v for k,v in terrain.items() if k not in ['positions','indices','uvs']},'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [shp,shp.with_suffix('.dbf'),shp.with_suffix('.prj'),dem,tiles]+([image] if image.exists() else [])},'footprintCorrections':applied_corrections,'limitations':['DEM vertical datum is not specified in source; elevations are used as supplied, without geoid correction.','Footprint roof base uses maximum DEM sample at vertices; walls extend to minimum sample for foundations.','DEM nodata cells are omitted from the terrain. Building vertices on small gaps use nearest valid samples within 100 m, counted in this report.','The orthophoto supplies ground texture and local footprint alignment evidence. No road centerlines are supplied.','Original white-model vertical semantics are not documented; it is a separate comparison layer.']}
     dump(OUT/'city.json', {'metadata':metadata,'buildings':buildings})
     dump(OUT/'terrain.json', terrain)
     dump(OUT/'buildings.geojson', {'type':'FeatureCollection','features':features})
