@@ -14,6 +14,8 @@ import {emcAnalysis,emcVerdictText,distance3D} from './emc.js';
 import {createRun,finalizeRun} from './runs.js';
 import {TASK3_VERSION,METRIC_WEIGHTS,EQUIPMENT_FACTS,EQUIPMENT_CHANNELS_GHZ,EMC_RULES} from './constants.js';
 import {TASK3_DEFAULT_SETTINGS,resolveTask3Settings,createScopeMetadata} from './scope.js';
+import {createDeploymentExclusion} from './building-constraints.js';
+import {collectDecisionEvidence} from './decision-evidence.js';
 
 export const PIPELINE_STAGES=['candidates','coverage','scoring','threats','emc'];
 export const STAGE_NAMES={candidates:'候选方案生成',coverage:'覆盖推演',scoring:'多指标择优',threats:'威胁场景验证',emc:'电磁兼容校核'};
@@ -39,10 +41,11 @@ function modelChannel(presetId,index){
 }
 
 // 与 optimizer.generateCandidates 同手法，但装备预设由用户选择注入；雷达俯仰与频道分组为模型假设。
-export function generateCandidatesWithEquipment(city,query,settings,sampling,presetIds,equipmentSnapshot=null){
+export function generateCandidatesWithEquipment(city,query,settings,sampling,presetIds,equipmentSnapshot=null,exclusion=createDeploymentExclusion(city,settings)){
  const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot),{bounds}=sampling,sites=[],cells=new Map();
  for(const b of city.buildings){
   if(b.height>140)continue;const ring=b.rings[0],x=ring.reduce((a,p)=>a+p[0],0)/ring.length,z=ring.reduce((a,p)=>a+p[2],0)/ring.length;
+  if(exclusion.blocked([x,0,z],b.id))continue;
   if(x<bounds.west||x>bounds.east||z<bounds.south||z>bounds.north||query.groundAt(x,z)===null)continue;
   const key=[Math.floor((x-bounds.west)/settings.siteSpacing),Math.floor((z-bounds.south)/settings.siteSpacing)].join(',');
   const current=cells.get(key)??{};if(!current.low||b.height<current.low.building.height)current.low={x,z,building:b};if(!current.high||b.height>current.high.building.height)current.high={x,z,building:b};cells.set(key,current);
@@ -115,7 +118,8 @@ function chooseRemedialAction(options,current,measureCoverage){
 
 // 确定性的单步贪心处置：每轮先试全部合法单设备换频，无改进再试既有候选点内的局部同型号替代。
 // 每步必须减少 fail 数，且状态签名去重；搜索规模随冲突设备数×频道数/局部候选数增长，不做组合枚举。
-export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=null,measureCoverage=null,maxSteps=null}={}){
+export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=null,measureCoverage=null,maxSteps=null,exclusion=null}={}){
+ exclusion?.assertDevices(devices,sites);
  let current={devices:structuredClone(devices),sites:structuredClone(sites),indices:indices?[...indices]:devices.map(()=>-1)};
  const initial=emcAnalysis(current.devices),before=emcSnapshot(initial),actions=[],visited=new Set([stateSignature(current.devices)]);
  const limit=maxSteps??Math.min(64,Math.max(8,devices.length*2));
@@ -145,6 +149,7 @@ export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=nu
   for(let i=0;i<current.devices.length;i++){
    const device=current.devices[i];if(!involved.has(device.id))continue;
    const alternatives=candidates.map((candidate,index)=>({candidate,index})).filter(({candidate,index})=>{
+    if(exclusion?.blocked(candidate.device.position,candidate.site?.buildingId))return false;
     if(current.indices.includes(index)||candidate.device.presetId!==device.presetId)return false;
     if(Math.abs((candidate.device.parameters?.pitch??0)-(device.parameters?.pitch??0))>1e-9)return false;
     const d=distance3D(device,candidate.device);return d>0&&d<=EMC_RULES.relocationSearchRadiusM;
@@ -173,6 +178,8 @@ export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=nu
 export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},weights={...METRIC_WEIGHTS},presetIds=PRESETS.map(p=>p.id),equipmentSnapshot=null,progress=()=>{},yieldTask=async()=>{},withThreatFrames=true,planTypes=null}){
  const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot);
  settings=resolveTask3Settings(settings);
+ const exclusion=createDeploymentExclusion(city,settings);
+ if(settings.buildingExclusions)settings={...settings,buildingExclusions:{...settings.buildingExclusions,buildingIds:exclusion.buildingIds}};
  const rawThreatConfigs=settings.threatConfigs;
  if(rawThreatConfigs!==undefined&&(!rawThreatConfigs||typeof rawThreatConfigs!=='object'||Array.isArray(rawThreatConfigs)))throw Error('settings.threatConfigs 必须是按场景键组织的对象');
  const threatConfigs=Object.fromEntries(['single','multi','swarm'].map(key=>[key,normalizeThreatConfig(key,rawThreatConfigs?.[key])]));
@@ -184,7 +191,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  progress({stage:'candidates',completed:0,total:1});
  const dataBounds=query.getDataBounds?.()??null,sampling=generateSamples(city,query,settings,dataBounds),scope=createScopeMetadata(settings,sampling,dataBounds);
  sampling.dataCoverage=scope;
- const {candidates,sites}=generateCandidatesWithEquipment(city,query,settings,sampling,presetIds,equipmentProfiles);
+ const {candidates,sites}=generateCandidatesWithEquipment(city,query,settings,sampling,presetIds,equipmentProfiles,exclusion);
  const conditions=scenarios(environment),n=sampling.samples.length;
  const weights1=conditions.flatMap((_,c)=>sampling.samples.map(p=>p.weight*(c===0?2:1)));
  progress({stage:'candidates',completed:1,total:1});
@@ -201,6 +208,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
    let found=null;
    for(const radius of [80,180,350]){for(let a=0;a<12;a++){
     const angle=a*Math.PI/6,x=p.position[0]+radius*Math.cos(angle),z=p.position[2]+radius*Math.sin(angle);
+    if(exclusion.blocked([x,0,z]))continue;
     if(settings.scope==='custom'&&(x<sampling.bounds.west||x>=sampling.bounds.east||z<sampling.bounds.south||z>=sampling.bounds.north))continue;
     const ground=query.groundAt(x,z),surface=query.surfaceAt(x,z);
     if(ground===null||surface===null)continue;const position=[x,surface+2,z],direction=angles(position,p.position);
@@ -284,7 +292,16 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
    for(let index=0;index<n;index++)if(deviceCoverage[k][c][index]){coveredSamples++;if(coverage[c][index]===1)independentSamples++;}
    return {condition:condition.id,coveredSamples,independentSamples};
   })]));
-  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds};
+  // 每工况保留一项覆盖/未覆盖实判，优先核心采样；只作解释证据，不参与选点。
+  const linkExamples=Object.fromEntries(devices.map((device,k)=>[device.id,conditions.flatMap((condition,c)=>[true,false].flatMap(covered=>{
+   let index=sampling.samples.findIndex((sample,j)=>sample.core&&!!deviceCoverage[k][c][j]===covered);
+   if(index<0)index=sampling.samples.findIndex((_,j)=>!!deviceCoverage[k][c][j]===covered);
+   if(index<0)return [];
+   const sample=sampling.samples[index],penalty=emc.penalties[device.id]??0;
+   const result=evaluate(device,{...target,position:sample.position,...condition.target},{...condition.environment,cochannelDb:condition.environment.cochannelDb+penalty},query.trace(device.position,sample.position));
+   return [{condition:condition.id,sampleId:sample.id??`sample-${index}`,sampleIndex:index,position:[...sample.position],core:!!sample.core,covered,marginReserveDb:settings.marginReserveDb,emcPenaltyDb:penalty,...result}];
+  }))]));
+  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds,linkExamples};
  }
  function candidateCoverageValue(pool){
   return (_devices,_sites,indices)=>{const covered=new Uint8Array(weights1.length);for(const i of indices)if(i>=0)for(const j of pool[i].cover)covered[j]=1;return covered.reduce((sum,v,j)=>sum+v*weights1[j],0);};
@@ -294,12 +311,15 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   const pool=candidates.filter(c=>policy.presetSubset.includes(c.device.presetId));
   const chosen=chooseWithRedundancy(pool,policy),initial={indices:[...chosen.indices],devices:chosen.indices.map(i=>structuredClone(pool[i].device)),sites:chosen.indices.map(i=>structuredClone(pool[i].site)),pool};
   assignRadarChannels(initial.devices);
-  const remediation=remediateEmcConflicts({...initial,candidates:pool,measureCoverage:candidateCoverageValue(pool)});
+  const remediation=remediateEmcConflicts({...initial,candidates:pool,measureCoverage:candidateCoverageValue(pool),exclusion});
   const beforeCoverage=remediation.before.counts.fail?await calculatePlanCoverage(initial):null;
   const finalState={indices:remediation.indices,devices:remediation.devices,sites:remediation.sites,pool},finalCoverage=await calculatePlanCoverage(finalState);
+  exclusion.assertDevices(finalState.devices,finalState.sites);
   remediation.after=emcSnapshot(finalCoverage.emc);remediation.unresolved=remediation.after.conflicts.filter(c=>c.severity==='fail');remediation.deployable=!finalCoverage.emc.counts.fail;
   remediation.coverageReview={before:beforeCoverage?coverageSummary(beforeCoverage.metrics):null,after:coverageSummary(finalCoverage.metrics),reevaluatedDeviceIds:finalCoverage.reevaluatedDeviceIds};
   plans.push({id:policy.id,name:policy.name,budget:policy.budget,maxDevices:policy.maxDevices,presetSubset:policy.presetSubset,devices:finalState.devices,cost:finalState.indices.reduce((sum,i)=>sum+pool[i].cost,0),installationProxy:finalState.sites.reduce((sum,s)=>sum+s.installationProxy,0),sites:finalState.sites,metrics:finalCoverage.metrics,coverage:finalCoverage.coverage.map(counts=>Array.from(counts)),coverageContributions:finalCoverage.coverageContributions,deployable:remediation.deployable,optimizationTrace:{policy:structuredClone(policy),poolSize:pool.length,events:chosen.events},emcRemediation:remediation});
+  plans.at(-1).decisionEvidence=collectDecisionEvidence({plan:plans.at(-1),pool,candidates,sampling,conditions,settings});
+  plans.at(-1).linkExamples=finalCoverage.linkExamples;
  }
  // 四类盲区分类（每方案 × 每工况）
  const blindspots={};
@@ -343,5 +363,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const rulesInput={candidateStats,perHeightBlind,recommendedId:recId,nominalCondition:nominal};
  const runRecord=finalizeRun(run,{summary:{samples:n,candidates:candidates.length,sites:sites.length,plans:plans.map(p=>({id:p.id,name:p.name,devices:p.devices.length,cost:p.cost,feasibility:scoring.plans.find(r=>r.id===p.id)?.indicators.feasibility??null,score:scoring.plans.find(r=>r.id===p.id)?.score??null,rank:scoring.plans.find(r=>r.id===p.id)?.rank??null,emcVerdict:emcByPlan[p.id].verdict,deployable:p.deployable,emcResolutionStatus:p.emcRemediation.status,metrics:p.metrics})) ,recommendedId:recId},blindspots:Object.fromEntries(Object.entries(blindspots).map(([pid,rows])=>[pid,rows.map(r=>({conditionId:r.conditionId,stats:r.stats,points:r.points.map(p=>({sampleId:p.sampleId,position:p.position,agl:p.agl,core:p.core,category:p.category,cause:p.cause}))}))])),threats:Object.fromEntries(Object.entries(threats).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}])),threatsByPlan:Object.fromEntries(Object.entries(threatsByPlan).map(([pid,byKey])=>[pid,Object.fromEntries(Object.entries(byKey).map(([k,v])=>[k,{summary:v.summary,perTarget:v.perTarget,config:structuredClone(v.config)}]))])),emc:Object.fromEntries(Object.entries(emcReports).map(([pid,r])=>[pid,{verdict:r.verdict,counts:r.counts,conflicts:r.conflicts,remediation:r.remediation}])),durationMs:report.durationMs,limitations:report.limitations});
  runRecord.rulesInput=rulesInput;runRecord.scope=structuredClone(scope);
+ runRecord.decisionEvidence=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.decisionEvidence)]));
+ runRecord.linkExamples=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.linkExamples)]));
  return {report,run:runRecord};
 }

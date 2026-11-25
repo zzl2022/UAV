@@ -34,7 +34,9 @@ try{
  await page.waitForFunction(()=>window.__ac8DeploymentMenu?.isDetail(),null,{timeout:3000});
  assert.equal(await page.locator('#task3-export-pdf').isDisabled(),true,'未推演时 PDF 不可伪造');
  // 自定义矩形范围推演
- await page.locator('#task3-scope-width').fill('2200');await page.locator('#task3-scope-depth').fill('2100');await page.locator('#task3-run-side').evaluate(button=>button.click());
+ await page.locator('#task3-scope-width').fill('2200');await page.locator('#task3-scope-depth').fill('2100');
+ await page.locator('#task3-panel [data-sub="generate"]').click();
+ await page.locator('#task3-run-side').click();
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
  const event=page.waitForEvent('download');await page.locator('#task3-export-pdf').click();const download=await event;const pdfPath=`${out}/deployment-doc.pdf`;await download.saveAs(pdfPath);
  const pdf=await readFile(pdfPath);assert.match(pdf.toString('latin1',0,8),/^%PDF-/,'PDF 文件头');assert.ok(pdf.length>50000,'PDF 应包含中文字体与完整内容');assert.match(pdf.toString('latin1'),/FontFile|CIDFontType/,'PDF 应嵌入字体');

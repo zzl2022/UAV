@@ -127,10 +127,6 @@ function setSidebarCollapsed(value){
 sidebarCollapse.onclick=()=>setSidebarCollapsed(true);
 sidebarExpand.onclick=()=>setSidebarCollapsed(false);
 const deploymentButton=el('toggle-deployment');
-deploymentButton.onclick=()=>{
-  const tab=el('toggle-task3');
-  if(tab&&!tab.disabled)tab.click();
-};
 let renderer,model,city,terrain,controls;
 let scene,camera,imageryTexture,imageryMaterial,grid;
 let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
@@ -192,7 +188,7 @@ try {
   const activeGroup=()=>mode==='recon'?model.group:siteGroups[mode];
   const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
   const FRAME_DISTANCE=1.3;
-  let cameraAnimation=null;
+  let cameraAnimation=null,mapPicking=false;
   function tweenCamera(position,target,duration=900){
     if(cameraAnimation){cameraAnimation.cancel();cameraAnimation=null;}
     return new Promise(resolve=>{
@@ -242,6 +238,7 @@ try {
   function zoomAfterIntro(){
     const run=()=>{
       if(document.documentElement.dataset.ready!=='true'){window.setTimeout(run,200);return;}
+      if(mapPicking||el('model-select').disabled)return;
       try{
         const next=frameTarget(activeGroup(),false,.55);
         if(next)tweenCamera(next.position,next.center,1200);
@@ -471,7 +468,6 @@ try {
     else if(siteMeta[next])city.metadata=siteAnalysisMetadata(siteMeta[next],SITES[next]);
     if(next==='recon'){el('count').textContent=reconCityMetadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=reconCityMetadata.maxHeight;}
     else{const meta=siteMeta[next];el('count').textContent=(meta?.buildingCount??0).toLocaleString('zh-CN');el('height').textContent=meta?.maxHeight??'—';}
-    for(const id of ['toggle-sensors','toggle-task3','toggle-deployment']){const button=el(id);if(button)button.disabled=false;}
     const museum=el('museum-focus');if(museum)museum.hidden=next!=='recon';
     landmarks?.setActive?.(next==='recon');
     setCoreForMode(next);
@@ -479,6 +475,24 @@ try {
     task3?.setScene?.(activeSiteDescriptor());
   }
   function activeSiteDescriptor(){if(mode==='recon')return null;return {base:SITES[mode].base,label:SITES[mode].label,coreName:siteMeta[mode]?.coreBuilding?.name??SITES[mode].short};}
+  async function getTask3BuildingContext(signal){
+    const sceneId=mode;
+    if(sceneId==='recon')return {sceneKey:'recon',city,model};
+    const site=SITES[sceneId],parts=siteParts[sceneId];
+    if(!parts?.buildings)throw Error('当前地图的建筑模型尚未加载');
+    let data=parts.buildingsData;
+    if(!data){
+      const response=await fetch(site.buildings??`${site.base}.json`,{signal});
+      if(!response.ok)throw Error(`建筑明细 HTTP ${response.status}`);
+      data=await response.json();
+    }
+    signal.throwIfAborted();
+    if(sceneId!==mode)throw Error('地图已切换，请重新选点');
+    if(!data?.buildings?.length)throw Error('当前地图没有可选建筑明细');
+    if(data.buildings.length!==siteMeta[sceneId].buildingCount)throw Error('建筑明细数量与当前模型不一致');
+    parts.buildingsData=data;
+    return {sceneKey:site.base,city:data,model:parts};
+  }
   async function setMode(next){
     if(!(next==='recon'||SITES[next]))return;
     if(next===mode){frameObject(activeGroup());return;}
@@ -489,6 +503,7 @@ try {
     if(cityOpen)workspace.minimizeWindow('city');
     status('正在切换模型…');
     try{
+      task3?.setMapSwitching(true);
       // 1) hide the old map at the current square size (south -> north)
       if(hud?.playScanHide)await hud.playScanHide();
       // 2) load the new map while it is hidden
@@ -512,7 +527,7 @@ try {
       if(hud?.playScanReveal)await hud.playScanReveal();
       updateStatus();updateDiagnostics();
     }catch(error){select.value=mode;status(`模型加载失败：${error.message}`);hud?.endSwitchScan?.();}
-    finally{select.disabled=false;if(cityOpen)workspace.restoreWindow('city');}
+    finally{select.disabled=false;task3?.setMapSwitching(false);if(cityOpen)workspace.restoreWindow('city');}
   }
   el('model-select').onchange=()=>setMode(el('model-select').value);
   el('core-focus').onclick=focusCore;
@@ -530,7 +545,7 @@ try {
     if(!sensors?.render())renderer.render(scene,camera);
     window.__ac8Hud?.render?.();
   });
-  disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeLayers();updateStatus();
+  disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeUI(mode);updateStatus();
   sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,onPickView:()=>{cancelAnimationFrame(equipmentShiftFrame);equipmentShift=0;applyEquipmentShift(0);return frameObject(activeGroup(),true,1,{animate:false});}});
   function coreCoordinateText(){
     const transform=city?.metadata?.ecefTransform;
@@ -549,6 +564,7 @@ try {
   }
   const TYPE_NAMES={radar:'雷达',radio:'无线电',optical:'光电',acoustic:'声学'};
   const shortPlanName=name=>String(name??'').split(' · ')[0]||'—';
+  const pct=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
   function currentPlan(){
     const diag=window.task3Diagnostics,report=window.__task3Report;
     return report?.plans?.find(plan=>plan.id===diag?.planId)??report?.plans?.find(plan=>plan.id===diag?.recommendedId)??report?.plans?.[0]??null;
@@ -570,57 +586,56 @@ try {
       const profile=profiles.find(item=>item.presetId===id),type=TYPE_NAMES[profile?.type]??profile?.type??'未知',names=byType.get(type)??[];
       names.push(profile?.name??id);byType.set(type,names);
     }
-    const models=[...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('/')}`).join(' · ');
-    return `${ids.length} 台 / ${byType.size} 类 · ${models}`;
+    return [...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('、')}`).join('｜');
   }
-  function deploymentConfigText(){
-    const plan=currentPlan();
-    if(!plan)return '尚未生成';
-    const cost=Number.isFinite(plan.cost)?` · 相对成本 ${plan.cost.toFixed(1)}`:'';
-    return `${shortPlanName(plan.name)} ${plan.devices.length} 台${cost}`;
+  function deploymentInputText(){
+    if(!el('task3-scope-width'))return '等待推演输入';
+    const value=id=>el(`task3-${id}`)?.value||'—';
+    const threat=el('task3-threat')?.selectedOptions[0]?.textContent??'—';
+    const diag=window.task3Diagnostics;
+    const state=diag?.busy?' · 方案计算中':diag?.staleResult?' · 结果已过期，待重新生成':'';
+    return `范围 ${value('scope-width')} × ${value('scope-depth')} m · 网格 ${value('spacing')} m · 预算 ${value('budget')} · 设备上限 ${value('max-devices')} · 威胁 ${threat}（${value('threat-count')} 架，高度 ${value('threat-agl')} m，速度 ${value('threat-speed')} m/s）${state}`;
   }
-  function planStatusText(){
-    const diag=window.task3Diagnostics,report=window.__task3Report,plans=diag?.plans??[];
-    if(!plans.length)return '尚未生成';
-    const recommended=shortPlanName(report?.plans?.find(plan=>plan.id===diag.recommendedId)?.name);
-    return `${plans.length} 套 · 推荐${recommended} · 当前${shortPlanName(currentPlan()?.name)}`;
+  function noResultText(){return window.task3Diagnostics?.busy?'方案计算中，尚未生成':'尚未生成';}
+  function resultStateText(){
+    const diag=window.task3Diagnostics;
+    if(diag?.mobilePending)return '移动补盲计算中，显示原方案结果 · ';
+    if(diag?.busy)return '方案计算中，显示上一轮结果 · ';
+    return diag?.staleResult?'结果已过期，显示上一轮结果 · ':'';
   }
-  function coverageText(){
-    const plan=currentPlan();
-    if(!plan?.metrics?.length)return '尚未生成';
-    const current=currentMetric(plan),weakest=Math.min(...plan.metrics.map(row=>row.coverageRate));
-    return `当前工况 ${((current?.coverageRate??0)*100).toFixed(1)}% · 最弱工况 ${(weakest*100).toFixed(1)}% · 核心区覆盖 ${((current?.coreCoverageRate??0)*100).toFixed(1)}%`;
+  function planComparisonText(){
+    const report=window.__task3Report,plan=currentPlan();
+    if(!plan)return noResultText();
+    const recommended=shortPlanName(report.plans.find(row=>row.id===report.recommendedId)?.name);
+    const score=report.scoring?.plans?.find(row=>row.id===plan.id)?.score;
+    const cost=Number.isFinite(plan.cost)?plan.cost.toFixed(1):'—';
+    const scoreText=Number.isFinite(score)?score.toFixed(3):'—';
+    const scoreLabel=plan.derivation?'原方案综合分':'综合分';
+    return `${resultStateText()}${report.plans.length} 套 · 推荐 ${recommended} · 当前 ${shortPlanName(plan.name)} · 设备 ${plan.devices.length} 台 · 相对成本 ${cost} · ${scoreLabel} ${scoreText}`;
   }
-  function blindRiskText(){
+  function blindAnalysisText(){
     const diag=window.task3Diagnostics,report=window.__task3Report,plan=currentPlan();
-    if(!plan?.metrics?.length)return '尚未生成';
-    const current=currentMetric(plan),average=plan.metrics.reduce((sum,row)=>sum+(row.blindRate??0),0)/plan.metrics.length;
+    if(!plan?.metrics?.length)return noResultText();
+    const current=currentMetric(plan),weakest=Math.min(...plan.metrics.map(row=>row.coverageRate));
+    const average=plan.metrics.reduce((sum,row)=>sum+row.blindRate,0)/plan.metrics.length;
     const index=Math.max(0,report?.conditions?.findIndex(row=>row.id===diag?.condition)??0);
-    const points=report?.blindspots?.[plan.id]?.[index]?.stats?.total;
-    return `平均盲区占比 ${(average*100).toFixed(1)}% · 盲区采样点 ${points??'—'} · 核心区二重覆盖 ${((current?.coreRedundantRate??0)*100).toFixed(1)}%`;
+    const points=diag?.blindStats?.total??report.blindspots?.[plan.id]?.[index]?.stats?.total;
+    return `${resultStateText()}当前工况覆盖 ${pct(current?.coverageRate)} · 最弱工况覆盖 ${pct(weakest)} · 盲区采样点 ${points??'—'} · 平均盲区占比 ${pct(average)} · 核心区覆盖 ${pct(current?.coreCoverageRate)} / 二重覆盖 ${pct(current?.coreRedundantRate)}`;
   }
   function emcText(){
-    const diag=window.task3Diagnostics;
-    if(!diag?.ready||!diag.emcCounts)return '尚未生成';
-    const verdict={pass:'通过',degraded:'降额',fail:'不通过'}[diag.emcVerdict]??'—';
-    return `${verdict} · 严重 ${diag.emcCounts.fail??0} / 提示 ${diag.emcCounts.warning??0}`;
-  }
-  function threatText(){
-    const report=window.__task3Report;
-    const threat=report?.threatsByPlan?.[report.recommendedId]?.swarm??report?.threats?.swarm;
-    if(!threat?.summary)return '尚未生成';
-    const summary=threat.summary,detected=(threat.perTarget??[]).filter(row=>row.firstDetectionTime!==null).length;
-    return `蜂群 ${summary.targetCount??0} 架 · 检出 ${detected} 架 · 平均首报 ${summary.meanFirstDetectionTime==null?'—':`${summary.meanFirstDetectionTime.toFixed(1)} s`} · 容量溢出 ${summary.overflowedTargets??0} 架`;
+    const plan=currentPlan(),emc=window.__task3Report?.emc?.[plan?.id];
+    if(!emc)return noResultText();
+    const verdict={pass:'通过',degraded:'降额',fail:'不通过'}[emc.verdict]??'—';
+    const status=typeof plan.deployable==='boolean'?` · 部署状态 ${plan.deployable?'可部署':'不可部署'}`:'';
+    return `${resultStateText()}${verdict} · 严重 ${emc.counts?.fail??'—'} / 提示 ${emc.counts?.warning??'—'}${status}`;
   }
   const sceneSummary=()=>({
     scene:sceneLine(),
     equipmentConfig:equipmentConfigText(),
-    deploymentConfig:deploymentConfigText(),
-    planStatus:planStatusText(),
-    coverage:coverageText(),
-    blindRisk:blindRiskText(),
+    deploymentInput:deploymentInputText(),
+    planComparison:planComparisonText(),
+    blindAnalysis:blindAnalysisText(),
     emc:emcText(),
-    threat:threatText(),
   });
   mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
   function restoreOverview(){
@@ -701,9 +716,10 @@ try {
   function updateSimulationBar(){
     if(!task3)return;
     const state=currentPlayback();
-    simStart.disabled=!!state.busy;
+    simStart.disabled=!!state.busy||!!state.blocked;
     simStart.textContent=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
     simStart.dataset.playing=String(!!state.playing);
+    if(simScenario&&state.key&&simScenario.value!==state.key)simScenario.value=state.key;
     if(Number(simSpeed.value)!==state.speed&&state.speed)simSpeed.value=String(state.speed);
     const progress=state.duration?Math.max(0,Math.min(100,state.time/state.duration*100)):0;
     if(!simSeeking)simProgress.value=String(progress*10);
@@ -718,13 +734,12 @@ try {
       const started=task3?.startThreatSimulation?.(simMode());
       if(started!==false&&fresh){const result=task3?.getThreatResult?.();if(result)recordSimulation(result);}
     };
-    simScenario?.addEventListener('change',()=>{task3?.pauseThreatSimulation?.();updateSimulationBar();});
+    simScenario?.addEventListener('change',()=>{task3?.selectThreatScenario?.(simMode());updateSimulationBar();});
     simSpeed.onchange=()=>task3?.setThreatSpeed?.(Number(simSpeed.value));
     simProgress.oninput=()=>task3?.setThreatProgress?.(Number(simProgress.value));
     simProgress.onpointerdown=()=>{simSeeking=true;};
     simProgress.onpointercancel=()=>{simSeeking=false;};
     window.addEventListener('pointerup',()=>{simSeeking=false;});
-    simStart.disabled=false;
     updateSimulationBar();
     window.setInterval(updateSimulationBar,160);
   }
@@ -734,7 +749,6 @@ try {
   let simulationHistory=[];
   try{const stored=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');if(Array.isArray(stored))simulationHistory=stored.filter(item=>item&&typeof item==='object').slice(0,20);}catch{}
   let compareSelection=[];
-  const pct=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
   const secs=value=>Number.isFinite(value)?`${value.toFixed(1)} s`:'—';
   const historyTime=value=>{const date=new Date(value);return Number.isFinite(value)&&!Number.isNaN(date.getTime())?date.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}):'—';};
   const persistHistory=()=>{try{localStorage.setItem(HISTORY_KEY,JSON.stringify(simulationHistory.slice(0,20)));}catch{}};
@@ -796,20 +810,12 @@ try {
     window.addEventListener('keydown',event=>{if(event.key==='Escape'&&!historyPanel.hidden){event.preventDefault();event.stopImmediatePropagation();hideHistory();}},true);
   }
   function activateDeploymentModule(id){
-    const run=()=>{
-      if(!task3?.showTab)return false;
-      const tab=document.querySelector('#toggle-task3');
-      if(!tab||tab.disabled)return false;
-      tab.click();
-      task3.showTab(id);
-      return true;
-    };
-    if(run())return;
-    const timer=window.setInterval(()=>{if(run())window.clearInterval(timer);},200);
-    window.setTimeout(()=>window.clearInterval(timer),15000);
+    if(!task3)return;
+    workspace.activateView('task3');
+    task3.showTab(id);
   }
-  mountHudMenu({
-    app,launchers,kind:'deployment',launcher:app.querySelector('#toggle-deployment'),
+  const deploymentMenu=mountHudMenu({
+    app,launchers,kind:'deployment',launcher:deploymentButton,
     panel:app.querySelector('#deployment-panel'),contentClass:'is-deployment',
     entries:[
       {id:'input',label:'推演输入'},
@@ -818,12 +824,31 @@ try {
       {id:'emc',label:'电磁兼容'},
     ],
     onSelect:id=>activateDeploymentModule(id),
+    onDetailExit:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
-    task3=mountTask3UI({app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor});
-    applyModeUI(mode);
-  }).catch(error=>{console.warn('任务三面板挂载失败',error);el('toggle-task3').disabled=true;workspace.showWindow('deployment');el('toggle-task3').click();});
+    task3=mountTask3UI({
+      app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,
+      getActiveModel:()=>mode==='recon'?model:siteParts[mode],
+      getBuildingContext:getTask3BuildingContext,
+      onMapPickMode:active=>{
+        mapPicking=active;
+        if(active){cameraAnimation?.cancel();deploymentMenu.minimize();}
+        else deploymentMenu.restore();
+      },
+    });
+    task3.setScene(activeSiteDescriptor());
+    task3.setMapSwitching(el('model-select').disabled);
+    deploymentButton.disabled=false;
+    updateSimulationBar();
+  }).catch(error=>{
+    console.warn('任务三面板挂载失败',error);
+    task3=null;
+    el('toggle-task3').disabled=true;
+    deploymentButton.disabled=true;
+    status('任务三加载失败，请刷新后重试。');
+  });
   document.documentElement.dataset.ready='true';
   // Expose diagnostic counts only, for reproducible headless browser verification.
   updateDiagnostics();

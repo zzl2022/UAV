@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildRadialRoute,buildThreatRoutes,simulateThreat,threatSummaryText} from '../src/task3/threats.js';
+import {buildCustomRoute,buildRadialRoute,buildThreatRoutes,simulateThreat,threatSummaryText} from '../src/task3/threats.js';
+import {computeCustomSingleThreat} from '../src/task3/worker.js';
 import {THREAT_SCENARIOS} from '../src/task3/constants.js';
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../src/sensors/presets.js';
 import {createModel} from '../src/model.js';
@@ -86,6 +87,53 @@ test('sequential mode flies each route independently and concatenates frames',as
  const counts=routes.map(r=>Math.floor((r.duration-r.startDelayS-1e-9)/2)+2);
  assert.equal(result.frames.length,counts[0]+counts[1]);
  assert.deepEqual(result.perTarget.map(p=>p.routeId),['a','b']);
+});
+
+test('custom polyline preserves waypoint order and shares elevation, segmentation and timing rules',()=>{
+ const route=buildCustomRoute(flatQuery,{waypoints:[[0,999,0],[50,888,0],[50,777,40]],aglM:45,speedMps:10});
+ assert.equal(route.kind,'custom');assert.equal(route.id,'single-custom');assert.equal(route.speed,10);assert.equal(route.startDelayS,0);
+ assert.deepEqual(route.waypoints,[[0,0],[50,0],[50,40]],'输入 y 不替代地形/AGL 高度，平面路点顺序保持不变');
+ assert.deepEqual(route.points[0].position,[0,45,0]);assert.deepEqual(route.points.at(-1).position,[50,45,40]);
+ assert.equal(route.length,90);assert.equal(route.duration,9);assert.equal(route.points[0].time,0);
+ assert.ok(route.points.some(p=>p.position[0]===50&&p.position[2]===0),'中间拐点必须保留');
+ for(let i=0;i<route.points.length;i++){
+  const point=route.points[i];assert.equal(point.position[1],45);
+  if(!i)continue;const previous=route.points[i-1],distance=Math.hypot(...point.position.map((v,k)=>v-previous.position[k]));
+  assert.ok(Math.hypot(point.position[0]-previous.position[0],point.position[2]-previous.position[2])<=20+1e-9);
+  assert.ok(point.time>previous.time);assert.ok(Math.abs((point.time-previous.time)*10-distance)<1e-9);
+ }
+ const faster=buildCustomRoute(flatQuery,{waypoints:[[0,0],[50,0],[50,40]],aglM:45,speedMps:20});assert.equal(faster.duration,4.5);
+ const elevated={...flatQuery,groundAt:()=>100,surfaceAt:()=>120};
+ const clearance=buildCustomRoute(elevated,{waypoints:[[0,0],[20,0]],aglM:10,speedMps:15});
+ assert.ok(clearance.points.every(p=>p.position[1]===145),'表面上方 25 米净空优先于过低的地面+AGL');
+ const agl=buildCustomRoute(elevated,{waypoints:[[0,0],[20,0]],aglM:60,speedMps:15});
+ assert.ok(agl.points.every(p=>p.position[1]===160),'地面+AGL 高于表面净空时保持指定 AGL');
+});
+
+test('custom polyline rejects malformed, terrain-less and non-distinct waypoints',()=>{
+ for(const waypoints of [undefined,[],[[0,0]],[[0,0],[0,0]],[[0,10,0],[0,20,0]]])assert.throws(()=>buildCustomRoute(flatQuery,{waypoints,aglM:45,speedMps:15}),/至少需要两个不同有效路点/);
+ for(const waypoints of [[[0,0],[NaN,0]],[[0,0],[Infinity,0]],[[0,0],[1,2,3,4]],[[0,0],null]])assert.throws(()=>buildCustomRoute(flatQuery,{waypoints,aglM:45,speedMps:15}),/有限数值数组/);
+ const missingGround={...flatQuery,groundAt:(x)=>x===50?null:0};
+ assert.throws(()=>buildCustomRoute(missingGround,{waypoints:[[0,0],[50,0]],aglM:45,speedMps:15}),/无有效地形高程/);
+ assert.throws(()=>buildCustomRoute(flatQuery,{waypoints:[[0,0],[20,0]],aglM:0,speedMps:15}),/离地高度/);
+ assert.throws(()=>buildCustomRoute(flatQuery,{waypoints:[[0,0],[20,0]],aglM:45,speedMps:0}),/速度/);
+ const deduplicated=buildCustomRoute(flatQuery,{waypoints:[[0,0],[0,0],[20,0]],aglM:45,speedMps:15});
+ assert.deepEqual(deduplicated.waypoints,[[0,0],[20,0]]);assert.equal(deduplicated.points.length,2);
+});
+
+test('custom single worker result merges as one single record with real detections and capacity limits',async()=>{
+ const device=createDevice('radio-tdoa','d1',[0,50,0]);device.parameters.capacity=1;
+ const input={plan:{id:'plan-a',devices:[device]},waypoints:[[-50,0],[50,0],[50,50]],aglM:45,speedMps:15,target:{...DEFAULT_TARGET},environment:{...DEFAULT_ENV},core:[0,0,0],coreRadius:700,interval:2};
+ const output=await computeCustomSingleThreat({query:flatQuery,input});
+ assert.equal(output.planId,'plan-a');assert.equal(output.scenarioKey,'single');assert.equal(output.single.custom,true);assert.equal(output.single.config.custom,true);
+ assert.equal(output.single.routes.length,1);assert.equal(output.single.routes[0].kind,'custom');assert.equal(output.single.summary.targetCount,1);
+ assert.deepEqual(output.single.config.waypoints,[[-50,0],[50,0],[50,50]]);assert.ok(output.single.frames.length>0);assert.ok(output.single.text.includes('1 架'));
+ for(const frame of output.single.frames){
+  assert.equal(frame.targets.length,1);assert.equal(frame.targets[0].id,'single-custom');assert.ok(frame.targets[0].detectedBy.length<=device.parameters.capacity,'每帧检出数不得超过设备并发容量');assert.equal(frame.targets[0].detectedBy.length,1);assert.equal(frame.targets[0].detectedBy[0].id,'d1');assert.equal(frame.overflow.length,0);
+ }
+ assert.equal(output.single.perTarget[0].detectedFraction,1);assert.equal(output.single.summary.overflowEvents,0);assert.ok(JSON.stringify(output));
+ await assert.rejects(()=>computeCustomSingleThreat({query:flatQuery,input:{...input,waypoints:[[0,0]]}}),/至少需要两个不同有效路点/);
+ await assert.rejects(()=>computeCustomSingleThreat({query:flatQuery,input:{...input,plan:null}}),/当前方案及设备快照/);
 });
 
 test('real city smoke: single scenario over the selected deployment plan',async()=>{

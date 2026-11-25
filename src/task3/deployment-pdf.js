@@ -4,6 +4,8 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import {createDeploymentDocument,createDeploymentDocumentAll} from './deployment-doc.js';
 import {BLIND_CATEGORIES} from './constants.js';
+import {createDeviceExplanation} from './device-explanation.js';
+import {buildDeviceExplanationDocument} from './device-explanation-pdf.js';
 
 const FONT = 'NotoSansSC';
 const FONT_FILE = 'NotoSansSC-Regular.otf';
@@ -46,7 +48,7 @@ function ensureFont() {
       [FONT]: {normal: FONT_FILE, bold: FONT_FILE, italics: FONT_FILE, bolditalics: FONT_FILE},
     };
     return true;
-  })();
+  })().catch(error=>{fontPromise=null;throw error;});
   return fontPromise;
 }
 
@@ -157,6 +159,7 @@ function buildPlanDesign(models) {
       ['离地高度层', first.grid.heightsM.map(value => `${num(value, 0)} m`).join(' / ')],
       ['有效空域采样 / 候选 / 初始站点', `${first.grid.sampleCount} / ${first.grid.candidateCount} / ${first.grid.siteCount}`],
       ['覆盖裕量门槛', `${num(first.grid.marginReserveDb)} dB`],
+      ['建筑禁部署约束', `${first.buildingExclusions?.buildingIds?.length??0} 个源建筑实体；初始选点、补点、迁移与移动补盲共同遵守`],
     ], ['auto', '*']),
   ];
 
@@ -396,6 +399,13 @@ export async function renderDeploymentPdfBuffer(input) {
   await ensureFont();
   const docDefinition = buildDocument(input);
   return pdfMake.createPdf(docDefinition).getBuffer();
+}
+
+export function buildDeviceExplanationPdf(model){return buildDeviceExplanationDocument(model);}
+export async function renderDeviceExplanationPdfBuffer(model){await ensureFont();return pdfMake.createPdf(buildDeviceExplanationPdf(model)).getBuffer();}
+export async function exportDeviceExplanationPdf(input){
+ const model=createDeviceExplanation(input);await ensureFont();
+ await pdfMake.createPdf(buildDeviceExplanationPdf(model)).download(`设备部署解释明细-${model.runId}-${model.planId}.pdf`);return model;
 }
 
 // 导出入口：确保字体就绪后生成并下载 PDF。

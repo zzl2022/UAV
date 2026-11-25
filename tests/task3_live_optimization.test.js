@@ -3,34 +3,22 @@ import assert from 'node:assert/strict';
 import {createTask3RequestSnapshot,createTask3RunScheduler} from '../src/task3/live-optimization.js';
 import {parseTask3Spacing,resolveTask3Settings,TASK3_DEFAULT_SETTINGS} from '../src/task3/scope.js';
 
-function fakeTimers(){
- let serial=0;const timers=new Map();
- return {
-  setTimer(callback,delay){const id=++serial;timers.set(id,{callback,delay});return id;},
-  clearTimer(id){timers.delete(id);},
-  flush(){const pending=[...timers.values()];timers.clear();for(const {callback} of pending)callback();},
-  get size(){return timers.size;},
- };
-}
-
-test('task3 live: 手动与自动复用同一入口，连续发布按原因去重并防抖合批',()=>{
- const timers=fakeTimers(),runs=[];
- const scheduler=createTask3RunScheduler({run:request=>runs.push(request),...timers});
- assert.equal(scheduler.start('手动推演'),1);
- scheduler.schedule('装备保存/导入自动更新');
- scheduler.schedule('城市目标/环境应用自动更新');
- scheduler.schedule('装备保存/导入自动更新');
- assert.equal(timers.size,1);assert.equal(runs.length,1);
- assert.deepEqual(scheduler.getState().pendingUpdateReasons,['装备保存/导入自动更新','城市目标/环境应用自动更新']);
- timers.flush();
- assert.equal(runs.length,2);assert.equal(runs[1].requestId,2);
- assert.equal(runs[1].updateReason,'装备保存/导入自动更新、城市目标/环境应用自动更新');
+test('task3 live: 配置变化只标记过期，不创建优化请求或自动队列',()=>{
+ const runs=[];let report=null;
+ const scheduler=createTask3RunScheduler({run:request=>runs.push(request),hasCurrentResult:()=>!!report});
+ const first=scheduler.start('方案生成');assert.equal(scheduler.succeed(first),true);report={requestId:first};runs.length=0;
+ scheduler.markStale();scheduler.markStale();
+ assert.equal(runs.length,0);assert.equal(scheduler.getState().requestId,first);
+ assert.equal(scheduler.getState().staleResult,true);assert.equal(scheduler.getState().pending,false);
+ assert.deepEqual(scheduler.getState().pendingUpdateReasons,[]);
+ const second=scheduler.start('方案生成');
+ assert.equal(runs.length,1);assert.deepEqual(runs[0],{requestId:second,updateReason:'方案生成'});
  assert.equal(scheduler.getState().pending,false);assert.deepEqual(scheduler.getState().pendingUpdateReasons,[]);
 });
 
 test('task3 live: 请求号单调递增，旧成功和旧错误均不能更新最新状态',()=>{
  const scheduler=createTask3RunScheduler({run:()=>{}});
- const first=scheduler.start('手动推演'),second=scheduler.start('装备保存/导入自动更新');
+ const first=scheduler.start('方案生成'),second=scheduler.start('方案生成');
  assert.ok(second>first);assert.equal(scheduler.isCurrent(first),false);assert.equal(scheduler.isCurrent(second),true);
  assert.equal(scheduler.succeed(first),false);assert.equal(scheduler.fail(first,'旧错误'),false);
  assert.equal(scheduler.getState().lastError,null);assert.equal(scheduler.getState().lastSuccessfulRequestId,null);
@@ -38,28 +26,41 @@ test('task3 live: 请求号单调递增，旧成功和旧错误均不能更新�
  const cancelled=scheduler.cancel();assert.ok(cancelled>second);assert.equal(scheduler.succeed(second),false);
 });
 
-test('task3 live: 新参数进入防抖队列后立即拒绝旧进度完成与旧错误',()=>{
- const timers=fakeTimers();let report={requestId:1};
- const scheduler=createTask3RunScheduler({run:()=>{},hasCurrentResult:()=>!!report,...timers});
- const first=scheduler.start('手动推演');scheduler.schedule('装备保存/导入自动更新');
- assert.equal(scheduler.isCurrent(first),false);assert.equal(scheduler.succeed(first),false);assert.equal(scheduler.fail(first,'旧错误'),false);
- assert.equal(scheduler.getState().staleResult,true);assert.equal(scheduler.getState().lastError,null);
- timers.flush();assert.equal(scheduler.getState().requestId,2);assert.equal(scheduler.isCurrent(first),false);
- assert.equal(scheduler.succeed(first),false);assert.equal(scheduler.succeed(2),true);
-});
-
-test('task3 live: 自动失败保留最后成功报告并明确标记非最新参数结果',()=>{
+test('task3 live: 计算中改参不取消当前请求，旧快照完成后仍明确过期',()=>{
  let report=null;
  const scheduler=createTask3RunScheduler({run:()=>{},hasCurrentResult:()=>!!report});
- const first=scheduler.start('手动推演');assert.equal(scheduler.succeed(first),true);
+ const first=scheduler.start('方案生成');assert.equal(scheduler.succeed(first),true);report={requestId:first};
+ const second=scheduler.start('方案生成');scheduler.markStale();
+ assert.equal(scheduler.isCurrent(second),true,'输入变化不应把当前快照请求变成旧请求');
+ assert.equal(scheduler.succeed(second),true,'当前快照仍应允许完成并替换上一轮展示');
+ assert.equal(scheduler.getState().lastSuccessfulRequestId,second);assert.equal(scheduler.getState().staleResult,true);
+ report={requestId:second};
+ const third=scheduler.start('方案生成');assert.equal(scheduler.succeed(third),true);
+ assert.equal(scheduler.getState().staleResult,false,'按最新输入重新生成后才清除过期状态');
+});
+
+test('task3 live: 首次计算中改参也会在首份快照完成后标记过期',()=>{
+ const scheduler=createTask3RunScheduler({run:()=>{}});
+ const request=scheduler.start('方案生成');scheduler.markStale();
+ assert.equal(scheduler.getState().staleResult,false,'尚无展示结果时不显示过期横幅');
+ assert.equal(scheduler.succeed(request),true);assert.equal(scheduler.getState().staleResult,true);
+});
+
+test('task3 live: 失败和取消保留最后成功报告并明确标记非最新参数结果',()=>{
+ let report=null;
+ const scheduler=createTask3RunScheduler({run:()=>{},hasCurrentResult:()=>!!report});
+ const first=scheduler.start('方案生成');assert.equal(scheduler.succeed(first),true);
  report={requestId:first,value:'last-success'};
- const second=scheduler.start('装备保存/导入自动更新');
+ const second=scheduler.start('方案生成');
  assert.equal(scheduler.getState().staleResult,true);
  assert.equal(scheduler.fail(second,new Error('最新输入无效')),true);
  const state=scheduler.getState();
  assert.equal(state.lastError,'最新输入无效');assert.equal(state.lastSuccessfulRequestId,first);assert.equal(state.staleResult,true);
  assert.deepEqual(report,{requestId:first,value:'last-success'});
  assert.equal(scheduler.succeed(first),false,'失败后到达的旧报告不得伪装成最新成功');
+ const third=scheduler.start('方案生成'),cancelled=scheduler.cancel();
+ assert.ok(cancelled>third);assert.equal(scheduler.isCurrent(third),false);assert.equal(scheduler.succeed(third),false);
+ assert.equal(scheduler.getState().staleResult,true);assert.equal(scheduler.getState().pending,false);
 });
 
 test('task3 live: 每轮输入快照与源对象隔离并递归冻结',()=>{

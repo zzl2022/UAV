@@ -165,6 +165,7 @@ function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,gener
   schema:DEPLOYMENT_DOC_SCHEMA,documentKind,generatedAt,
   source:{runId:run.runId,runCreatedAt:run.createdAt,reportCreatedAt:report.createdAt,activePlanId:plan.id,recommendedId:report.recommendedId,origin:report.origin,inputHashes:report.inputHashes},
   scope:{widthM:scope.widthM??settings.scopeWidthM,depthM:scope.depthM??settings.scopeDepthM,clipped:Boolean(scope.clipped),note:scope.note??'采样仅使用实际 GIS/DEM 数据，不外推无数据区域覆盖。'},
+  buildingExclusions:structuredClone(settings.buildingExclusions??{buildingIds:[]}),
   grid:{spacingM:settings.spacing,siteSpacingM:settings.siteSpacing,heightsM:[...settings.heights],sampleCount:report.sampling.samples.length,candidateCount:report.candidateCount,siteCount:report.siteCount,marginReserveDb:settings.marginReserveDb,excluded:{...report.sampling.excluded}},
   plan:{id:plan.id,name:plan.name,deviceCount:plan.devices.length,cost:plan.cost,typeCounts:{...plan.typeCounts},recommended:plan.id===report.recommendedId,derived},
   devices:planDevices(plan),
