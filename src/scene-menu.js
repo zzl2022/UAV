@@ -57,12 +57,10 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   info.innerHTML = `
     <div class="ac8-info-row"><span class="ac8-info-label">[当前场景]</span><span class="ac8-info-value" data-info="scene">—</span></div>
     <div class="ac8-info-row"><span class="ac8-info-label">[装备建模]</span><span class="ac8-info-value" data-info="equipmentConfig">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[部署配置]</span><span class="ac8-info-value" data-info="deploymentConfig">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[方案状态]</span><span class="ac8-info-value" data-info="planStatus">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[覆盖质量]</span><span class="ac8-info-value" data-info="coverage">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[盲区风险]</span><span class="ac8-info-value" data-info="blindRisk">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[EMC 校核]</span><span class="ac8-info-value" data-info="emc">—</span></div>
-    <div class="ac8-info-row"><span class="ac8-info-label">[威胁验证]</span><span class="ac8-info-value" data-info="threat">—</span></div>`;
+    <div class="ac8-info-row"><span class="ac8-info-label">[推演输入]</span><span class="ac8-info-value" data-info="deploymentInput">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[方案对比]</span><span class="ac8-info-value" data-info="planComparison">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[盲区分析]</span><span class="ac8-info-value" data-info="blindAnalysis">—</span></div>
+    <div class="ac8-info-row"><span class="ac8-info-label">[电磁兼容]</span><span class="ac8-info-value" data-info="emc">—</span></div>`;
   const sidebar = launchers.parentElement;
   sidebar.appendChild(info);
   const mainToggleButton = app.querySelector('#ac8-main-menu-toggle');
@@ -82,12 +80,10 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   const infoValues = {
     scene: info.querySelector('[data-info="scene"]'),
     equipmentConfig: info.querySelector('[data-info="equipmentConfig"]'),
-    deploymentConfig: info.querySelector('[data-info="deploymentConfig"]'),
-    planStatus: info.querySelector('[data-info="planStatus"]'),
-    coverage: info.querySelector('[data-info="coverage"]'),
-    blindRisk: info.querySelector('[data-info="blindRisk"]'),
+    deploymentInput: info.querySelector('[data-info="deploymentInput"]'),
+    planComparison: info.querySelector('[data-info="planComparison"]'),
+    blindAnalysis: info.querySelector('[data-info="blindAnalysis"]'),
     emc: info.querySelector('[data-info="emc"]'),
-    threat: info.querySelector('[data-info="threat"]'),
   };
   function refreshInfo() {
     if (!getInfo) return;
@@ -397,6 +393,7 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   back.onclick = backAction;
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && open && !event.defaultPrevented) {
+      if (panel.querySelector('dialog[open]')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       backAction();
