@@ -241,7 +241,9 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   if(!customEdit.active||customPending||event.button!==0||!down||down.id!==event.pointerId||down.dragged||Math.hypot(event.clientX-down.x,event.clientY-down.y)>5)return;
   if(customEdit.scene!==task3SceneKey){resetCustomEditing();return;}
   const hit=customSurfaceAt(event.clientX,event.clientY);if(!hit){setCustomStatus('未选中当前模型的建筑或地表，请重新单击。','warning');return;}
-  event.preventDefault();event.stopImmediatePropagation();customEdit.waypoints.push(hit.point.toArray());drawCustomEdit();setCustomStatus(customEdit.waypoints.length<2?'再单击一个不同位置后即可完成。':`已输入 ${customEdit.waypoints.length} 个路点，可继续加点或完成计算。`);
+  // 不可拦截 pointerup：OrbitControls 在 document 上监听 pointerup 来结束旋转，
+  // 若在此吞掉事件，轨道控制器会停留在旋转状态，松开左键后镜头仍随鼠标移动。
+  customEdit.waypoints.push(hit.point.toArray());drawCustomEdit();setCustomStatus(customEdit.waypoints.length<2?'再单击一个不同位置后即可完成。':`已输入 ${customEdit.waypoints.length} 个路点，可继续加点或完成计算。`);
  },true);
  renderer.domElement.addEventListener('pointercancel',()=>{customEdit.pointer=null;},true);
  ce$('task3-custom-complete').onclick=()=>completeCustomRoute();

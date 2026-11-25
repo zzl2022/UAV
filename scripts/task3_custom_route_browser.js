@@ -90,10 +90,24 @@ try{
  const first=await pickPoint(1);
  await page.mouse.click(first.box.x+first.marker.x,first.box.y+first.marker.y,{button:'right'});
  assert.equal((await customState()).waypointCount,1,'右键不得加点');
+ // 回归：单击加点后松开左键，鼠标移动不得继续带动镜头（OrbitControls 必须收到 pointerup）。
+ const cameraAt=()=>page.evaluate(()=>[...window.task3Diagnostics.cameraPosition]);
+ const cameraDrift=(a,b)=>Math.hypot(...a.map((value,index)=>value-b[index]));
+ await page.waitForTimeout(500);
+ const idleBefore=await cameraAt();
+ const idleBox=await page.locator('#viewport').boundingBox();
+ await page.mouse.move(idleBox.x+idleBox.width*0.4,idleBox.y+idleBox.height*0.45);
+ await page.mouse.move(idleBox.x+idleBox.width*0.6,idleBox.y+idleBox.height*0.7,{steps:12});
+ await page.waitForTimeout(400);
+ const idleDrift=cameraDrift(await cameraAt(),idleBefore);
+ assert.ok(idleDrift<=1,`松开左键后移动鼠标不得带动镜头（位移 ${idleDrift.toFixed(2)} m）`);
  const drag=await page.evaluate(()=>{const viewport=document.querySelector('#viewport'),canvas=viewport.querySelector('canvas'),rect=viewport.getBoundingClientRect();return window.task3Diagnostics.deviceMarkers.find(marker=>marker.visible&&marker.x>340&&marker.x<1000&&marker.y>100&&marker.y<650&&document.elementFromPoint(rect.left+marker.x,rect.top+marker.y)===canvas);});
  assert.ok(drag);const dragBox=await page.locator('#viewport').boundingBox();
+ const dragBefore=await cameraAt();
  await page.mouse.move(dragBox.x+drag.x,dragBox.y+drag.y);await page.mouse.down();await page.mouse.move(dragBox.x+drag.x+55,dragBox.y+drag.y+35,{steps:8});await page.mouse.up();
+ await page.waitForTimeout(300);
  assert.equal((await customState()).waypointCount,1,'拖动视角不得加点');
+ assert.ok(cameraDrift(await cameraAt(),dragBefore)>1,'编辑模式下拖动仍需旋转视角');
  await pickPoint(2);
  assert.equal((await customState()).lineCount,1);assert.equal((await customState()).markers.length,2);
  await page.screenshot({path:'artifacts/task3/custom-route-desktop.png'});
