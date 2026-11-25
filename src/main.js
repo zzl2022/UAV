@@ -76,6 +76,7 @@ app.innerHTML=`<header id="platform-topbar">
   <label>模型<select id="model-select" aria-label="选择地图模型">
     <option value="recon" selected>复杂城市——河南博物院</option>
     <option value="shenzhen">复杂城市——深圳国际交流中心(APEC举办地)</option>
+    <option value="wuxi">复杂城市——无锡市市民中心</option>
     <option value="beijing">核心区域——北京故宫</option>
     <option value="daxing">机场区域——大兴机场</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
@@ -142,6 +143,12 @@ let renderer,model,city,terrain,controls;
 let scene,camera,imageryTexture,imageryMaterial,grid;
 let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
 const SITES={
+  wuxi:{
+    label:'复杂城市——无锡市市民中心',short:'无锡市市民中心',
+    base:'./data/sites/wuxi/wuxi-gba',
+    imagery:'./data/sites/wuxi/wuxi-imagery.jpg',
+    frameHalf:4400,
+  },
   beijing:{
     label:'核心区域——北京故宫',short:'北京故宫',
     base:'./data/beijing/beijing-gba',
@@ -293,8 +300,8 @@ try {
     const sites=Object.fromEntries(Object.keys(SITES).map(id=>[id,{loaded:!!siteGroups[id]?.children.length,buildingCount:siteMeta[id]?.buildingCount??null,maxHeight:siteMeta[id]?.maxHeight??null}]));
     window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:city.metadata.sourceFeatures},...sites}};
   }
-  function addGround(group,meta,texture){
-    const [x0,x1,z0,z1]=meta?.localBounds??[-5042,4974,-5054,4984];
+  function addGround(group,meta,texture,bounds){
+    const [x0,x1,z0,z1]=bounds??meta?.localBounds??[-5042,4974,-5054,4984];
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute([x0,-0.5,z0,x1,-0.5,z0,x1,-0.5,z1,x0,-0.5,z1],3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute([0,1,1,1,1,0,0,0],2));
@@ -314,15 +321,17 @@ try {
     if(siteGroups[id]?.children.length)return;
     status(`正在加载${site.label}…`);
     const buildingData=fetchJSON(`${site.base}.json`).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;});
-    const [meta,gltf,buildingsData]=await Promise.all([
+    const [meta,gltf,buildingsData,imageryMeta]=await Promise.all([
       fetchJSON(`${site.base}-meta.json`),
       new GLTFLoader().loadAsync(`${site.base}.glb`),
       buildingData,
+      fetchJSON(site.imagery.replace(/\.jpe?g$/i,'.json')).catch(()=>null),
     ]);
     siteMeta[id]=meta;
     let buildingMesh=null;
     gltf.scene.traverse(child=>{if(child.isMesh&&child.material){child.material.side=THREE.DoubleSide;buildingMesh??=child;}});
     const group=new THREE.Group();group.name=`${id}_GBA_LoD1`;group.visible=false;group.add(gltf.scene);
+    if(site.frameHalf)group.userData.frameHalf=site.frameHalf;
     const origin=[meta.center?.[0]??0,meta.center?.[1]??0,0];
     group.userData={...group.userData,name:meta.name,origin,ecefTransform:null};
     siteParts[id]={group,buildings:buildingMesh??gltf.scene,ground:null,buildingsData,city:buildingsData?{metadata:siteAnalysisMetadata(meta,site),buildings:buildingsData.buildings}:null};
@@ -330,7 +339,7 @@ try {
       const texture=await new THREE.TextureLoader().loadAsync(site.imagery);
       texture.colorSpace=THREE.SRGBColorSpace;
       texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-      siteParts[id].ground=addGround(group,meta,texture);
+      siteParts[id].ground=addGround(group,meta,texture,imageryMeta?.localBounds);
     }catch(error){console.warn(`${site.short}影像底图加载失败`,error);}
     if(meta.route?.points?.length){
       const route=meta.route.points.map(point=>new THREE.Vector3(point[0],2,point[1]));

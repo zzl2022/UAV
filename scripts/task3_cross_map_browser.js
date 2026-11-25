@@ -18,11 +18,18 @@ const readJson=async path=>JSON.parse(await readFile(new URL(path,import.meta.ur
 const recon=await readJson('../public/data/city.json');
 const daxing=await readJson('../public/data/sites/daxing/daxing-gba-meta.json');
 const nuclear=await readJson('../public/data/sites/nuclear/nuclear-gba-meta.json');
-const cases=[
+const allCases=[
  {id:'recon',base:null,center:recon.metadata.origin.slice(0,2)},
  {id:'daxing',base:'./data/sites/daxing/daxing-gba',center:daxing.center},
  {id:'nuclear',base:'./data/sites/nuclear/nuclear-gba',center:nuclear.center},
 ];
+for(const id of ['wuxi','hangzhou']){
+ const meta=await readJson(`../public/data/sites/${id}/${id}-gba-meta.json`);
+ allCases.push({id,base:`./data/sites/${id}/${id}-gba`,center:meta.center});
+}
+const requested=(process.env.TASK3_MAP_IDS||'recon,daxing,nuclear').split(',');
+assert.ok(requested.every(id=>allCases.some(item=>item.id===id)),'未知验收地图');
+const cases=requested.map(id=>allCases.find(item=>item.id===id));
 const server=await createServer({root,server:{host:'127.0.0.1',port:0},logLevel:'error'});
 let browser;
 try{
@@ -122,7 +129,7 @@ try{
  };
  const results=[];
  for(const [caseIndex,item] of cases.entries()){
-  if(caseIndex)await switchMap(item);
+  if(caseIndex||item.id!=='recon')await switchMap(item);
   await configureSmallRealPipeline();
   const generated=await page.evaluate(()=>{
    const diag=window.task3Diagnostics,report=window.__task3Report,single=report.threatsByPlan[diag.planId].single,request=window.__task3PipelineRequests.at(-1);
