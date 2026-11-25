@@ -1,0 +1,37 @@
+{
+  "name": "杭州萧山机场",
+  "source": "Esri World Imagery (ArcGIS Online World_Imagery MapServer)",
+  "license": "Esri, Maxar, Earthstar Geographics, and the GIS User Community; 仅用于演示/研究，保留署名",
+  "attribution": "Esri World Imagery",
+  "center": [
+    120.4344,
+    30.2295
+  ],
+  "halfMeters": 5650.0,
+  "bbox": [
+    120.375737,
+    30.17852,
+    120.493123,
+    30.280454
+  ],
+  "zoom": 15,
+  "tileRange": [
+    27340,
+    13489,
+    27351,
+    13500
+  ],
+  "tileCount": 144,
+  "image": "hangzhou-imagery.jpg",
+  "width": 4096,
+  "height": 4096,
+  "localBounds": [
+    -5650.0,
+    5650.0,
+    -5650.0,
+    5650.0
+  ],
+  "projection": "local_tmerc",
+  "reprojected": "inverse TM pixel grid, bilinear Web Mercator sampling",
+  "normalized": false
+}

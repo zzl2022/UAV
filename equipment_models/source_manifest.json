@@ -1,0 +1,188 @@
+[
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\src\\optical_model\\buildings.py",
+    "copy": "equipment_models/optical/src/optical_model/buildings.py",
+    "sha256": "c02e1f7668f77c65324bdfc50989b76461e8c94683cf5f4a7e3a704f65488edd",
+    "normalized_sha256": "c02e1f7668f77c65324bdfc50989b76461e8c94683cf5f4a7e3a704f65488edd"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\src\\optical_model\\config.py",
+    "copy": "equipment_models/optical/src/optical_model/config.py",
+    "sha256": "d903850073853238eb88a3ddfb177f4c2632d5343b60f25359a043e378bcae63",
+    "normalized_sha256": "d903850073853238eb88a3ddfb177f4c2632d5343b60f25359a043e378bcae63"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\src\\optical_model\\model.py",
+    "copy": "equipment_models/optical/src/optical_model/model.py",
+    "sha256": "e90ffe74e9c3a9a57092febc32a8a5dcfd701f4fadab5909b532f59393515f46",
+    "normalized_sha256": "e90ffe74e9c3a9a57092febc32a8a5dcfd701f4fadab5909b532f59393515f46"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\src\\optical_model\\report.py",
+    "copy": "equipment_models/optical/src/optical_model/report.py",
+    "sha256": "8c4254dbb6747112054677fc550973413f80c8948f56b13de99ab8723afdf3db",
+    "normalized_sha256": "8c4254dbb6747112054677fc550973413f80c8948f56b13de99ab8723afdf3db"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\src\\optical_model\\__init__.py",
+    "copy": "equipment_models/optical/src/optical_model/__init__.py",
+    "sha256": "4e4d083a02ac6d7e4c0f334cbfe3b654f02ceca9c8dc2fed5c2559043e381298",
+    "normalized_sha256": "4e4d083a02ac6d7e4c0f334cbfe3b654f02ceca9c8dc2fed5c2559043e381298"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\config\\environment.yaml",
+    "copy": "equipment_models/optical/config/environment.yaml",
+    "sha256": "32f25adee673fab077593fa6d52b5119cfdec597741898f96aed7c5b544b92b9",
+    "normalized_sha256": "32f25adee673fab077593fa6d52b5119cfdec597741898f96aed7c5b544b92b9"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\config\\optical_nvt951.yaml",
+    "copy": "equipment_models/optical/config/optical_nvt951.yaml",
+    "sha256": "4580e2e7d0e532b9295a4379c750d9026edfbd143a5f9563f437b8a820ffd21f",
+    "normalized_sha256": "4580e2e7d0e532b9295a4379c750d9026edfbd143a5f9563f437b8a820ffd21f"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\tests\\test_case_example.py",
+    "copy": "equipment_models/optical/tests/test_case_example.py",
+    "sha256": "ead27c2572470c1fa44a6e81e87f7508bf8e800e97ef9ab43d8dca63301ccbbe",
+    "normalized_sha256": "ead27c2572470c1fa44a6e81e87f7508bf8e800e97ef9ab43d8dca63301ccbbe"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\tests\\test_chinese_report.py",
+    "copy": "equipment_models/optical/tests/test_chinese_report.py",
+    "sha256": "9a91c0b5fd150d1734f7ab1efd1ad15c1dda24fffda73da2ce9b8ee2d356d553",
+    "normalized_sha256": "5ad4a96e0937ee40da4ae8a0ba2fae29d869a0b2d0c5cd79f45cf50fed35889c"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\tests\\test_optical.py",
+    "copy": "equipment_models/optical/tests/test_optical.py",
+    "sha256": "05bd21fe299caca4b24a36e6f9aa380f726cd89a6ba9549673ac620bf09cc76a",
+    "normalized_sha256": "05bd21fe299caca4b24a36e6f9aa380f726cd89a6ba9549673ac620bf09cc76a"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\examples\\optical_case.example.json",
+    "copy": "equipment_models/optical/examples/optical_case.example.json",
+    "sha256": "ef56a4219a4b88aa8321944b92d1b56afa2fd23f4bb73ce381b88036bb553943",
+    "normalized_sha256": "ef56a4219a4b88aa8321944b92d1b56afa2fd23f4bb73ce381b88036bb553943"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\examples\\report_optical_results.py",
+    "copy": "equipment_models/optical/examples/report_optical_results.py",
+    "sha256": "78ba97c18b209779981b446921a7d8d2c1f7ba0663744c95cc5b525ec142fe72",
+    "normalized_sha256": "33dfc8c5075f307e14ada60febd5da6701085aa97c2c9dd0e590d5fa82746f40"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\examples\\run_optical_case.py",
+    "copy": "equipment_models/optical/examples/run_optical_case.py",
+    "sha256": "8764e6d6dc6d90d02461aed75140b267e91a5adac4c0b68ecd36624e095a99c7",
+    "normalized_sha256": "8764e6d6dc6d90d02461aed75140b267e91a5adac4c0b68ecd36624e095a99c7"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\光电\\examples\\run_optical_demo.py",
+    "copy": "equipment_models/optical/examples/run_optical_demo.py",
+    "sha256": "4f1770a74f9265c90598a146435aa34f7d3ecb28b7fed15d65fb898e746277f3",
+    "normalized_sha256": "153f167523b0b967a0f35533a0eb187cb3d897eed0bd6f3cf624d9fcdd75cf35"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\config.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/config.py",
+    "sha256": "256c898f9924b4647de7ab79e1ed78984c16b9579709ad44cdd9dd44771d4402",
+    "normalized_sha256": "f256552fcde29620835661d215aba597a480347809564f5a4a154a36996c0df5"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\environment.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/environment.py",
+    "sha256": "a2d035fa7ee2d297cbb391437148a43816119ac9e5b120b881efc194c4a50344",
+    "normalized_sha256": "2dca81c25c08f747889144340c9cf77310c00d2af47f0ad5cf54fe539e1cea4c"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\inputs.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/inputs.py",
+    "sha256": "61e7ea6d50700c730ae1071909b002a5c3d4110ec26e4bc29cc3a4f416006e6f",
+    "normalized_sha256": "e848d08d3563524cd04a3628bfb59ca6226f84d512290f9ba583a4a802b9f1ba"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\model.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/model.py",
+    "sha256": "25737fc321ba72334fe8cf642e3e52b7fad46779bc06550c62b01813a655d887",
+    "normalized_sha256": "8ffb37610b35f0f599620ec5e0d273417dc88a176cdce82b558a36a6e2599b04"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\noise.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/noise.py",
+    "sha256": "1090075f76b5b09cff3bdb71c7bc358089fb252251cc6f677babba0f866f415d",
+    "normalized_sha256": "cba33f3d94b854d408a44b60301cc3d426adfa2296a9ca762c36c54e9c179ae2"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\report.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/report.py",
+    "sha256": "8c4254dbb6747112054677fc550973413f80c8948f56b13de99ab8723afdf3db",
+    "normalized_sha256": "8c4254dbb6747112054677fc550973413f80c8948f56b13de99ab8723afdf3db"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\__init__.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/__init__.py",
+    "sha256": "81c6692d1964a1fbd618de3992e413407b2968d40484af6c2577c354dc0ee763",
+    "normalized_sha256": "c9c84d76649adc5dcf1f84e6b806223f82704a784062a2c34b277f394ac7205a"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\shared\\buildings.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/shared/buildings.py",
+    "sha256": "669ce1a3cceeac8ac8155bb6c95437c3c627d61c0e11f295cfd594974719f5cd",
+    "normalized_sha256": "c02e1f7668f77c65324bdfc50989b76461e8c94683cf5f4a7e3a704f65488edd"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\shared\\config.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/shared/config.py",
+    "sha256": "1df2bb206724f349e40ddb2c5640f504f6800e04a3c41c2abe21dba5bd5d2bd2",
+    "normalized_sha256": "1d57c508bfd1b89d3bc8cdc168df7bb5b6f7c7ecdf10b9d3e2492e5a06ef7d11"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\src\\acoustic_model\\shared\\__init__.py",
+    "copy": "equipment_models/acoustic/src/acoustic_model/shared/__init__.py",
+    "sha256": "9f53ff068c3379579195eca2274693355a8631270995db85a3ba18ff867d0ee9",
+    "normalized_sha256": "7e2273ecb837e28288f9afdca5d9a2e2addc00a91a0d4d5dfd52a720b04c5cf2"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\config\\acoustic_demo.yaml",
+    "copy": "equipment_models/acoustic/config/acoustic_demo.yaml",
+    "sha256": "473c5cc97bffc1eccd3918f96ab76ced82348926eb60f01d4dd11ce5e6cbe2c5",
+    "normalized_sha256": "473c5cc97bffc1eccd3918f96ab76ced82348926eb60f01d4dd11ce5e6cbe2c5"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\config\\acoustic_environment.yaml",
+    "copy": "equipment_models/acoustic/config/acoustic_environment.yaml",
+    "sha256": "b9fa34d363f2486776e26db08306b751a9490e0f12e8af1db3cd8413c1ef9811",
+    "normalized_sha256": "b9fa34d363f2486776e26db08306b751a9490e0f12e8af1db3cd8413c1ef9811"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\config\\acoustic_sensor.yaml",
+    "copy": "equipment_models/acoustic/config/acoustic_sensor.yaml",
+    "sha256": "69bcb9d5db7f841fc1ef21fc2be66230a57520eacffca8e1f7f5c156fb20379b",
+    "normalized_sha256": "69bcb9d5db7f841fc1ef21fc2be66230a57520eacffca8e1f7f5c156fb20379b"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\tests\\test_acoustic.py",
+    "copy": "equipment_models/acoustic/tests/test_acoustic.py",
+    "sha256": "210124fbbc5b15c83823d6dcf3f2de565de908ab2784bdcf9677bd29875e9aa1",
+    "normalized_sha256": "4dd327e88a96d4dfcc5b7df23401f27aed80330134eb6650b896ec216d1c498d"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\tests\\test_chinese_report.py",
+    "copy": "equipment_models/acoustic/tests/test_chinese_report.py",
+    "sha256": "a39b4fbc2fdbec9e858e573489e82436808682325fb938d1d97088fe8206b35c",
+    "normalized_sha256": "c9da0f03a071660b2ea255a0e05a44029aa5e6976462f628342df8ef031e156c"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\examples\\report_acoustic_results.py",
+    "copy": "equipment_models/acoustic/examples/report_acoustic_results.py",
+    "sha256": "141e3273787a2f0c8bbdbd1def280ac2ee9b07254b43b7dc8c3bb5e5399a2c31",
+    "normalized_sha256": "e9eb109bcc800f16c654546972e56dac426124268ca5fcd2528b7e0465178d75"
+  },
+  {
+    "source": "C:\\Users\\72665\\Desktop\\低空\\声学\\examples\\run_acoustic_demo.py",
+    "copy": "equipment_models/acoustic/examples/run_acoustic_demo.py",
+    "sha256": "731372f2af4a7bbe2fb0df306a94199b5cf2e4b2468c1ead22781a4170968713",
+    "normalized_sha256": "4c3d744a42597aa2060db794e7dd14b882d5d31f5359f63622ae9ab01d39f5d2"
+  }
+]

@@ -1,0 +1,16 @@
+# 全部为可修改的演示假设，未使用现场实测标定。
+schema_version: 1
+parameters:
+  distance_limits: {value: [1, 5000], unit: m, status: assumed, source: 区域自由场示例适用范围，不是设备探测范围}
+  neighborhood_radius: {value: 30, unit: m, status: assumed, source: 视线路径两侧建筑统计缓冲宽度}
+  air_loss: {value: 0.001, unit: dB/m, status: assumed, source: 单频带示例，不是ISO9613或真实大气吸收系数}
+  wind_loss: {value: 0.0005, unit: dB/m/(m/s), status: assumed, source: 风速相关附加损失示例，不模拟风向折射}
+  rain_loss: {value: 0.0001, unit: dB/m/(mm/h), status: assumed, source: 雨强相关附加损失示例}
+  wind_noise_reference: {value: 40, unit: dB_SPL, status: assumed, source: 接收点1m/s风速下合成频带噪声，Z计权，参考20uPa}
+  rain_noise_reference: {value: 40, unit: dB_SPL, status: assumed, source: 接收点1mm/h雨强下合成频带噪声，Z计权，参考20uPa}
+  screening_loss: {value: 12, unit: dB, status: assumed, source: 已知建筑遮挡的整体附加损失，包含未解析绕射，不等于完全隔声}
+  snr_zero: {value: -10, unit: dB, status: assumed, source: 相对信号质量归一化下界，不是实际检测阈值}
+  snr_full: {value: 10, unit: dB, status: assumed, source: 相对信号质量归一化上界，不是实际检测阈值}
+  noise_angle: {value: 0.3, unit: deg/dB, status: assumed, source: 低信噪差附加方向不确定性尺度，无统计分布保证}
+  multipath_angle: {value: 6, unit: deg, status: assumed, source: 建筑密度及截线空隙代理量的方向不确定性系数}
+  screening_angle: {value: 4, unit: deg, status: assumed, source: 直达路径被挡后的方向不确定性增量示例}

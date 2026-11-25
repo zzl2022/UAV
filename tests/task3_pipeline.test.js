@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createModel} from '../src/model.js';
+import {createSceneQuery} from '../src/sensors/scene.js';
+import {runTask3Pipeline,validatePresetIds} from '../src/task3/pipeline.js';
+import {validateRun} from '../src/task3/runs.js';
+import {METRIC_WEIGHTS} from '../src/task3/constants.js';
+
+const city=JSON.parse(readFileSync(new URL('../public/data/city.json',import.meta.url)));
+const terrain=JSON.parse(readFileSync(new URL('../public/data/terrain.json',import.meta.url)));
+const query=createSceneQuery(createModel(city,terrain));
+const yieldTask=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('task3 pipeline: 一键串联产出 ≥3 套差异化方案、盲区分类、三威胁与 EMC 结论，过程数据可校验',async()=>{
+ const {report,run}=await runTask3Pipeline({city,query,weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask});
+ // ≥3 套方案且点位/类型组合不同
+ assert.equal(report.plans.length,3);
+ assert.ok(new Set(report.plans.map(p=>p.devices.length)).size>1||new Set(report.plans.map(p=>p.presetSubset.join())).size>1,'三套方案须有差异');
+ // 推荐方案与四指标
+ assert.ok(report.plans.some(p=>p.id===report.recommendedId));
+ for(const row of report.scoring.plans){for(const k of ['coverage','blindRatio','cost','feasibility'])assert.ok(Number.isFinite(row.indicators[k]),k);assert.ok(row.score>=0&&row.score<=1);}
+ // 盲区四类归因完整
+ for(const rows of Object.values(report.blindspots))for(const r of rows){assert.equal(r.stats.total,Object.values(r.stats.byCategory).reduce((a,b)=>a+b,0));for(const p of r.points)assert.ok(['gap','corner','lowFacade','shadow','other'].includes(p.category));}
+ // 三威胁场景
+ for(const key of ['single','multi','swarm']){const th=report.threats[key];assert.ok(th.summary.targetCount>0);assert.ok(th.frames.length>0);assert.ok(th.summary.meanDetectedFraction>=0&&th.summary.meanDetectedFraction<=1);}
+ assert.equal(report.threats.swarm.summary.targetCount,42);
+ // 三套方案分别拥有三类威胁结果，供合并 PDF 逐方案导出
+ assert.ok(report.threatsByPlan,'应提供按方案缓存的威胁结果');
+ for(const plan of report.plans){
+  for(const key of ['single','multi','swarm']){
+   const threat=report.threatsByPlan[plan.id]?.[key];
+   assert.ok(threat?.summary,`方案 ${plan.id} 缺少 ${key} 威胁汇总`);
+   assert.ok(threat.summary.targetCount>0);assert.ok(threat.perTarget.length>0);
+  }
+ }
+ // 标准默认 500 m 网格：处置后推荐方案必须无 fail，记录和覆盖复核完整
+ assert.equal(report.settings.spacing,500);assert.equal(report.deploymentStatus,'deployable');
+ assert.equal(report.emc[report.recommendedId].counts.fail,0);
+ for(const p of report.plans){
+  assert.ok(['pass','degraded','fail'].includes(report.emc[p.id].verdict));assert.equal(report.emc[p.id].counts.fail,0);assert.ok(report.emc[p.id].remediation.coverageReview.after.length>0);assert.ok(run.emc[p.id].remediation);
+  // 逐设备贡献来自最终实际覆盖矩阵；独立贡献之和必须等于仅由一台设备覆盖的采样数。
+  for(const [c,condition] of report.conditions.entries()){
+   const rows=p.devices.map(d=>p.coverageContributions[d.id][c]);
+   assert.ok(rows.every(row=>row.condition===condition.id&&row.coveredSamples>=row.independentSamples&&row.independentSamples>=0));
+   assert.equal(rows.reduce((sum,row)=>sum+row.independentSamples,0),p.coverage[c].filter(count=>count===1).length);
+   assert.ok(rows.reduce((sum,row)=>sum+row.coveredSamples,0)>=p.metrics[c].covered);
+  }
+ }
+ assert.ok(report.emc.enhanced.remediation.before.counts.fail>0);assert.ok(report.emc.enhanced.remediation.actions.length>0);
+ // 过程数据
+ validateRun(run);assert.ok(run.rulesInput.candidateStats.length>0);assert.ok(run.rulesInput.perHeightBlind.length===3);
+});
+
+test('task3 pipeline: 装备选择注入生效，非法预设被拒',async()=>{
+ assert.throws(()=>validatePresetIds([]));assert.throws(()=>validatePresetIds(['nope']));
+ const {report}=await runTask3Pipeline({city,query,settings:{scope:'core',spacing:700,siteSpacing:500,heights:[30,60,100],maxSites:192,maxDevices:32,budget:300,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3},presetIds:['radar-03d','radio-tdoa'],weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask,withThreatFrames:false});
+ const types=new Set(report.plans.flatMap(p=>p.devices.map(d=>d.presetId)));
+ assert.deepEqual([...types].sort(),['radar-03d','radio-tdoa'].sort());
+});
+
+test('task3 pipeline: 方案生成仅包含勾选的方案类型',async()=>{
+ const base={city,query,weights:{...METRIC_WEIGHTS},progress:()=>{},yieldTask};
+ const only=await runTask3Pipeline({...base,planTypes:['economy']});
+ assert.deepEqual(only.report.plans.map(plan=>plan.id),['economy']);
+ assert.equal(only.report.recommendedId,'economy');
+ assert.deepEqual(Object.keys(only.report.threatsByPlan),['economy']);
+ assert.deepEqual(only.report.comparison.rows.map(row=>row.id),['economy']);
+ const two=await runTask3Pipeline({...base,planTypes:['enhanced','economy']});
+ assert.deepEqual(two.report.plans.map(plan=>plan.id),['economy','enhanced'],'方案按固定顺序输出');
+ assert.deepEqual(Object.keys(two.report.threatsByPlan).sort(),['economy','enhanced']);
+ await assert.rejects(()=>runTask3Pipeline({...base,planTypes:['unknown']}),/至少选择一套方案/);
+});

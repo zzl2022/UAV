@@ -1,0 +1,163 @@
+/* AC8-style boot intro overlay */
+#ac8-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: auto;
+  background: transparent;
+  opacity: 1;
+  transition: opacity .55s ease;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+#ac8-intro.is-done { opacity: 0; pointer-events: none; }
+
+#ac8-intro .ac8-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(1100px 720px at 50% 42%, rgba(9, 36, 54, .94), rgba(1, 6, 11, .988) 64%),
+    linear-gradient(180deg, #02080f 0%, #01050a 100%);
+  clip-path: inset(var(--ac8-scan, 0px) 0 0 0);
+  will-change: clip-path, opacity;
+  transition: opacity .18s ease;
+}
+#ac8-intro .ac8-veil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(120, 220, 255, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 220, 255, .055) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 8%, transparent 74%);
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 8%, transparent 74%);
+  opacity: .8;
+}
+#ac8-intro .ac8-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 44%, rgba(0, 0, 0, .58) 100%),
+    repeating-linear-gradient(0deg, rgba(170, 235, 255, .022) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+}
+
+#ac8-intro .ac8-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+#ac8-intro .ac8-hud-canvas {
+  display: block;
+  pointer-events: none;
+}
+
+#ac8-intro .ac8-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  color: #a9ecff;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  transition: opacity .25s linear;
+}
+#ac8-intro .ac8-hud-top {
+  position: absolute;
+  top: clamp(18px, 3.2vh, 34px);
+  left: clamp(18px, 3.4vw, 46px);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+#ac8-intro .ac8-hud-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d9fbff;
+  text-shadow: 0 0 14px rgba(80, 210, 255, .55);
+}
+#ac8-intro .ac8-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7fe8ff;
+  box-shadow: 0 0 10px #7fe8ff, 0 0 22px rgba(127, 232, 255, .55);
+  animation: ac8-dot-pulse 1.4s ease-in-out infinite;
+}
+#ac8-intro .ac8-hud-sub {
+  font-size: 9px;
+  color: rgba(133, 197, 218, .72);
+  letter-spacing: .22em;
+}
+#ac8-intro .ac8-hud-bottom {
+  position: absolute;
+  left: clamp(18px, 3.4vw, 46px);
+  right: clamp(18px, 3.4vw, 46px);
+  bottom: clamp(18px, 3.4vh, 36px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  font-size: 9.5px;
+  color: rgba(133, 197, 218, .8);
+}
+#ac8-intro .ac8-hud-status {
+  color: #8fe8ff;
+  text-shadow: 0 0 12px rgba(80, 210, 255, .35);
+  min-height: 1.2em;
+}
+#ac8-intro .ac8-hud-status::before {
+  content: "// ";
+  color: #ff9a3c;
+  text-shadow: 0 0 10px rgba(255, 122, 24, .55);
+}
+#ac8-intro .ac8-hud-hint {
+  color: rgba(133, 197, 218, .55);
+  letter-spacing: .18em;
+}
+#ac8-intro .ac8-scan-readout {
+  position: absolute;
+  z-index: 4;
+  right: clamp(18px, 3.4vw, 46px);
+  transform: translateY(-50%);
+  padding: 4px 0 4px 12px;
+  border-left: 1px solid rgba(255, 122, 24, .8);
+  font-size: 10px;
+  letter-spacing: .2em;
+  color: #ffc46b;
+  text-shadow: 0 0 12px rgba(255, 122, 24, .55);
+  opacity: 0;
+  pointer-events: none;
+}
+#ac8-intro .ac8-scan-readout::after {
+  content: "";
+  display: block;
+  width: 46px;
+  height: 3px;
+  margin-top: 5px;
+  background: linear-gradient(90deg, rgba(255, 122, 24, .9), rgba(255, 122, 24, 0));
+}
+
+body.intro-active { overflow: hidden; }
+body.intro-active #app { pointer-events: none; user-select: none; }
+
+@keyframes ac8-dot-pulse {
+  0%, 100% { opacity: .55; transform: scale(.82); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ac8-intro { transition-duration: .2s; }
+  #ac8-intro .ac8-dot { animation: none; }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "大兴机场",
+  "source": "Esri World Imagery (ArcGIS Online World_Imagery MapServer)",
+  "license": "Esri, Maxar, Earthstar Geographics, and the GIS User Community; 仅用于演示/研究，保留署名",
+  "attribution": "Esri World Imagery",
+  "center": [
+    116.4105,
+    39.5098
+  ],
+  "halfMeters": 11250.0,
+  "bbox": [
+    116.279878,
+    39.408397,
+    116.541502,
+    39.611054
+  ],
+  "zoom": 15,
+  "tileRange": [
+    26968,
+    12451,
+    26991,
+    12475
+  ],
+  "tileCount": 600,
+  "image": "daxing-imagery.jpg",
+  "width": 4096,
+  "height": 4096,
+  "localBounds": [
+    -11250.0,
+    11250.0,
+    -11250.0,
+    11250.0
+  ],
+  "projection": "local_tmerc",
+  "reprojected": "inverse TM pixel grid, bilinear Web Mercator sampling",
+  "normalized": false
+}

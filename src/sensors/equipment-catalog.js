@@ -1,0 +1,151 @@
+import {fieldsFor,createDevice} from './presets.js';
+import {PHYSICS_FIELDS} from './physics.js';
+import {CATALOG_MODELS,catalogModel} from './equipment-models.js';
+
+export const CATALOG_SCHEMA='equipment-catalog/1';
+export const CATALOG_STORAGE_KEY='uav.equipment-catalog.v1';
+const field=(label,unit,min,max,value,options={})=>({label,unit,min,max,value,step:'any',...options});
+const params=(...keys)=>keys.map(key=>`parameters.${key}`);
+const physics=(...keys)=>keys.map(key=>`physics.${key}`);
+const modelGroups={
+ radar:[
+  ['探测范围',params('maxRange','minRange','azimuthFov','elevationMin','elevationMax')],
+  ['测量精度',params('rangeAccuracy','azimuthAccuracy','elevationAccuracy')],
+  ['发射配置',[...params('frequencyGHz'),...physics('peakPowerW','pulseWidthUs','switchTimeUs','txGainDb')]],
+  ['接收积累',physics('rxGainDb','noiseFigureDb','systemLossDb','pulses')],
+  ['检出判定',[...params('thresholdDb','referenceSnrDb','referenceRcs'),...physics('pfa','pdRequired')]],
+  ['传播杂波',params('rainCoefficient','rainExponent','reflection','clutterDb')],
+ ],
+ optical:[
+  ['探测距离',params('maxRange','minRange')],['通道焦距',['working.channel','working.focalMm']],
+  ['图像尺寸',params('imageWidth','imageHeight','thermalWidth','thermalHeight')],
+  ['成像条件',params('wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels','rainDbKm')],
+  ['云台范围',['working.yawMin','working.yawMax','working.pitchMin','working.pitchMax']],
+ ],
+ radio:[
+  ['探测范围',params('maxRange','minRange','azimuthFov','elevationMin','elevationMax')],
+  ['接收频段',[...params('bandMinGHz','bandMaxGHz','bandToleranceMHz'),...physics('bandwidthMHz')]],
+  ['定位精度',params('networkAccuracy','bearingAccuracy')],
+  ['接收特性',physics('rxGainDb','noiseFigureDb','receiverLossDb')],
+  ['链路传播',[...params('referenceSnrDb','referenceEirpDbm','pathExponent','wallLossDb','reflection'),...physics('referenceFrequencyGHz','referenceEirpDbm')]],
+  ['检出观测',[...params('thresholdDb'),...physics('pfa','pdRequired','observationSeconds','hopSeconds')]],
+ ],
+ acoustic:[
+  ['探测距离',params('maxRange','minRange')],['阵列频带',['working.arrayDiameter','working.frequencyMin','working.frequencyMax']],
+  ['声压范围',params('minSoundDb','maxSoundDb','dynamicRangeDb')],['测角精度',params('bearingAccuracy','elevationAccuracy')],
+  ['声学检出',params('absorptionDbKm','wallLossDb','reflection','referenceNoiseDb','thresholdDb')],
+ ],
+};
+const workingFields={
+ optical:{channel:field('成像通道','',0,0,'visible',{options:[['visible','可见光'],['thermal','热成像']],source:'资料'}),focalMm:field('工作焦距','mm',6.5,312,6.5,{source:'资料'}),yawMin:field('云台水平下限','°',0,360,0,{source:'资料'}),yawMax:field('云台水平上限','°',0,360,360,{source:'资料'}),pitchMin:field('云台俯仰下限','°',-90,90,-90,{source:'资料'}),pitchMax:field('云台俯仰上限','°',-90,90,90,{source:'资料'})},
+ acoustic:{arrayDiameter:field('阵列规格','m',.3,1.1,1.1,{options:[['0.3','30 cm'],['0.7','70 cm'],['1.1','110 cm']],source:'资料'}),frequencyMin:field('频率下限','Hz',1,100000,20,{nullable:true,source:'资料'}),frequencyMax:field('频率上限','Hz',1,100000,20000,{nullable:true,source:'资料'})},
+};
+const opticalMissing=new Set(['maxRange','minRange','wideHfov','narrowHfov','thermalHfov','minLux','requiredPixels']);
+const integerKeys=new Set(['capacity','imageWidth','imageHeight','thermalWidth','thermalHeight','pulses']);
+const path=(scope,key)=>`${scope}.${key}`;
+
+export function catalogFields(presetId){
+ const preset=catalogModel(presetId);
+ if(preset.catalogOnly)return structuredClone(preset.fields);
+ const definitions={};
+ for(const [key,spec] of Object.entries(fieldsFor(preset.type))){
+  if(['heading','pitch'].includes(key)||preset.type==='acoustic'&&['azimuthFov','elevationMin','elevationMax'].includes(key))continue;
+  const nullable=preset.type==='optical'&&opticalMissing.has(key)||preset.type==='acoustic'&&['bearingAccuracy','elevationAccuracy'].includes(key);
+  definitions[path('parameters',key)]={...spec,step:integerKeys.has(key)?1:spec.step,integer:integerKeys.has(key),source:nullable?'未提供':preset.provenance[key]==='文档'?'资料':'假设',nullable};
+ }
+ for(const [key,spec] of Object.entries(PHYSICS_FIELDS[preset.type]??{}))definitions[path('physics',key)]={...spec,source:'假设',integer:integerKeys.has(key),step:integerKeys.has(key)?1:'any'};
+ for(const [key,spec] of Object.entries(workingFields[preset.type]??{}))definitions[path('working',key)]=spec;
+ return definitions;
+}
+export function defaultProfile(presetId){
+ const preset=catalogModel(presetId),profile={presetId,type:preset.type,name:preset.name,parameters:{},physics:{},working:{}};
+ if(preset.catalogOnly){for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.value??null;}return profile;}
+ const device=createDevice(preset.basePresetId??presetId,'profile');
+ for(const [key,spec] of Object.entries(catalogFields(presetId))){const [scope,name]=key.split('.');profile[scope][name]=spec.nullable&&spec.source==='未提供'?null:scope==='working'?spec.value:device[scope][name];}
+ return profile;
+}
+export function getProfileValue(profile,key){const [scope,name]=key.split('.');return profile[scope]?.[name];}
+export function setProfileValue(profile,key,value){const [scope,name]=key.split('.');if(!Object.hasOwn(catalogFields(profile.presetId),key))throw Error('参数无效');profile[scope][name]=value;}
+export const INACTIVE_EDITOR_FIELDS={
+ radar:params('thresholdDb','referenceSnrDb','referenceRcs'),
+ radio:[...params('thresholdDb','referenceSnrDb','referenceEirpDbm','pathExponent'),...physics('rxGainDb','noiseFigureDb','receiverLossDb','bandwidthMHz')],
+};
+export function profileGroups(presetId){
+ const preset=catalogModel(presetId),definitions=catalogFields(presetId);
+ const entries=preset.catalogOnly?preset.groups.map(([name,keys])=>[name,params(...keys)]):modelGroups[preset.type];
+ return entries.map(([name,keys])=>({name,keys:keys.filter(key=>Object.hasOwn(definitions,key)&&!(INACTIVE_EDITOR_FIELDS[preset.type]??[]).includes(key))})).filter(group=>group.keys.length);
+}
+export function validateProfile(profile){
+ const base=defaultProfile(profile?.presetId);
+ if(profile.type!==base.type||(!catalogModel(profile.presetId).basePresetId&&profile.name!==base.name))throw Error('装备型号信息不一致');
+ if(typeof profile.name!=='string'||!profile.name.trim()||profile.name.length>120)throw Object.assign(Error('请填写装备名称（最多 120 字）'),{field:'name'});
+ if(Object.keys(profile).some(key=>!Object.hasOwn(base,key)))throw Error('包含不支持的装备信息');
+ for(const scope of ['parameters','physics','working']){
+  if(!profile[scope]||typeof profile[scope]!=='object'||Array.isArray(profile[scope]))throw Error('参数格式无效');
+  for(const name of Object.keys(profile[scope]))if(!Object.hasOwn(base[scope],name))throw Error('包含不支持的参数');
+ }
+ for(const [key,spec] of Object.entries(catalogFields(profile.presetId))){
+  const value=getProfileValue(profile,key);if(value===null&&spec.nullable)continue;
+  if(spec.options){if(!spec.options.some(([option])=>String(option)===String(value)))throw Error(`${spec.label}无效`);continue;}
+  if(typeof value!=='number'||!Number.isFinite(value)||value<spec.min||value>spec.max||spec.integer&&!Number.isInteger(value))throw Object.assign(Error(`请检查${spec.label}`),{field:key});
+ }
+ const ordered=(scope,low,high,label,allowEqual=false)=>{const a=profile[scope][low],b=profile[scope][high];if(a!=null&&b!=null&&(allowEqual?a>b:a>=b))throw Object.assign(Error(`${label}上下限无效`),{field:path(scope,low)});};
+ ordered('parameters','minRange','maxRange','探测距离');ordered('parameters','elevationMin','elevationMax','俯仰角');ordered('parameters','bandMinGHz','bandMaxGHz','接收频段');ordered('parameters','minSoundDb','maxSoundDb','声压');
+ ordered('working','yawMin','yawMax','云台水平');ordered('working','pitchMin','pitchMax','云台俯仰');ordered('working','frequencyMin','frequencyMax','频率');
+ ordered('parameters','fieldMinVpm','fieldMaxVpm','场强量程');ordered('parameters','temperatureMin','temperatureMax','工作温度',true);
+ if(profile.type==='optical'){
+  const p=profile.parameters;if(p.narrowHfov!=null&&p.wideHfov!=null&&p.narrowHfov>p.wideHfov)throw Error('窄视场不能大于宽视场');
+  if(profile.working.channel==='thermal'&&profile.working.focalMm!==75)throw Object.assign(Error('热成像通道焦距为 75 mm'),{field:'working.focalMm'});
+ }
+ return structuredClone(profile);
+}
+export function validateCatalogFile(value){
+ if(value?.schema!==CATALOG_SCHEMA||!Array.isArray(value.profiles)||!value.profiles.length||value.profiles.length>200)throw Error('请选择装备参数文件（最多 200 个型号）');
+ const ids=new Set();return value.profiles.map(profile=>{if(ids.has(profile.presetId))throw Error('装备型号重复');ids.add(profile.presetId);return validateProfile(profile);});
+}
+export function createCustomProfile(profile,name=profile.name){
+ const model=catalogModel(profile.presetId),base=model.basePresetId??model.id;
+ return {...structuredClone(profile),presetId:`custom:${base}:${crypto.randomUUID()}`,name};
+}
+export function resolveEquipmentProfiles(equipment){
+ if(equipment instanceof Map)return equipment;
+ const source=structuredClone(equipment??null),list=Array.isArray(source)?source:Array.isArray(source?.profiles)?source.profiles:source?.presetId?[source]:[],profiles=new Map();
+ for(const profile of list)try{const valid=validateProfile(profile);if(!profiles.has(valid.presetId))profiles.set(valid.presetId,valid);}catch{}
+ return profiles;
+}
+export function applyEquipmentProfile(device,equipment){
+ const profile=(equipment instanceof Map?equipment:resolveEquipmentProfiles(equipment)).get(device.presetId);if(!profile)return device;
+ for(const scope of ['parameters','physics'])if(device[scope])for(const [key,value] of Object.entries(profile[scope]))if(Object.hasOwn(device[scope],key)&&typeof value==='number'&&Number.isFinite(value))device[scope][key]=value;
+ return device;
+}
+export function createCatalogStore(storage){
+ const saved=new Map(CATALOG_MODELS.map(p=>[p.id,defaultProfile(p.id)])),listeners=new Set();let readError=false;
+ try{
+  const raw=storage?.getItem(CATALOG_STORAGE_KEY);
+  if(raw){
+   const data=JSON.parse(raw);
+   if(data?.schema!==CATALOG_SCHEMA||!Array.isArray(data.profiles)||data.profiles.length>200)throw Error('参数存储格式无效');
+   for(const profile of data.profiles)try{
+    // Restore profiles independently; fill newly added fields from current defaults.
+    const defaults=defaultProfile(profile?.presetId),next={...defaults,...profile};
+    if(!catalogModel(next.presetId).basePresetId)next.name=defaults.name;
+    for(const scope of ['parameters','physics','working']){
+     next[scope]={...defaults[scope]};
+     for(const key of Object.keys(defaults[scope]))if(Object.hasOwn(profile[scope]??{},key))next[scope][key]=profile[scope][key];
+    }
+    saved.set(next.presetId,validateProfile(next));
+   }catch{readError=true;}
+  }
+ }catch{readError=true;}
+ const snapshot=()=>({schema:CATALOG_SCHEMA,profiles:[...saved.values()].map(p=>structuredClone(p))});
+ const publish=()=>{const value=snapshot();for(const listener of [...listeners])listener(structuredClone(value));};
+ const persist=next=>{if(!storage)throw Error('当前浏览器无法保存，请导出参数');storage.setItem(CATALOG_STORAGE_KEY,JSON.stringify({schema:CATALOG_SCHEMA,profiles:[...next.values()]}));};
+ return {
+  readError,get:id=>structuredClone(saved.get(id)),getSnapshot:snapshot,
+  subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
+  save(profile){const valid=validateProfile(profile),next=new Map(saved);next.set(profile.presetId,valid);if(next.size>200)throw Error('装备型号不能超过 200 个');persist(next);saved.set(profile.presetId,valid);publish();},
+  import(value){const profiles=validateCatalogFile(value),next=new Map(saved);for(const p of profiles)next.set(p.presetId,p);persist(next);for(const p of profiles)saved.set(p.presetId,p);publish();return profiles;},
+  importAsNew(value){const profiles=validateCatalogFile(value).map(p=>validateProfile(createCustomProfile(p))),next=new Map(saved);for(const p of profiles)next.set(p.presetId,p);if(next.size>200)throw Error('装备型号不能超过 200 个');persist(next);for(const p of profiles)saved.set(p.presetId,p);publish();return profiles;},
+  export(profile){return profile?{schema:CATALOG_SCHEMA,profiles:[validateProfile(profile)]}:snapshot();},
+ };
+}

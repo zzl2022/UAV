@@ -1,0 +1,30 @@
+import {chromium} from 'playwright-core';
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {openSceneMenu} from './city_menu_helper.js';
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ page.on('crash',()=>console.error('City page crashed'));
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');
+ await page.waitForFunction(()=>document.documentElement.dataset.ready,null,{timeout:120000});
+ assert.equal(await page.locator('html').getAttribute('data-ready'),'true',await page.locator('#status').innerText());
+ const diagnostics=await page.evaluate(()=>window.cityDiagnostics);
+ assert.equal(diagnostics.features,15889);assert.equal(diagnostics.imagery,true);
+ await openSceneMenu(page);
+ await page.locator('#imagery').uncheck();await page.locator('#imagery').check();assert.ok(diagnostics.buildingTriangles>100000);
+ await page.locator('#top').click();
+ await page.locator('#terrain').uncheck();await page.locator('#terrain').check();
+ await page.locator('#reset').click();
+ assert.equal(await page.locator('#wire').count(),0);
+ assert.equal(await page.locator('#original').count(),0);
+ assert.equal(await page.locator('#export').count(),0);
+ assert.equal(await page.locator('summary').filter({hasText:'高级图层'}).count(),0);
+ assert.equal(await page.locator('summary').filter({hasText:'场景数据与导出'}).count(),0);
+ await mkdir('artifacts',{recursive:true});
+ await page.screenshot({path:'artifacts/city-desktop.png'});
+ await page.screenshot({path:'artifacts/city-imagery.png'});
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'artifacts/city-mobile.png',fullPage:true});
+ assert.deepEqual(errors,[]);console.log('Browser smoke passed:',diagnostics);
+}finally{await browser.close();}

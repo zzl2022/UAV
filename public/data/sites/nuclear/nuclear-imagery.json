@@ -1,0 +1,23 @@
+{
+  "source": "天地图 WMTS imagery (img_w)",
+  "license": "天地图服务条款；仅用于演示/研究，保留署名",
+  "bbox": [
+    115.9813,
+    39.6826,
+    116.0981,
+    39.7726
+  ],
+  "zoom": 16,
+  "tileRange": [
+    53881,
+    24864,
+    53903,
+    24885
+  ],
+  "tileCount": 506,
+  "image": "nuclear-imagery.jpg",
+  "width": 2045,
+  "height": 2048,
+  "normalized": true,
+  "normalization": "per-tile gain field + low-frequency luminance gain"
+}

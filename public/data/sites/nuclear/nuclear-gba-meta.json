@@ -1,0 +1,158 @@
+{
+  "name": "北京 · 房山核设施 5 km · GBA LoD1",
+  "source": "GlobalBuildingAtlas LoD1 (per-building footprints + heights)",
+  "sourceUrl": "https://huggingface.co/datasets/zhu-xlab/GBA.LoD1",
+  "license": "CC BY-NC 4.0",
+  "attribution": "GlobalBuildingAtlas (TUM), 3D-GloBFP, © OpenStreetMap contributors",
+  "center": [
+    116.0397,
+    39.7276
+  ],
+  "radiusMeters": 5000,
+  "bbox": [
+    115.9813,
+    39.6826,
+    116.0981,
+    39.7726
+  ],
+  "featureBounds": [
+    115.979098,
+    39.681652,
+    116.098747,
+    39.773004
+  ],
+  "coverageMargins": {
+    "west": -0.002202,
+    "south": -0.000948,
+    "east": -0.000647,
+    "north": -0.000404
+  },
+  "localBounds": [
+    -5010.01,
+    5010.01,
+    -4997.97,
+    4994.67
+  ],
+  "buildingCount": 20780,
+  "blockCount": 20780,
+  "minHeight": 3,
+  "maxHeight": 45.6,
+  "filters": {
+    "minHeight": 3,
+    "maxHeight": 300,
+    "minAreaMeters2": 20
+  },
+  "skipped": {
+    "height": 10699,
+    "area": 3355,
+    "geometry": 0,
+    "duplicate": 0
+  },
+  "coreBuilding": {
+    "id": "gba-3dglobfp-122999786-0",
+    "name": "房山核设施",
+    "shortName": "房山核设施",
+    "height": 10.13,
+    "areaM2": 21369.5,
+    "center": [
+      -614.56,
+      28.95
+    ],
+    "distanceFromCenterMeters": 615.2,
+    "rings": [
+      [
+        [
+          -719.58,
+          0,
+          69.79
+        ],
+        [
+          -732.29,
+          0,
+          69.74
+        ],
+        [
+          -732.17,
+          0,
+          41.16
+        ],
+        [
+          -726.88,
+          0,
+          41.18
+        ],
+        [
+          -726.73,
+          0,
+          7.31
+        ],
+        [
+          -722.5,
+          0,
+          7.32
+        ],
+        [
+          -722.39,
+          0,
+          -18.09
+        ],
+        [
+          -496.9,
+          0,
+          -17.15
+        ],
+        [
+          -497.28,
+          0,
+          72.83
+        ],
+        [
+          -504.69,
+          0,
+          72.8
+        ],
+        [
+          -504.7,
+          0,
+          75.97
+        ],
+        [
+          -719.6,
+          0,
+          75.08
+        ],
+        [
+          -719.58,
+          0,
+          69.79
+        ]
+      ]
+    ],
+    "selection": "largest footprint within 800 m of site center"
+  },
+  "sourceCounts": {
+    "3dglobfp": 23346,
+    "osm": 789
+  },
+  "heightSource": "GBA LoD1 heights (3D-GloBFP/OSM fusion)",
+  "baseElevation": 0,
+  "rawSha256": "a1c122e08447ecc2b871e263543fde2e837d00843fe1b202b8e8b208f5f74860",
+  "coordinateSystem": "local metric [east, up, -north]; origin at center; local_tmerc",
+  "limitations": [
+    "GBA LoD1 is a model product; heights are not surveyed.",
+    "License is CC BY-NC 4.0: non-commercial use with attribution.",
+    "Base is flat (no DEM); absolute elevations are not represented.",
+    "Low/tiny structures are filtered; roads are left to the imagery basemap."
+  ],
+  "metricProjection": "local_tmerc",
+  "glb": {
+    "file": "nuclear-gba.glb",
+    "bytes": 22765300,
+    "sha256": "0e967d16217a5038aa8aec4d6b44c9cc7311cdf00108405036e615ab9d8c2cc8"
+  },
+  "mesh": {
+    "vertices": 948432,
+    "triangles": 316144,
+    "drawCalls": 1
+  }
+}
