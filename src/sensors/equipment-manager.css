@@ -170,11 +170,7 @@
 .equipment-name-field{grid-column:1/-1}
 #city-environment-page .city-settings-footer{flex-wrap:wrap}
 .city-target-actions{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
-.city-target-actions label{font-size:12px;margin:0;white-space:nowrap}
-.city-target-actions select{width:240px;max-width:100%;min-width:0;padding:9px 10px;border:1px solid #35505b;border-radius:4px;background:#0d1c24;color:#d9e9ec;font:inherit;font-size:12px}
-.city-target-source{font-size:11px;line-height:1.7;color:#9ab9c5;margin:-12px 0 16px;flex-shrink:0}
-.city-target-source a{color:#91e2d0}
+#city-target-current-model{font-size:11px;line-height:1.7;color:#9ab9c5;margin:-12px 0 16px;flex-shrink:0}
 #city-target-page .city-settings-footer{flex-wrap:wrap}
 #city-target-page .city-settings-footer [role=status]{flex:1;min-width:80px}
-.city-target-actions select:focus-visible{outline:2px solid #7adfc5;outline-offset:2px}
-@media(max-width:580px){.city-target-actions{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}.city-target-actions label{grid-column:1;grid-row:2}.city-target-actions button{grid-row:1}.city-target-actions select{grid-column:2;grid-row:2;width:100%}.city-target-source{font-size:10px;margin:-8px 0 12px}}
+@media(max-width:580px){#city-target-current-model{font-size:10px}}

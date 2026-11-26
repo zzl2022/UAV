@@ -1,0 +1,192 @@
+{
+  "mini-4-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/892e39b4b76dc5a83b267ed12ce69b97@374%2A374.png",
+    "source": "https://www.dji.com/cn/mini-4-pro",
+    "kind": "model"
+  },
+  "air-3s": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/204e70db1a193ad14c14a61db633dca9@374%2A374.png",
+    "source": "https://www.dji.com/cn/air-3s",
+    "kind": "model"
+  },
+  "avata-2": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/99bd8b1f1f0b8f77e4bba446286bc7c9@374%2A374.png",
+    "source": "https://www.dji.com/cn/avata-2",
+    "kind": "model"
+  },
+  "mavic-3e": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/e2f81a8788ed614eed5f77cd06fec299@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/mavic-3-enterprise",
+    "kind": "series"
+  },
+  "matrice-350-rtk": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/3f33b79fc054eaf64bd357bf287069f9@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-350-rtk",
+    "kind": "model"
+  },
+  "mini-5-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/3462d29fa23cf5d29fce9171fb2b6b9d@374%2A374.png",
+    "source": "https://www.dji.com/cn/mini-5-pro",
+    "kind": "model"
+  },
+  "mini-4k": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/10d722b4300ebf565bb6182fb20086d1@374%2A374.png",
+    "source": "https://www.dji.com/mini-2-se/specs",
+    "kind": "series"
+  },
+  "mini-3": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/0e65b98eaee5cad6f74196e9594b99cd@374%2A374.png",
+    "source": "https://www.dji.com/cn/mini-3",
+    "kind": "model"
+  },
+  "mini-2-se": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/10d722b4300ebf565bb6182fb20086d1@374%2A374.png",
+    "source": "https://www.dji.com/cn/mini-2-se",
+    "kind": "series"
+  },
+  "lito-1": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/e4b0b945e076ea03849d166583e07aec@374%2A374.png",
+    "source": "https://www.dji.com/cn/lito-1",
+    "kind": "model"
+  },
+  "flip": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/32a4df4ce9e014fa44a38e24cc7fa97e@374%2A374.png",
+    "source": "https://www.dji.com/cn/flip",
+    "kind": "model"
+  },
+  "neo-2": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/c108f7561fdb680e96523c11e959c1cf@374%2A374.png",
+    "source": "https://www.dji.com/cn/neo-2",
+    "kind": "model"
+  },
+  "neo": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/a2d5733d4fe4b62050a3a1ea1109612d@374%2A374.png",
+    "source": "https://www.dji.com/cn/neo",
+    "kind": "model"
+  },
+  "mavic-4-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/979ab68fd602bd3440fc4fb12f3ea38e@374%2A374.png",
+    "source": "https://www.dji.com/cn/mavic-4-pro",
+    "kind": "model"
+  },
+  "mavic-3-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/ff6ae7f2efed6d80de477f6a634d6c4b@374%2A374.png",
+    "source": "https://www.dji.com/cn/mavic-3-pro",
+    "kind": "model"
+  },
+  "mavic-3": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/e94c238bb61eb85f55189734263a7693@374%2A374.png",
+    "source": "https://www.dji.com/mavic-3/downloads",
+    "kind": "model"
+  },
+  "mavic-2-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/adf02e74afd33392f12ecc0f318ca20e@374%2A374.png",
+    "source": "https://www.dji.com/cn/mavic-2/info",
+    "kind": "series"
+  },
+  "mavic-2-zoom": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/adf02e74afd33392f12ecc0f318ca20e@374%2A374.png",
+    "source": "https://www.dji.com/cn/mavic-2/info",
+    "kind": "series"
+  },
+  "mavic-3t": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/e2f81a8788ed614eed5f77cd06fec299@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/mavic-3-enterprise",
+    "kind": "series"
+  },
+  "mavic-3m": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/bb05e28681013e38a74f48164ac52652@374%2A374.png",
+    "source": "https://ag.dji.com/cn/mavic-3-m",
+    "kind": "model"
+  },
+  "matrice-400": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/3c9712c308bac3e36007c3a9ded88d9d@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-400",
+    "kind": "model"
+  },
+  "matrice-30": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/a39d9ada3c5c88ab54082e100284f642@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-30",
+    "kind": "series"
+  },
+  "matrice-30t": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/a39d9ada3c5c88ab54082e100284f642@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-30",
+    "kind": "series"
+  },
+  "matrice-4e": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/5a6ef3ed6f35e3719453a78ff0e67af4@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-4-series",
+    "kind": "series"
+  },
+  "matrice-4t": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/5a6ef3ed6f35e3719453a78ff0e67af4@374%2A374.png",
+    "source": "https://enterprise.dji.com/cn/matrice-4-series",
+    "kind": "series"
+  },
+  "agras-t30": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/e81818e5549e7587c6723900402e0a21@374%2A374.png",
+    "source": "https://ag.dji.com/cn/t30",
+    "kind": "model"
+  },
+  "lito-x1": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/9e110344ffce2fb6fe7c4a181f148892@374%2A374.png",
+    "source": "https://www.dji.com/cn/lito-x1/specs",
+    "kind": "model"
+  },
+  "avata-360": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/19c15ba39f4574808ca6b0380b7d44dc@374%2A374.png",
+    "source": "https://www.dji.com/cn/avata-360/specs",
+    "kind": "model"
+  },
+  "mavic-pro": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/d9482763dda421b51853d2083283527a@374%2A374.png",
+    "source": "https://www.dji.com/cn/mavic/info",
+    "kind": "model"
+  },
+  "inspire-3": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/3ed16936dbef2e77d8d93488a9ae4af0@374%2A374.png",
+    "source": "https://www.dji.com/cn/inspire-3/specs",
+    "kind": "model"
+  },
+  "flycart-30": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/ff7d624d0b2d70d468c05343b22d9a4e@374%2A374.png",
+    "source": "https://www.dji.com/cn/flycart-30/specs",
+    "kind": "model"
+  },
+  "flycart-100": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/ca4874861c76a3bffac78bb7b2af56fc@374%2A374.png",
+    "source": "https://www.dji.com/cn/flycart-100/specs",
+    "kind": "model"
+  },
+  "agras-t20p": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/f77bede7893c8d87ab86a9672fa97efb@374%2A374.png",
+    "source": "https://ag.dji.com/t20p/specs",
+    "kind": "model"
+  },
+  "agras-t25": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/030c0cedf7bb641d6add91285635da1e@374%2A374.png",
+    "source": "https://ag.dji.com/t25/specs",
+    "kind": "model"
+  },
+  "agras-t40": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/7c161c5b8c533e9d19d5f4482853f67b@374%2A374.png",
+    "source": "https://ag.dji.com/t40/specs",
+    "kind": "model"
+  },
+  "agras-t50": {
+    "image": "https://www-cdn.djiits.com/cms/uploads/aae86116a033d2c9fb35e254986a264b@374%2A374.png",
+    "source": "https://ag.dji.com/t50/specs",
+    "kind": "model"
+  },
+  "hoverair-x1-promax": {
+    "image": "https://cdn.shopify.com/s/files/1/0796/1362/4605/files/x1promax.png?v=1736476840",
+    "source": "https://hoverair.com/pages/x1-pro-and-promax",
+    "kind": "model"
+  },
+  "wingtra-ray": {
+    "image": "https://wingtra.com/wp-content/uploads/wingtraray-drone-standing-768x515.png",
+    "source": "https://wingtra.com/ray/",
+    "kind": "model"
+  }
+}

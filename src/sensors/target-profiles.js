@@ -1,14 +1,10 @@
 import {TARGET_FIELDS} from './presets.js';
 import {validateTarget} from './engine.js';
+import catalog from './drone-target-catalog.json' with {type:'json'};
 
-// Official aircraft specifications checked 2026-11-05. Dimensions are L × W × H.
-export const DRONE_TARGET_PRESETS=[
- {id:'mini-4-pro',name:'DJI Mini 4 Pro',type:'轻型航拍',dimensions:[.298,.373,.101],speed:16,dimensionsNote:'展开、含桨',speedNote:'运动模式',source:'https://www.dji.com/mini-4-pro/specs'},
- {id:'air-3s',name:'DJI Air 3S',type:'航拍',dimensions:[.26611,.32547,.106],speed:21,dimensionsNote:'展开、不含桨',speedNote:'海平面无风，非欧盟版本',source:'https://www.dji.com/air-3s/specs'},
- {id:'avata-2',name:'DJI Avata 2',type:'穿越机',dimensions:[.185,.212,.064],speed:27,dimensionsNote:'机身尺寸',speedNote:'手动模式，非欧盟版本',source:'https://www.dji.com/avata-2/specs'},
- {id:'mavic-3e',name:'DJI Mavic 3E',type:'行业巡检',dimensions:[.3475,.283,.1077],speed:21,dimensionsNote:'展开、不含桨',speedNote:'运动模式前飞，海平面无风，非 EU C1 电池配置',source:'https://enterprise.dji.com/mavic-3-enterprise/specs'},
- {id:'matrice-350-rtk',name:'DJI Matrice 350 RTK',type:'工业多旋翼',dimensions:[.81,.67,.43],speed:23,dimensionsNote:'展开、不含桨',speedNote:'最大水平速度',source:'https://enterprise.dji.com/matrice-350-rtk/specs'},
-];
+export const DRONE_TARGET_PRESETS=catalog.models;
+export const DRONE_CATALOG_VERSION=catalog.schemaVersion;
+const builtInModels=new Map(DRONE_TARGET_PRESETS.map(model=>[model.id,model]));
 const extra=(label,unit,min,max,options={})=>({label,unit,min,max,...options});
 export const TARGET_EDITOR_FIELDS={...TARGET_FIELDS,
  width_m:extra('成像水平尺寸','m',.001,100,{nullable:true}),height_m:extra('成像垂直尺寸','m',.001,100,{nullable:true}),
@@ -48,8 +44,35 @@ export function importTargetDraft(current,draft,data){
  if(!count)throw Error('文件中没有侦测目标参数');
  next.dronePresetId=null;targetFromDraft(current,next);return next;
 }
-export function selectTargetPreset(draft,id){
- const preset=DRONE_TARGET_PRESETS.find(item=>item.id===id);if(!preset)throw Error('未知无人机型号');
+export function readDroneCatalog(data){
+ if(data?.schemaVersion!==DRONE_CATALOG_VERSION||!Array.isArray(data.models)||!data.models.length){
+  throw Error('型号库需要版本 1 和非空 models 列表');
+ }
+ const seen=new Set();
+ return data.models.map((item,index)=>{
+  const {id,brand,name,type,dimensions,speed,dimensionsNote,speedNote,source}=item??{};
+  const label=`第 ${index+1} 条型号`;
+  if(typeof id!=='string'||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))throw Error(`${label}的编号无效`);
+  if(seen.has(id))throw Error(`型号编号重复：${id}`);
+  if(![brand,name,type,dimensionsNote,speedNote,source].every(value=>typeof value==='string'&&value.trim())){
+   throw Error(`${label}缺少品牌、名称、用途、规格说明或来源`);
+  }
+  if(URL.parse(source)?.protocol!=='https:')throw Error(`${label}需要 HTTPS 规格来源`);
+  if(!Array.isArray(dimensions)||dimensions.length!==3||
+    dimensions.some(value=>!Number.isFinite(value)||value<.001)||
+    Math.max(dimensions[0],dimensions[1])<TARGET_FIELDS.size.min||
+    Math.max(dimensions[0],dimensions[1])>TARGET_FIELDS.size.max||dimensions[2]>TARGET_EDITOR_FIELDS.height_m.max){
+   throw Error(`${label}的长、宽、高须以米填写，并符合目标尺寸范围`);
+  }
+  if(!Number.isFinite(speed)||speed<TARGET_FIELDS.speed.min||speed>TARGET_FIELDS.speed.max){
+   throw Error(`${label}的速度须以 m/s 填写，并符合目标速度范围`);
+  }
+  seen.add(id);
+  return {id,brand:brand.trim(),name:name.trim(),type:type.trim(),dimensions:[...dimensions],speed,dimensionsNote:dimensionsNote.trim(),speedNote:speedNote.trim(),source:source.trim()};
+ });
+}
+export function selectTargetPreset(draft,id,models=builtInModels){
+ const preset=models.get(id);if(!preset)throw Error('未知无人机型号');
  const [length,width,height]=preset.dimensions;
  return {...structuredClone(draft),size:Math.max(length,width),width_m:width,height_m:height,speed:preset.speed,dronePresetId:id};
 }

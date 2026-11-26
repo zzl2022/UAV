@@ -393,6 +393,7 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   back.onclick = backAction;
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && open && !event.defaultPrevented) {
+      if (panel.querySelector('dialog[open]')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       backAction();

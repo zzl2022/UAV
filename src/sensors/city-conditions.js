@@ -1,6 +1,7 @@
 import {ENV_FIELDS,DEFAULT_ENV,DEFAULT_TARGET} from './presets.js';
 import {validateEnvironment} from './engine.js';
-import {DRONE_TARGET_PRESETS,TARGET_EDITOR_FIELDS,targetDraft,targetFromDraft,importTargetDraft,selectTargetPreset} from './target-profiles.js';
+import {DRONE_TARGET_PRESETS,TARGET_EDITOR_FIELDS,targetDraft,targetFromDraft,importTargetDraft,readDroneCatalog,selectTargetPreset} from './target-profiles.js';
+import {createDroneLibrary} from './drone-catalog-ui.js';
 
 const environmentGroups=[
  ['气象环境',['rainMmH','visibilityKm','illuminanceLux','temperatureC','windSpeed']],
@@ -13,14 +14,15 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
  const scene=document.createElement('div');scene.id='city-scene-page';scene.className='city-page';scene.append(...panel.childNodes);
  const tabs=document.createElement('div');tabs.className='city-mode-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','城市建模');
  const pages=new Map([['scene',scene]]);let active='scene';
+ const droneModels=new Map(DRONE_TARGET_PRESETS.map(model=>[model.id,model]));
  const editors={
   environment:{name:'环境情况',groups:environmentGroups,fields:ENV_FIELDS,draft:structuredClone(getState().environment),dirty:false,group:'气象环境'},
   target:{name:'侦测目标',fields:TARGET_EDITOR_FIELDS,draft:draftTarget(getState().target),dirty:false},
  };
- function commitTarget(editor){
+ function commitTarget(editor,draft=editor.draft){
   try{
-   const next=targetFromDraft(getState().target,editor.draft);
-   onTarget(next);editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='设置成功，目标参数已生效';return true;
+   const next=targetFromDraft(getState().target,draft);
+   onTarget(next);editor.draft=draft;editor.dirty=false;editor.apply.disabled=true;editor.message.textContent='设置成功，目标参数已生效';return true;
   }catch(error){editor.apply.disabled=false;editor.message.textContent=error.message;return false;}
  }
  function activate(id){active=id;for(const [name,page] of pages)page.hidden=name!==id;for(const button of tabs.children){const selected=button.dataset.page===id;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;}}
@@ -66,26 +68,38 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
   }
   if(id==='target'){
    const actions=document.createElement('div');actions.className='city-target-actions';
-   const load=document.createElement('button');load.type='button';load.id='city-target-import';load.textContent='导入';load.title='导入 JSON 目标参数';
+   const load=document.createElement('button');load.type='button';load.id='city-target-import';load.textContent='导入';load.title='导入 JSON 目标参数或无人机型号库';
    const template=document.createElement('button');template.type='button';template.id='city-target-template';template.textContent='模板';template.onclick=()=>{
     const data={target:Object.fromEntries(Object.entries(TARGET_EDITOR_FIELDS).map(([key])=>[key,targetDraft(getState().target)[key]]))};
     const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='侦测目标-导入模板.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
    };
-   const file=document.createElement('input');file.type='file';file.id='city-target-file';file.accept='.json,application/json';file.hidden=true;file.setAttribute('aria-label','导入侦测目标参数');load.onclick=()=>file.click();
-   const label=document.createElement('label');label.htmlFor='city-target-model';label.textContent='无人机型号';
-   const select=document.createElement('select');select.id='city-target-model';select.add(new Option('自定义目标',''));
-   for(const preset of DRONE_TARGET_PRESETS)select.add(new Option(`${preset.name} · ${preset.type}`,preset.id));
-   actions.append(load,template,label,select);footer.prepend(actions);page.append(file);Object.assign(editor,{select});
-   select.onchange=()=>{
-    if(select.value)editor.draft=selectTargetPreset(editor.draft,select.value);
-    else editor.draft.dronePresetId=null;
-    editor.dirty=true;commitTarget(editor);renderEditor(id);
-   };
+   const file=document.createElement('input');file.type='file';file.id='city-target-file';file.accept='.json,application/json';file.hidden=true;file.setAttribute('aria-label','导入侦测目标参数或无人机型号库');load.onclick=()=>file.click();
+   const currentModel=document.createElement('p');currentModel.id='city-target-current-model';
+   const libraryButton=document.createElement('button');libraryButton.type='button';libraryButton.id='city-target-library-open';
+   libraryButton.textContent='无人机设备库导入';libraryButton.setAttribute('aria-haspopup','dialog');
+   libraryButton.setAttribute('aria-controls','city-target-library');
+   const library=createDroneLibrary({models:droneModels,onImport:modelId=>{
+    const next=selectTargetPreset(editor.draft,modelId,droneModels);
+    if(!commitTarget(editor,next))return editor.message.textContent;
+    renderEditor(id);
+    editor.message.textContent=`已导入 ${droneModels.get(modelId).name}，目标参数已生效`;
+   }});
+   libraryButton.onclick=()=>library.open(editor.draft.dronePresetId);
+   actions.append(load,template,libraryButton,currentModel);footer.prepend(actions);editor.currentModel=currentModel;
+   page.append(file,library.dialog);
    file.onchange=async()=>{
     const selected=file.files[0];if(!selected)return;
     try{
      if(selected.size>1024*1024)throw Error('文件不能大于 1 MB');
-     editor.draft=importTargetDraft(getState().target,editor.draft,JSON.parse(await selected.text()));
+     const data=JSON.parse(await selected.text());
+     if(Object.hasOwn(data??{},'models')){
+      const imported=readDroneCatalog(data);
+      const additions=imported.filter(model=>!droneModels.has(model.id));
+      for(const model of additions)droneModels.set(model.id,model);
+      editor.message.textContent=`已读取 ${imported.length} 款型号，新增 ${additions.length} 款，库内共 ${droneModels.size} 款`;
+      return;
+     }
+     editor.draft=importTargetDraft(getState().target,editor.draft,data);
      editor.dirty=true;if(commitTarget(editor))editor.message.textContent='设置成功，已导入并生效';renderEditor(id);
     }catch(error){editor.message.textContent=`导入失败：${error.message}`;}
     finally{file.value='';}
@@ -117,12 +131,13 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
   };
   renderEditor(id);
  }
+ function renderCurrentModel(editor){
+  const preset=droneModels.get(editor.draft.dronePresetId);
+  editor.currentModel.textContent=`当前目标　${preset?.name??'自定义目标'}`;
+ }
  function renderEditor(id){
   const editor=editors[id];if(!editor.form)return;
-  if(id==='target'){
-   const preset=DRONE_TARGET_PRESETS.find(item=>item.id===editor.draft.dronePresetId);
-   editor.select.value=preset?.id??'';
-  }
+  if(id==='target')renderCurrentModel(editor);
   editor.form.replaceChildren();
   if(editor.groups){
    for(const button of editor.nav.children)button.setAttribute('aria-current',String(button.textContent===editor.group));
@@ -143,7 +158,10 @@ export function mountCityConditions({panel,getState,onEnvironment,onTarget}){
    label.append(title,control);grid.append(label);
    input.addEventListener(spec.boolean?'change':'input',()=>{
     editor.draft[key]=spec.boolean?input.checked:input.value.trim()===''?null:Number(input.value);editor.dirty=true;
-    if(id==='target'){editor.draft.dronePresetId=null;editor.select.value='';commitTarget(editor);}
+    if(id==='target'){
+     if(editor.draft.dronePresetId){editor.draft.dronePresetId=null;renderCurrentModel(editor);}
+     commitTarget(editor);
+    }
     else{editor.apply.disabled=false;editor.message.textContent='未应用';}
     if(key==='check_band'){
      const scrollTop=editor.form.scrollTop;renderEditor(id);editor.form.scrollTop=scrollTop;

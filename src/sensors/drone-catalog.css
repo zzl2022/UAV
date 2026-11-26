@@ -1,0 +1,79 @@
+.drone-library {
+ width:min(1080px,calc(100vw - 40px));height:min(740px,calc(100dvh - 48px));
+ max-width:none;max-height:none;margin:auto;padding:0;
+ border:1px solid #427789;border-radius:8px;background:#0a1721;color:#e4f1f5;
+ box-shadow:0 24px 90px #02080c;
+}
+.drone-library[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.drone-library::backdrop{background:rgb(0 9 15 / .73)}
+.drone-library .drone-library-header {
+ position:static;height:auto;display:flex;justify-content:space-between;align-items:center;
+ padding:20px 24px;background:#0d1e29;border:0;border-bottom:1px solid #294551;
+}
+.drone-library-header h2{font-size:23px;line-height:1.2;letter-spacing:.04em;font-weight:650;margin:0;color:#e4f6fb}
+.drone-library-stats{margin:5px 0 0;color:#91bbcd;font-size:13px}
+.drone-library .drone-library-close {
+ display:grid;place-items:center;width:34px;height:34px;padding:0;
+ color:#bdefff;background:#142b38;border-color:#325668;font-size:24px;line-height:1;
+}
+.drone-library-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,27%);min-height:0}
+.drone-library-content{display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0}
+.drone-library-filters{display:grid;grid-template-columns:minmax(100px,1fr) minmax(110px,150px) auto;gap:10px;align-items:center;padding:16px 18px}
+.drone-library-filters input,.drone-library-filters select{
+ min-width:0;width:100%;height:36px;margin:0;padding:0 9px;color:#e4f4fb;
+ border:1px solid #345664;border-radius:4px;background:#122732;font:inherit;font-size:13px;
+}
+.drone-library-filters input::placeholder{color:#90adba}
+.drone-library-results{color:#9fc6d4;font-size:12px;white-space:nowrap;text-align:right}
+.drone-library-list{
+ display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr));
+ grid-auto-rows:max-content;align-content:start;gap:12px;overflow:auto;padding:0 18px 18px;
+ scrollbar-color:#345664 #0a1721;
+}
+.drone-library .drone-library-card{
+ display:block;min-width:0;padding:0;overflow:hidden;text-align:left;border:1px solid #2b4857;
+ border-radius:5px;background:#10232f;color:#e5f3f8;
+}
+.drone-library .drone-library-card:hover{border-color:#5c9aaa;background:#15303e}
+.drone-library .drone-library-card[aria-pressed="true"]{border-color:#87eaff;box-shadow:inset 0 0 0 1px #87eaff;background:#15323e}
+.drone-library :is(button,input,select,a):focus-visible{outline:2px solid #87eaff;outline-offset:2px}
+.drone-library .drone-library-card:focus-visible{outline-offset:-3px}
+.drone-library-image{
+ position:relative;display:grid;place-items:center;aspect-ratio:1.7;overflow:hidden;background-color:#152634;
+}
+.drone-library-image img{position:absolute;inset:0;display:block;width:100%;height:100%;padding:5px;object-fit:contain}
+.drone-library-image.is-illustration{
+ background-size:300% 340%;background-position:0 14.6%;background-repeat:no-repeat;
+}
+.drone-library-image.is-illustration[data-slot="1"]{background-position:50% 14.6%}
+.drone-library-image.is-illustration[data-slot="2"]{background-position:100% 14.6%}
+.drone-library-image.is-illustration[data-slot="3"]{background-position:0 85.4%}
+.drone-library-image.is-illustration[data-slot="4"]{background-position:50% 85.4%}
+.drone-library-image.is-illustration[data-slot="5"]{background-position:100% 85.4%}
+.drone-library-card-body{display:grid;gap:4px;padding:10px 11px}
+.drone-library-card-body strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.drone-library-card-body span,.drone-library-kind{font-size:11px;color:#9cbecb}
+.drone-library-side{
+ min-width:0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px;
+ padding:17px 18px;border-left:1px solid #294551;background:#0e1e29;
+}
+.drone-library-detail{min-height:0;overflow:auto;margin:0;overflow-wrap:anywhere}
+.drone-library-detail .drone-library-image{margin-bottom:14px;border-radius:4px}
+#ac8-scene-menu #city-panel .drone-library-detail h3{margin:0;color:#eff9fb;font-size:18px;line-height:1.25;letter-spacing:0;text-shadow:none}
+.drone-library-kind{margin:5px 0 12px}
+.drone-library-specs{margin:0}
+.drone-library-specs dt{margin:10px 0 4px;color:#9cbecb;font-size:11px}
+.drone-library-specs dd{margin:0;color:#e9f4f8;font-size:14px}
+.drone-library-specs small{display:block;margin-top:3px;color:#9cbecb;font-size:11px;line-height:1.4}
+.drone-library-empty{margin:12px 0;color:#9cbecb;font-size:13px}
+.drone-library-error{margin:0;color:#ffc7a1;font-size:12px;line-height:1.45}
+.drone-library-error:empty{display:none}
+@media(max-width:700px){
+ .drone-library{width:calc(100vw - 16px);height:calc(100dvh - 20px)}
+ .drone-library .drone-library-header{padding:14px 15px}
+ .drone-library-layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(120px,34%)}
+ .drone-library-filters{padding:10px}
+ .drone-library-list{padding:0 10px 10px}
+ .drone-library-side{border-left:0;border-top:1px solid #294551;padding:9px 12px}
+ .drone-library-detail .drone-library-image{float:left;width:min(31%,115px);margin:0 10px 4px 0}
+}
