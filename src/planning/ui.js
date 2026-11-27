@@ -7,7 +7,7 @@ import {TYPES} from '../sensors/presets.js';
 import {terrainSampler} from '../sensors/terrain-query.js';
 import {flightTelemetry} from './telemetry.js';
 import {createDroneMesh} from './drone-mesh.js';
-import {createVoiceAlarm} from './voice.js';
+import {bindDetectionVoice} from './voice.js';
 import './ui.css';
 const COLORS={radar:0x70d6ff,radio:0xb89aff,optical:0xffd783,acoustic:0x69e2bd};
 const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
@@ -35,18 +35,16 @@ export function mountPlanningUI({app,city,scene,camera,controls,renderer,sensors
  const button=app.querySelector('#toggle-planning');
  const layer=new THREE.Group();layer.name='Deployment_and_Flight';layer.visible=false;scene.add(layer);
  const label=document.createElement('div');label.id='flight-label';label.hidden=true;renderer.domElement.parentElement.append(label);
- const view=renderer.domElement.parentElement,voice=createVoiceAlarm();let groundAt=terrainSampler(model.ground.geometry);
+ const view=renderer.domElement.parentElement;let groundAt=terrainSampler(model.ground.geometry);
  const tooltip=document.createElement('div');tooltip.id='planning-device-tooltip';tooltip.hidden=true;tooltip.setAttribute('role','tooltip');view.append(tooltip);
  const hud=document.createElement('section');hud.id='flight-hud';
- hud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-target"><span id="flight-name">无人机 D-01</span><strong id="flight-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="flight-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="flight-coordinates">—</div></div><div class="ac8-flight-actions"><button id="flight-track" type="button" aria-pressed="false">跟踪无人机</button><button id="flight-voice" type="button" aria-pressed="false">开启语音报警</button></div><div id="flight-voice-status" role="status">语音关闭</div>`;
+ hud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-target"><span id="flight-name">无人机 D-01</span><strong id="flight-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="flight-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="flight-coordinates">—</div></div><div class="ac8-flight-actions"><button id="flight-track" type="button" aria-pressed="false">跟踪无人机</button><button id="flight-voice" type="button" aria-pressed="false">开启语音播报</button><button id="flight-voice-preview" type="button" hidden>试听</button></div><div id="flight-voice-status" role="status">语音关闭</div>`;
  view.append(hud);
  const h=id=>hud.querySelector('#'+id);let deviceMeshes=[],detectedIds=new Set(),pointer=null,telemetry=null;
- h('flight-voice').disabled=!voice.supported;h('flight-voice-status').textContent=voice.supported?'语音关闭':'当前浏览器不支持语音合成';
- window.addEventListener('flight-voice-error',()=>{h('flight-voice-status').textContent='语音播放失败，请检查系统中文语音与浏览器声音设置';});
- function speakCurrent(force=false){if(!telemetry)return;const state=tracker.status==='alarm'?'发现无人机':tracker.status==='coasting'?'无人机信号暂失，正在确认':'无人机当前未检出';voice.announce(tracker.status,`${state}，目标 D 零一。${telemetry.agl===null?'':`离地高度 ${Math.round(telemetry.agl)} 米。`}东经 ${telemetry.longitude.toFixed(4)}，北纬 ${telemetry.latitude.toFixed(4)}。`,{force});}
- h('flight-voice').onclick=()=>{const enabled=voice.setEnabled(!voice.enabled);h('flight-voice').setAttribute('aria-pressed',String(enabled));h('flight-voice').textContent=enabled?'关闭语音报警':'开启语音报警';h('flight-voice-status').textContent=enabled?'语音已启用':'语音关闭';if(enabled&&flight&&!busy)speakCurrent(true);};
+ const getVoiceTarget=()=>({detected:!!flight&&!busy&&tracker.status==='alarm',telemetry:flight&&!busy?telemetry:null});
+ const voice=bindDetectionVoice({toggle:h('flight-voice'),preview:h('flight-voice-preview'),status:h('flight-voice-status'),getTarget:getVoiceTarget});
+ function updateVoice(){const target=getVoiceTarget();voice.update(target.detected,target.telemetry);}
  view.addEventListener('pointermove',event=>{const rect=view.getBoundingClientRect();pointer={x:event.clientX-rect.left,y:event.clientY-rect.top};});view.addEventListener('pointerleave',()=>{pointer=null;tooltip.hidden=true;});
- document.addEventListener('visibilitychange',()=>{if(document.hidden)voice.stop();});
  let report=null,plan=null,flight=null,worker=null,busy=false,playing=false,time=0,lastStamp=0,frameIndex=-1,tracker=new AlarmTracker(),drone=null,coverageMesh=null,alarmLines=null,loadPromise=null,lastCompleted=null,speed=10;
  let hudRetracted=false,hudRetractTimer=null;
  let tracking=false,cameraTween=null,lastFollowStamp=0,trailMesh=null,trailPositions=null,trailUvs=null,trailTexture=null;
@@ -205,7 +203,7 @@ export function mountPlanningUI({app,city,scene,camera,controls,renderer,sensors
   if(direction.lengthSq()>1e-8)drone.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction.normalize());
   refreshTrail();
   const p=drone.position.clone();p.y+=85;camera.updateMatrixWorld();p.project(camera);label.hidden=!active||hudRetracted||p.z<-1||p.z>1||Math.abs(p.x)>1||Math.abs(p.y)>1;
-  const view=renderer.domElement.parentElement;label.style.left=`${(p.x+1)/2*view.clientWidth}px`;label.style.top=`${(1-p.y)/2*view.clientHeight}px`;telemetry=flightTelemetry(drone.position.toArray(),city.metadata.ecefTransform,groundAt);const agl=telemetry.agl===null?'未知':telemetry.agl.toFixed(1);label.textContent=`◎ D-01 · ${tracker.status==='alarm'?'报警':tracker.status==='coasting'?'确认中':'未检出'} · 离地 ${agl} m`;h('flight-agl').textContent=agl;h('flight-coordinates').textContent=`东经 ${telemetry.longitude.toFixed(6)}° · 北纬 ${telemetry.latitude.toFixed(6)}°`;h('flight-live-state').textContent=busy?'正在重算':tracker.status==='alarm'?'已检出 · 报警':tracker.status==='coasting'?'信号确认中':'未检出';h('flight-track').disabled=!drone;hud.dataset.alarm=busy?'clear':tracker.status;hud.classList.toggle('is-visible',!!active&&!hudRetracted);label.dataset.alarm=tracker.status;
+  const view=renderer.domElement.parentElement;label.style.left=`${(p.x+1)/2*view.clientWidth}px`;label.style.top=`${(1-p.y)/2*view.clientHeight}px`;telemetry=flightTelemetry(drone.position.toArray(),city.metadata.ecefTransform,groundAt);const agl=telemetry.agl===null?'未知':telemetry.agl.toFixed(1);label.textContent=`◎ D-01 · ${tracker.status==='alarm'?'报警':tracker.status==='coasting'?'确认中':'未检出'} · 离地 ${agl} m`;h('flight-agl').textContent=agl;h('flight-coordinates').textContent=telemetry.longitude===null?'未知':`东经 ${telemetry.longitude.toFixed(6)}° · 北纬 ${telemetry.latitude.toFixed(6)}°`;h('flight-live-state').textContent=busy?'正在重算':tracker.status==='alarm'?'已检出 · 报警':tracker.status==='coasting'?'信号确认中':'未检出';h('flight-track').disabled=!drone;hud.dataset.alarm=busy?'clear':tracker.status;hud.classList.toggle('is-visible',!!active&&!hudRetracted);label.dataset.alarm=tracker.status;
   $('flight-clock').textContent=`${clock(time)} / ${clock(report.route.duration)}`;
  }
  function installFlight(value){voice.stop();$('planning-progress').value=1;flight=value;time=0;playing=false;tracker=new AlarmTracker();frameIndex=-1;$('flight-summary').replaceChildren();metric($('flight-summary'),'轨迹采样检出比例',percent(flight.summary.detectedFraction));metric($('flight-summary'),'首报 / 失联事件',`${flight.summary.firstDetectionTime===null?'未检出':clock(flight.summary.firstDetectionTime)} / ${flight.summary.lossEvents} 次`);metric($('flight-summary'),'仿真速度 / 计算步长',`${report.route.speed} m/s / ${flight.interval} s`);acceptFrame(0);updatePosition();controlsEnabled();lastCompleted={report,plan,flight};}
@@ -268,7 +266,7 @@ export function mountPlanningUI({app,city,scene,camera,controls,renderer,sensors
   }
   if(!flight)return false;
   if(time>=report.route.duration){time=0;tracker=new AlarmTracker();frameIndex=-1;acceptFrame(0);}
-  playing=true;lastStamp=0;speakCurrent(true);updateDiagnostics();
+  playing=true;lastStamp=0;updatePosition();updateVoice();updateDiagnostics();
   return true;
  }
  function pauseSimulation(){playing=false;lastStamp=0;voice.stop();updateDiagnostics();}
@@ -294,7 +292,7 @@ export function mountPlanningUI({app,city,scene,camera,controls,renderer,sensors
   for(const mesh of deviceMeshes){const p=mesh.position.clone().project(camera);if(p.z<-1||p.z>1)continue;const x=(p.x+1)/2*view.clientWidth,y=(1-p.y)/2*view.clientHeight,d=Math.hypot(pointer.x-x,pointer.y-y);if(d<best){best=d;picked=mesh;}}
   tooltip.hidden=!picked;if(!picked)return;const d=picked.userData.device;tooltip.textContent=`${TYPES[d.type]} · ${d.name}\n${d.id}${detectedIds.has(d.id)&&!busy?'\n● 当前检出无人机 · 闪烁报警':''}`;tooltip.style.left=`${Math.max(8,Math.min(view.clientWidth-260,pointer.x+14))}px`;tooltip.style.top=`${Math.max(8,Math.min(view.clientHeight-90,pointer.y+14))}px`;
  }
- function update(stamp){if(!active)return;for(const rotor of drone?.userData.rotors??[])rotor.rotation.y+=0.42;if(playing&&flight){if(lastStamp)time=Math.min(report.route.duration,time+Math.min(0.2,(stamp-lastStamp)/1000)*speed);lastStamp=stamp;let index=Math.min(flight.frames.length-1,Math.floor(time/flight.interval));if(time>=report.route.duration)index=flight.frames.length-1;if(index!==frameIndex)acceptFrame(index);if(time>=report.route.duration&&playing){playing=false;setStatus('飞行结束，可回放或导出全部报警记录。');scheduleHudRetract();}updateDiagnostics();}else lastStamp=0;updatePosition();followCamera(stamp);updateMarkers(stamp);if(playing&&!document.hidden&&!busy)speakCurrent();updateDiagnostics();}
- function setScene(site){report=null;plan=null;flight=null;lastCompleted=null;loadPromise=null;busy=false;playing=false;stopTracking();cancelCameraTween();hud.classList.remove('is-visible');destroyLayer();groundAt=site?()=>0:terrainSampler(model.ground.geometry);setStatus(site?'当前场景请点击“重新优化”生成部署方案。':'正在读取已计算示例…');updateDiagnostics();}
+ function update(stamp){if(!active)return;for(const rotor of drone?.userData.rotors??[])rotor.rotation.y+=0.42;if(playing&&flight){if(lastStamp)time=Math.min(report.route.duration,time+Math.min(0.2,(stamp-lastStamp)/1000)*speed);lastStamp=stamp;let index=Math.min(flight.frames.length-1,Math.floor(time/flight.interval));if(time>=report.route.duration)index=flight.frames.length-1;if(index!==frameIndex)acceptFrame(index);if(time>=report.route.duration&&playing){playing=false;voice.stop();setStatus('飞行结束，可回放或导出全部报警记录。');scheduleHudRetract();}updateDiagnostics();}else lastStamp=0;updatePosition();followCamera(stamp);updateMarkers(stamp);if(playing)updateVoice();updateDiagnostics();}
+ function setScene(site){voice.stop();telemetry=null;report=null;plan=null;flight=null;lastCompleted=null;loadPromise=null;busy=false;playing=false;stopTracking();cancelCameraTween();hud.classList.remove('is-visible');destroyLayer();groundAt=site?()=>site.custom?null:0:terrainSampler(model.ground.geometry);setStatus(site?'当前场景请点击“重新优化”生成部署方案。':'正在读取已计算示例…');updateDiagnostics();}
  controlsEnabled();return {update,panel,setActive,setScene,startSimulation,pauseSimulation,toggleSimulation,setSpeed,setProgress,getPlayback,getSimulationResult};
 }

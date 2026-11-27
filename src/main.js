@@ -17,6 +17,7 @@ import {mountCustomSites} from './custom-sites.js';
 import {mountHudMenu} from './hud-menu.js';
 import {mountProjectChat} from './project-chat.js';
 import {flightTelemetry} from './planning/telemetry.js';
+import {terrainSampler} from './sensors/terrain-query.js';
 import logoFullUrl from './assets/logo-full.png';
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
@@ -872,6 +873,10 @@ try {
     task3=mountTask3UI({
       app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,
       getActiveModel:()=>mode==='recon'?model:siteParts[mode],
+      getGroundAt:()=>{
+        const ground=mode==='recon'?model.ground:siteParts[mode]?.ground;
+        return ground?terrainSampler(ground.geometry):null;
+      },
       getBuildingContext:getTask3BuildingContext,
       onMapPickMode:active=>{
         mapPicking=active;

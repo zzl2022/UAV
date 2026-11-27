@@ -14,7 +14,7 @@ import {mountBuildingSelector} from './building-selector.js';
 import {normalizeThreatConfig} from './threats.js';
 import {createDroneMesh} from '../planning/drone-mesh.js';
 import {flightTelemetry} from '../planning/telemetry.js';
-import {createVoiceAlarm} from '../planning/voice.js';
+import {bindDetectionVoice} from '../planning/voice.js';
 import './ui.css';
 
 const COLORS={radar:0x70d6ff,radio:0xb89aff,optical:0xffd783,acoustic:0x69e2bd};
@@ -77,11 +77,12 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  view.append(customEditPanel);
  const ce$=id=>customEditPanel.querySelector('#'+id);
  const threatHud=document.createElement('section');threatHud.id='threat-hud';threatHud.hidden=true;
- threatHud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[场景]</span><div class="ac8-flight-target"><span id="threat-name">威胁推演</span><strong id="threat-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-value"><span id="threat-count">—</span><small>架</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="threat-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="threat-coordinates">—</div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[检出]</span><div class="ac8-flight-value"><span id="threat-detected">—</span><small>架</small></div></div><div class="ac8-flight-actions"><button id="threat-track" type="button" aria-pressed="false">跟踪目标</button><button id="threat-voice" type="button" aria-pressed="false">开启语音报警</button></div><div id="threat-voice-status" role="status">语音关闭</div>`;
+ threatHud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[场景]</span><div class="ac8-flight-target"><span id="threat-name">威胁推演</span><strong id="threat-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-value"><span id="threat-count">—</span><small>架</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="threat-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="threat-coordinates">—</div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[检出]</span><div class="ac8-flight-value"><span id="threat-detected">—</span><small>架</small></div></div><div class="ac8-flight-actions"><button id="threat-track" type="button" aria-pressed="false">跟踪目标</button><button id="threat-voice" type="button" aria-pressed="false">开启语音播报</button><button id="threat-voice-preview" type="button" hidden>试听</button></div><div id="threat-voice-status" role="status">语音关闭</div>`;
  view.append(threatHud);
- const threatVoice=createVoiceAlarm();
  const th$=id=>threatHud.querySelector('#'+id);
- if(!threatVoice.supported){th$('threat-voice').disabled=true;th$('threat-voice-status').textContent='当前浏览器不支持语音合成';}
+ let threatDetected=false;
+ const threatVoice=bindDetectionVoice({toggle:th$('threat-voice'),preview:th$('threat-voice-preview'),
+  status:th$('threat-voice-status'),getTarget:()=>({detected:threatDetected,telemetry:lastThreatTelemetry})});
  const contentBox=panel.querySelector('.task3-content');
  const subnav=panel.querySelector('.task3-subnav');
  const equipPane=document.createElement('div');equipPane.className='task3-pane task3-pane-top';equipPane.innerHTML=`<section class="task3-selected-equipment"><h3>装备建模已选型号</h3><div id="task3-equipment"></div><p class="hint">型号随装备建模选择自动更新；优化计算直接采用对应已保存参数，无需在此重复选择。</p></section>`;
@@ -391,25 +392,18 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  }
  function updateThreatHud(frame){
   if(!frame)return;
-  const detected=frame.targets.filter(target=>target.detectedBy.length).length,primary=frame.targets[0]??null;
+  const detectedTargets=frame.targets.filter(target=>target.detectedBy.length);
+  const detected=detectedTargets.length,primary=detectedTargets[0]??frame.targets[0];
+  threatDetected=detected>0;
   th$('threat-name').textContent=threatLabel();
   th$('threat-live-state').textContent=detected?'发现目标 · 报警':primary?'未检出':'待命';
   th$('threat-count').textContent=String(frame.targets.length);
   th$('threat-detected').textContent=String(detected);
   threatHud.dataset.alarm=detected?'alarm':'clear';
-  lastThreatTelemetry=null;
-  if(!primary){th$('threat-agl').textContent='未知';th$('threat-coordinates').textContent='—';return;}
-  let telemetry=null;
-  try{telemetry=flightTelemetry(primary.position,city.metadata?.ecefTransform,threatGroundAt);}catch{}
+  const telemetry=primary?flightTelemetry(primary.position,city.metadata?.ecefTransform,threatGroundAt):null;
   lastThreatTelemetry=telemetry;
   th$('threat-agl').textContent=telemetry?.agl==null?'未知':telemetry.agl.toFixed(1);
-  th$('threat-coordinates').textContent=telemetry?`东经 ${telemetry.longitude.toFixed(6)}° · 北纬 ${telemetry.latitude.toFixed(6)}°`:'—';
-  if(threatVoice.enabled&&!document.hidden){
-   const agl=telemetry?.agl==null?'未知':`${Math.round(telemetry.agl)} 米`;
-   const coordinate=telemetry?`东经 ${telemetry.longitude.toFixed(4)}，北纬 ${telemetry.latitude.toFixed(4)}`:'坐标未知';
-   const message=detected?`${threatLabel()}，发现无人机，目标 ${primary.id}，离地高度 ${agl}，${coordinate}。`:`${threatLabel()}，当前未检出目标。`;
-   threatVoice.announce(detected?`threat-alarm-${primary.id}`:'threat-clear',message);
-  }
+  th$('threat-coordinates').textContent=telemetry?.longitude!=null?`东经 ${telemetry.longitude.toFixed(6)}° · 北纬 ${telemetry.latitude.toFixed(6)}°`:'未知';
  }
  function hideThreatVisuals(){for(const drone of threatDrones.values())drone.visible=false;if(threatDetectLines)threatDetectLines.visible=false;for(const line of threatRouteLines)line.visible=false;}
  function disposeTargets(){
@@ -454,17 +448,17 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   updateDiagnostics();
  }
  function pauseThreatPlayback(){threatPlaying=false;threatLastStamp=0;cancelAnimationFrame(threatRafId);threatVoice.stop();updateDiagnostics();}
- function stopThreatPlayback(){pauseThreatPlayback();hideThreatHud(0);}
+ function stopThreatPlayback(){pauseThreatPlayback();threatDetected=false;lastThreatTelemetry=null;hideThreatHud(0);}
  function threatPlayLoop(stamp){
   if(!threatPlaying)return;
-  const threat=threatForPlan();if(!threat?.frames?.length){threatPlaying=false;return;}
+  const threat=threatForPlan();if(!threat?.frames?.length){stopThreatPlayback();return;}
   if(threatLastStamp)threatFrameTime+=Math.min(.2,(stamp-threatLastStamp)/1000)*threatSpeed;threatLastStamp=stamp;
   for(const drone of targetMeshes)for(const rotor of drone.userData.rotors??[])rotor.rotation.y+=0.42;
   const duration=threat.frames.at(-1).time;
-  if(threatFrameTime>=duration){threatFrameTime=duration;threatPlaying=false;hideThreatHud(1500);updateDiagnostics();}
+  if(threatFrameTime>=duration){threatFrameTime=duration;threatPlaying=false;threatVoice.stop();hideThreatHud(1500);updateDiagnostics();}
   const index=Math.min(threat.frames.length-1,threat.frames.findIndex(frame=>frame.time>=threatFrameTime));
   if(index!==threatFrameIndex&&index>=0){threatFrameIndex=index;installThreatFrame();}
-  if(threatPlaying)threatRafId=requestAnimationFrame(threatPlayLoop);
+  if(threatPlaying){threatVoice.update(threatDetected,lastThreatTelemetry);threatRafId=requestAnimationFrame(threatPlayLoop);}
  }
  function beginThreatPlayback(){
   if(mapSwitching||buildingSelector.diagnostics().active||constraintsInvalid)return false;
@@ -473,7 +467,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   const duration=threat.frames.at(-1).time;
   if(threatFrameTime>=duration){threatFrameTime=0;threatFrameIndex=0;}
   rebuildThreatRoutes();showThreatHud();installThreatFrame();
-  threatPlaying=true;threatLastStamp=0;threatRafId=requestAnimationFrame(threatPlayLoop);
+  threatPlaying=true;threatLastStamp=0;threatVoice.update(threatDetected,lastThreatTelemetry);threatRafId=requestAnimationFrame(threatPlayLoop);
   updateDiagnostics();return true;
  }
  function selectThreatScenario(key){
@@ -491,6 +485,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   $('task3-threat').value=key;renderThreatConfig();
   mapActive=true;updateLayerVisibility();
   if(!threatsForPlan()?.[key]?.frames?.length){
+   threatVoice.stop();threatDetected=false;lastThreatTelemetry=null;
    pendingThreatKey=key;threatFrameIndex=0;threatFrameTime=0;showThreatHud();
    th$('threat-name').textContent=THREAT_SCENARIOS[key].name;th$('threat-live-state').textContent=busy?'等待方案生成':'缺少威胁帧';th$('threat-count').textContent='—';th$('threat-detected').textContent='—';th$('threat-agl').textContent='—';th$('threat-coordinates').textContent='—';threatHud.dataset.alarm='clear';
    setStatus(busy?'威胁帧尚未就绪，请等待本次方案生成完成。':report?'当前方案缺少该场景威胁帧，请重新生成方案。':'尚未生成方案及威胁帧，请先在“推演输入 → 方案生成”中点击“生成方案”。','warning');
@@ -519,7 +514,6 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   const index=threat.frames.findIndex(frame=>frame.time>=threatFrameTime);threatFrameIndex=Math.max(0,Math.min(threat.frames.length-1,index));
   installThreatFrame();
  }
- th$('threat-voice').onclick=()=>{const enabled=threatVoice.setEnabled(!threatVoice.enabled);th$('threat-voice').setAttribute('aria-pressed',String(enabled));th$('threat-voice').textContent=enabled?'关闭语音报警':'开启语音报警';th$('threat-voice-status').textContent=enabled?'语音已启用':'语音关闭';if(enabled){const frame=threatForPlan()?.frames?.[threatFrameIndex];if(frame)updateThreatHud(frame);}};
  function setThreatTracking(enabled){
   threatTracking=enabled;
   th$('threat-track').setAttribute('aria-pressed',String(enabled));
