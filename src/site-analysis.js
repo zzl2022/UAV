@@ -1,6 +1,5 @@
 // Shared adapter: turn a GBA site (JSON + meta) into the city/terrain shape
-// used by the planning and task3 analysis pipelines.  The site ground is flat;
-// local coordinates are the site's local_tmerc metres.
+// used by the planning and task3 analysis pipelines.
 
 export function enuToEcefMatrix(center){
  const lon=center[0]*Math.PI/180,lat=center[1]*Math.PI/180,h=0;
@@ -16,6 +15,9 @@ export function enuToEcefMatrix(center){
 }
 
 export function siteAnalysisMetadata(meta,site){
+ if(meta?.custom){
+  return {...meta,name:site?.label??meta.name,sourceFeatures:meta.buildingCount};
+ }
  const center=meta?.center??[0,0];
  return {
   name:site?.label??meta?.name??meta?.shortName??'站点场景',
@@ -38,6 +40,17 @@ export async function loadSiteCity(site,baseURL){
   fetch(metaURL).then(response=>{if(!response.ok)throw Error(`站点元数据加载失败：HTTP ${response.status}`);return response.json();}),
   fetch(base).then(response=>{if(!response.ok)throw Error(`站点建筑数据加载失败：HTTP ${response.status}`);return response.json();}),
  ]);
+ if(meta.custom||meta.meshType==='json'){
+  if(!Array.isArray(data.buildings)||!data.buildings.length||data.buildings.length!==meta.buildingCount){
+   throw Error('建筑明细数量与自定义模型不一致');
+  }
+  const terrainURL=new URL(`${site.base.replace(/-gba$/,'')}-terrain.json`,baseURL);
+  const response=await fetch(terrainURL);
+  if(!response.ok)throw Error(`自定义模型地形加载失败：HTTP ${response.status}`);
+  const terrain=await response.json();
+  if(!terrain.positions?.length||!terrain.indices?.length)throw Error('自定义模型缺少有效地形网格');
+  return {city:{metadata:siteAnalysisMetadata(meta,site),buildings:data.buildings},terrain,meta};
+ }
  const [x0,x1,z0,z1]=meta.localBounds;
  const terrain={
   positions:[x0,0,z0,x1,0,z0,x1,0,z1,x0,0,z1],

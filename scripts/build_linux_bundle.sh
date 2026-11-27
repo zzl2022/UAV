@@ -18,6 +18,8 @@ cp -a backend "$STAGE/backend"
 cp -a equipment_models "$STAGE/equipment_models"
 cp -a deploy "$STAGE/deploy"
 cp -a requirements.txt "$STAGE/requirements.txt"
+mkdir -p "$STAGE/scripts"
+cp -a scripts/{build_custom_site,prepare_data,imagery}.py "$STAGE/scripts/"
 cp -a 启动平台.sh "$STAGE/启动平台.sh"
 
 echo "==> 删除主界面已移除站点的数据（保留深圳/无锡/杭州）"

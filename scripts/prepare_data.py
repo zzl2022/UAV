@@ -30,6 +30,14 @@ FOOTPRINT_CORRECTIONS = {
 def dump(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':'), allow_nan=False), encoding='utf-8')
 
+def local_enu_point(lon, lat, height, to_ecef, rotation, translation):
+    ecef = np.array(to_ecef.transform(lon, lat, height))
+    enu = rotation.T @ (ecef - translation)
+    return [round(float(enu[0]), 3), round(float(enu[2]), 3), round(float(-enu[1]), 3)]
+
+def dem_cell(raster, to_dem, lon, lat):
+    return raster.index(*to_dem.transform(lon, lat))
+
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
     shp = SOURCE / 'building/zheng_apart.shp'
@@ -45,9 +53,7 @@ def build():
     from_ecef = Transformer.from_crs(4978, 4979, always_xy=True)
     origin = from_ecef.transform(*translation)
     def local(lon, lat, height):
-        ecef = np.array(to_ecef.transform(lon, lat, height))
-        enu = rotation.T @ (ecef - translation)
-        return [round(float(enu[0]), 3), round(float(enu[2]), 3), round(float(-enu[1]), 3)]
+        return local_enu_point(lon, lat, height, to_ecef, rotation, translation)
     shp_crs = CRS.from_wkt(shp.with_suffix('.prj').read_text())
     to_geo = Transformer.from_crs(shp_crs, 4326, always_xy=True)
     cpg = shp.with_suffix('.cpg')
@@ -66,8 +72,7 @@ def build():
         valid_rows, valid_cols = np.where(~mask)
         def sample(lon, lat):
             nonlocal missing_dem, interpolated_dem, max_sample_distance
-            x, y = to_dem.transform(lon, lat)
-            row, col = raster.index(x, y)
+            row, col = dem_cell(raster, to_dem, lon, lat)
             if not (0 <= row < raster.height and 0 <= col < raster.width):
                 missing_dem += 1
                 raise ValueError(f'Building lies outside DEM: {lon}, {lat}')

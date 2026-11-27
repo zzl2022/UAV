@@ -334,8 +334,8 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const table=comparisonTable(scoring,conditions);
  progress({stage:'scoring',completed:1,total:1});
  // ④ 三类威胁场景验证：三套方案分别计算，推荐方案结果同时保留在 report.threats 兼容既有界面。
- const threatKeys=['single','multi','swarm'];
- progress({stage:'threats',completed:0,total:plans.length*threatKeys.length});
+ const threatKeys=city.metadata.custom?[]:['single','multi','swarm'];
+ if(threatKeys.length)progress({stage:'threats',completed:0,total:plans.length*threatKeys.length});
  const threatsByPlan=Object.fromEntries(plans.map(plan=>[plan.id,{}]));
  const scenarioEnv=conditions[0].environment,scenarioTarget={...target,...conditions[0].target};
  let ti=0;
@@ -353,6 +353,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  progress({stage:'emc',completed:1,total:1});
  const report={version:TASK3_VERSION,createdAt:new Date().toISOString(),settings:structuredClone(settings),scope,weights,equipment:PRESETS.filter(p=>presetIds.includes(p.id)).map(p=>({id:p.id,name:p.name,type:p.type})),environment:structuredClone(environment),target:structuredClone(target),origin:city.metadata.origin,inputHashes:city.metadata.sources,sampling,conditions:conditions.map(({id,name})=>({id,name})),candidateCount:candidates.length,siteCount:sites.length,plans,blindspots,scoring,comparison:table,threats,threatsByPlan,emc:emcReports,recommendedId:scoring.recommendedId,deploymentStatus:scoring.recommendationStatus,durationMs:Date.now()-start,limitations:['覆盖率仅针对所列有效空域采样点，不是连续空间无盲区证明。','盲区四分类为几何归因初值，阈值将按多轮仿真统计校订。','威胁推演为运动学逐帧模型，检出全部来自感知模型实判；蜂群容量溢出如实计数。','EMC 为工程代理规则，非频谱合规认证；自动处置仅使用既有模型离散频道和真实候选点，处置后的实际载频/位置已按同一感知模型重算受影响覆盖。','成本为相对成本单位，非人民币报价；施工可行性为重量/尺寸/架设方式/安装高度代理，未实测。']};
  if(scope.clipped)report.limitations.push(scope.note);
+ if(city.metadata.custom)report.limitations[2]='自定义区域用于感知覆盖和电磁兼容仿真。';
  enrichReport(report,city); // 复用 areaEstimates/typeCounts
  // 规则提炼输入：候选池覆盖统计（类型/相对高度/覆盖数）与推荐方案分层盲区，供 rules.js 基于多轮数据统计阈值。
  const siteElevations=sites.map(s=>s.position[1]),sortedElev=[...siteElevations].sort((a,b)=>a-b);

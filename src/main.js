@@ -1,18 +1,19 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {createModel} from './model.js';
+import {buildCityGeometry,buildTerrainGeometry,createModel} from './model.js';
 import {siteImageBounds,siteGroundGeometry,roofHighlightGeometry} from './site-display.js';
 import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountSensorUI} from './sensors/ui.js';
 import {createWorkspace} from './workspace.js';
-import {siteAnalysisMetadata} from './site-analysis.js';
+import {loadSiteCity,siteAnalysisMetadata} from './site-analysis.js';
 import './workspace.css';
 import './ac8-theme.css';
 import {mountIntro} from './intro.js';
 import {createAc8Hud} from './ac8-hud.js';
 import {mountSceneMenu} from './scene-menu.js';
+import {mountCustomSites} from './custom-sites.js';
 import {mountHudMenu} from './hud-menu.js';
 import {mountProjectChat} from './project-chat.js';
 import {flightTelemetry} from './planning/telemetry.js';
@@ -133,7 +134,7 @@ let renderer,model,city,terrain,controls,task3;
 let scene,camera,imageryTexture,imageryMaterial,grid;
 let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
 mountProjectChat(app,()=>({scene:mode,...task3?.getPlanChatContext()}));
-const SITES={
+const BUILTIN_SITES={
   shenzhen:{
     label:'复杂城市——深圳国际交流中心(APEC举办地)',short:'深圳国际交流中心',
     base:'./data/sites/shenzhen/shenzhen-gba',
@@ -152,6 +153,7 @@ const SITES={
     imagery:'./data/sites/hangzhou/hangzhou-imagery.jpg',
   },
 };
+const SITES={...BUILTIN_SITES};
 const viewport=el('viewport');
 const status=text=>{const node=el('status');node.textContent=text;node.hidden=!text;};
 const disableControls=value=>{for (const id of ['buildings','terrain','imagery','reset','top','core-focus','model-select']) el(id).disabled=value;};
@@ -259,15 +261,16 @@ try {
   el('count').textContent=city.metadata.sourceFeatures.toLocaleString('zh-CN');el('height').textContent=city.metadata.maxHeight;
   function updateStatus(){
     const imageError=mode==='recon'?imageryError:siteParts[mode]?.imageryError;
-    status(imageError?'影像底图未能加载，当前显示素色地面。':'');
+    const missingImagery=SITES[mode]?.custom&&!SITES[mode].imagery;
+    status(missingImagery?'该模型未提供影像底图。':imageError?'影像底图未能加载，当前显示素色地面。':'');
   }
   function updateDiagnostics(){
     if(!city||!terrain||!model)return;
-    const sites=Object.fromEntries(Object.keys(SITES).map(id=>[id,{loaded:!!siteGroups[id]?.children.length,buildingCount:siteMeta[id]?.buildingCount??null,maxHeight:siteMeta[id]?.maxHeight??null}]));
-    window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:city.metadata.sourceFeatures},...sites}};
+    const sites=Object.fromEntries(Object.entries(SITES).map(([id,site])=>[id,{loaded:!!siteGroups[id]?.children.length,buildingCount:siteMeta[id]?.buildingCount??site.buildingCount??null,maxHeight:siteMeta[id]?.maxHeight??site.maxHeight??null}]));
+    window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:reconCityMetadata.sourceFeatures},...sites}};
   }
-  function addGround(group,meta,texture,bounds){
-    const geometry=siteGroundGeometry(bounds,meta.baseElevation??0);
+  function addGround(group,meta,texture,bounds,terrainData){
+    const geometry=terrainData?buildTerrainGeometry(terrainData):siteGroundGeometry(bounds,meta.baseElevation??0);
     // The map meets the walls at grade. Depth bias separates coincident bottom faces.
     const surface={side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
     const textureMaterial=texture?new THREE.MeshBasicMaterial({...surface,map:texture}):null;
@@ -279,11 +282,32 @@ try {
     group.add(plane);
     return plane;
   }
+  async function ensureCustomSite(id,site){
+    const {city:siteCity,terrain:terrainData,meta}=await loadSiteCity(site,document.baseURI);
+    if(!meta.custom||meta.meshType!=='json')throw Error('自定义模型的元数据无效');
+    const {geometry,ranges}=buildCityGeometry(siteCity.buildings);
+    const buildings=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:0xc6ccd4,roughness:0.95,side:THREE.DoubleSide}));
+    const group=new THREE.Group();
+    group.name=`${id}_Buildings_DEM`;group.visible=false;group.userData={...siteCity.metadata};group.add(buildings);
+    let texture=null,imageryError=null;
+    if(site.imagery){
+      try{
+        texture=await new THREE.TextureLoader().loadAsync(site.imagery);
+        texture.colorSpace=THREE.SRGBColorSpace;
+        texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+      }catch(error){imageryError=error;}
+    }
+    const ground=addGround(group,meta,texture,meta.localBounds,terrainData);
+    siteMeta[id]=meta;
+    siteParts[id]={group,buildings,ground,ranges,buildingsData:siteCity,imageryError};
+    scene.add(group);siteGroups[id]=group;
+  }
   async function ensureSite(id){
     const site=SITES[id];
     if(!site)return;
     if(siteGroups[id]?.children.length)return;
     status(`正在加载${site.label}…`);
+    if(site.custom)return ensureCustomSite(id,site);
     const buildingData=site.buildings
       ?fetchJSON(site.buildings).catch(error=>{console.warn(`${site.short}建筑明细加载失败`,error);return null;})
       :Promise.resolve(null);
@@ -332,9 +356,9 @@ try {
     const core=meta.coreBuilding,[x,z]=core?.center??[0,0];
     const baseY=core?.rings?.[0]?.[0]?.[1]??0;
     return {
-      model:{group:parts.group,buildings:parts.buildings,ground:parts.ground,ranges:[]},
-      origin:[meta.center?.[0]??0,meta.center?.[1]??0,0],
-      anchor:[x,baseY+(Number(core?.height)||0)+2,z],
+      model:{group:parts.group,buildings:parts.buildings,ground:parts.ground,ranges:parts.ranges??[]},
+      origin:meta.origin??[meta.center?.[0]??0,meta.center?.[1]??0,0],
+      anchor:meta.analysisAnchor??[x,baseY+(Number(core?.height)||0)+2,z],
       meta,
     };
   }
@@ -481,7 +505,7 @@ try {
     applyModeLayers();
     task3?.setScene?.(activeSiteDescriptor());
   }
-  function activeSiteDescriptor(){if(mode==='recon')return null;return {base:SITES[mode].base,label:SITES[mode].label,coreName:siteMeta[mode]?.coreBuilding?.name??SITES[mode].short};}
+  function activeSiteDescriptor(){if(mode==='recon')return null;return {base:SITES[mode].base,label:SITES[mode].label,custom:!!SITES[mode].custom,coreName:siteMeta[mode]?.coreBuilding?.name??SITES[mode].short};}
   async function getTask3BuildingContext(signal){
     const sceneId=mode;
     if(sceneId==='recon')return {sceneKey:'recon',city,model};
@@ -501,9 +525,11 @@ try {
     return {sceneKey:site.base,city:data,model:parts};
   }
   async function setMode(next){
-    if(!(next==='recon'||SITES[next]))return;
-    if(next===mode){frameObject(activeGroup());return;}
-    const select=el('model-select');select.value=next;select.disabled=true;
+    if(!(next==='recon'||SITES[next]))return false;
+    if(next===mode){frameObject(activeGroup());return true;}
+    const select=el('model-select');
+    if(select.disabled)return false;
+    select.value=next;select.disabled=true;
     const hud=window.__ac8Hud;
     const cityWindow=document.querySelector('#city-window');
     const cityOpen=!!cityWindow?.open&&!cityWindow.classList.contains('is-minimized');
@@ -533,7 +559,8 @@ try {
       hud?.prepareScanClip?.();
       if(hud?.playScanReveal)await hud.playScanReveal();
       updateStatus();updateDiagnostics();
-    }catch(error){select.value=mode;status(`模型加载失败：${error.message}`);hud?.endSwitchScan?.();}
+      return true;
+    }catch(error){select.value=mode;status(`模型加载失败：${error.message}`);hud?.endSwitchScan?.();return false;}
     finally{select.disabled=false;task3?.setMapSwitching(false);if(cityOpen)workspace.restoreWindow('city');}
   }
   el('model-select').onchange=()=>setMode(el('model-select').value);
@@ -645,6 +672,13 @@ try {
     emc:emcText(),
   });
   mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
+  mountCustomSites({menu:el('ac8-scene-menu'),select:el('model-select'),switchTo:setMode,register(site){
+    const base=`./data/custom-sites/${site.slug}/${site.slug}`;
+    SITES[site.slug]={custom:true,label:site.name,short:site.name,base:`${base}-gba`,
+      buildings:`${base}-gba.json`,imagery:site.imagery?`${base}-imagery.jpg`:null,
+      buildingCount:site.buildingCount,maxHeight:site.maxHeight};
+    updateDiagnostics();
+  }});
   function restoreOverview(){
     if(['ready','computing'].includes(window.equipmentDemoDiagnostics?.status))return;
     frameObject(activeGroup());

@@ -80,7 +80,7 @@ ssh -i ~/.ssh/uav_server_ed25519 root@182.92.226.203 \
 1. 服务器 SSH 只允许公钥；部署公钥在 `~/.ssh/uav_server_ed25519.pub`，对应私钥在本机 `~/.ssh/uav_server_ed25519`。如不再需要远程维护，可从服务器 `/root/.ssh/authorized_keys` 删除该行。
 2. 阿里云轻量控制台 → 防火墙，放行 **80**（以及可选的 443）。
 3. 当前使用 HTTP + 公网 IP，未配置域名/证书；如绑定域名并走大陆节点，需要按阿里云要求完成 ICP 备案。
-4. 后端只监听 127.0.0.1，公网只能通过 Nginx 的 `/api/capabilities/` 反代访问。
+4. 后端只监听 127.0.0.1，由 Nginx 转发能力、问答和自定义区域请求。
 5. 静态资源缓存：`/assets/` 一年 immutable；`.glb/.jpg/.png` 7 天；`.json` 每次回源校验。
 
 ## 资源与扩容
@@ -88,6 +88,12 @@ ssh -i ~/.ssh/uav_server_ed25519 root@182.92.226.203 \
 - 当前 2C4G 足够 1–20 人演示；20–50 人评审建议先观察 `free -m` 与带宽。
 - 若带宽成为瓶颈，把 `dist/data` 迁到 OSS + CDN，Nginx 只保留页面与 API 反代。
 - 后端依赖 Python 3.11；系统默认 Python 3.6 不要替换，venv 使用 `/usr/bin/python3.11`。
+
+## 自定义区域存储
+
+systemd 将 `UAV_CUSTOM_SITES_DIR` 设为 `/opt/uav/custom-sites`。安装脚本创建该目录，属主为 `uav:uav`，权限为 755。重新安装时保留全部已生成的模型和 `index.json`。备份时将索引与各模型目录一起保存。
+
+Nginx 登录门保护 `/api/sites` 和 `/data/custom-sites/`。后者只允许读取生成的 JSON 和 JPG，文件使用 `Cache-Control: no-cache`，目录禁止列出。变更存储位置时，需同步调整 Nginx 的 `alias`。原始上传和生成日志位于私有暂存目录，过期后由后端清理。更新包包含生成脚本和现有 Python 依赖，自定义数据独立于更新包持久保存。
 
 ## SSH 登录账号
 

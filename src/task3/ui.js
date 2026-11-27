@@ -146,7 +146,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  function applyTab(){
   if(activeTab!=='input'||activeSub!=='weights')stopBuildingSelection();
   const tab=TABS[activeTab];subnav.replaceChildren();
-  for(const [key,name] of tab.subs){const b=document.createElement('button');b.type='button';b.className='task3-subnav-btn';b.dataset.sub=key;b.setAttribute('aria-selected',String(key===activeSub));b.textContent=name;subnav.append(b);}
+  for(const [key,name] of tab.subs){if(key==='threat'&&getSite?.()?.custom)continue;const b=document.createElement('button');b.type='button';b.className='task3-subnav-btn';b.dataset.sub=key;b.setAttribute('aria-selected',String(key===activeSub));b.textContent=name;subnav.append(b);}
   subnav.hidden=!tab.subs.length;
   for(const btn of panel.querySelectorAll('.task3-tabs button'))btn.setAttribute('aria-selected',String(btn.dataset.tab===activeTab));
   for(const pane of contentBox.children)pane.hidden=true;
@@ -601,7 +601,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  }
  function controlsEnabled(){
   $('task3-run-side').disabled=busy||mapSwitching;$('task3-cancel-side').disabled=!busy;for(const id of ['task3-plan','task3-condition'])$(id).disabled=busy||!report;
-  $('task3-custom-route').disabled=busy||constraintsInvalid;$('task3-mobile-repair').disabled=busy||!report||constraintsInvalid;updatePdfVisibility();updateExplanationButton();
+  $('task3-custom-route').disabled=busy||constraintsInvalid||!!getSite?.()?.custom;$('task3-mobile-repair').disabled=busy||!report||constraintsInvalid;updatePdfVisibility();updateExplanationButton();
  }
  function mobileFail(text){worker?.terminate();worker=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;$('task3-mobile-repair').checked=false;restoreMobileRepair();setMobileStatus(`移动补盲失败：${text}`,'error');setStatus('移动补盲未完成，已保留原方案。','error');controlsEnabled();renderAll();publishSimulation();}
  function clearMobileRepairState(){
@@ -690,7 +690,9 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   try{
    const spacing=parseTask3Spacing(spacingInput.value),custom=scopeWidthM!==2400||scopeDepthM!==2400;
    const costs=Object.fromEntries([...app.querySelectorAll('#task3-costs input')].map(input=>[input.dataset.cost,Number(input.value)]));
-   const normalizedThreatConfigs=resolveThreatConfigs();threatConfigs=structuredClone(normalizedThreatConfigs);
+   const customSite=getSite?.()?.custom;
+   const normalizedThreatConfigs=customSite?DEFAULT_THREAT_CONFIGS:resolveThreatConfigs();
+   if(!customSite)threatConfigs=structuredClone(normalizedThreatConfigs);
    const settings=resolveTask3Settings({buildingExclusions:buildingSelector.snapshot(),scope:custom?'custom':'core',scopeWidthM,scopeDepthM,spacing,heights:[30,60,100],siteSpacing:500,maxSites:192,maxDevices:Number($('task3-max-devices').value),budget:Number($('task3-budget').value),costs,threatConfigs:normalizedThreatConfigs,coreRadius:700,coreWeight:3,marginReserveDb:3});
    const equipmentSnapshot=sensors.getEquipmentSnapshot(),presetIds=renderEquipmentSelection(equipmentSnapshot);
    snapshot=createTask3RequestSnapshot({settings,weights,presetIds,equipmentSnapshot,scenarioSnapshot:sensors.getScenarioSnapshot(),planTypes});
@@ -812,6 +814,8 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  };
  function setScene(site){
   const key=site?.base??'recon';if(key===task3SceneKey)return;task3SceneKey=key;
+  if(site?.custom&&activeSub==='threat')activeSub='scope';
+  generatePane.querySelector('.hint').textContent=site?.custom?'自定义区域支持覆盖评估、方案对比和电磁兼容分析。':'选择一套或多套方案后生成；未勾选的方案不会进入方案对比、威胁验证和 PDF 导出。';
   resetCustomEditing();customDefaultSingles=new Map();
   stopBuildingSelection();buildingError='';buildingSelector.refresh();constraintsInvalid=false;selectedDevices.clear();
   activePipelineRequest=null;lastRequestSnapshot=null;worker?.terminate();worker=null;
@@ -823,7 +827,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   for(const count of panel.querySelectorAll('#task3-blind-legend [data-count]'))count.textContent='';
   const scopeStatus=$('task3-scope-status');
   scopeStatus.textContent='生成方案后显示当前场景范围。';scopeStatus.dataset.tone='';
-  $('task3-progress-side').value=0;setStatus(site?'场景已切换，请重新推演。':'待命');controlsEnabled();updateDiagnostics();
+  $('task3-progress-side').value=0;setStatus(site?'场景已切换，请重新推演。':'待命');applyTab();controlsEnabled();updateDiagnostics();
  }
  rebuildThreatGround();applyTab();renderThreatConfig();renderEquipmentSelection();controlsEnabled();updateDiagnostics();
  function setMapSwitching(value){

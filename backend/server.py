@@ -4,7 +4,9 @@ from collections import defaultdict, deque
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import logging
 from pathlib import Path
+import shutil
 import sys
 import threading
 import time
@@ -13,6 +15,7 @@ from urllib.parse import urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend import auth, project_chat
 from backend.capabilities import CapabilityService
+from backend.sites import ID, SiteError, SiteService
 
 MAX_LOGIN_FAILURES = 5
 LOGIN_WINDOW_SECONDS = 600
@@ -44,7 +47,7 @@ def _clear_login_failures(ip):
         _attempts.pop(ip, None)
 
 
-def make_handler(service):
+def make_handler(service, sites=None):
     class Handler(BaseHTTPRequestHandler):
         def reply(self, status, data, headers=None):
             body = json.dumps(data, ensure_ascii=False, allow_nan=False).encode('utf-8')
@@ -75,6 +78,61 @@ def make_handler(service):
                 return True
             self.reply(401, {'error': '未登录或登录已过期'})
             return False
+
+        def custom_sites(self, method, path):
+            if not sites or not (path == '/api/sites' or path.startswith(('/api/sites/', '/data/custom-sites/'))):
+                return False
+            if not self.require_auth():
+                return True
+            try:
+                if method == 'GET' and path.startswith('/data/custom-sites/'):
+                    parts = path.split('/')
+                    if len(parts) != 5:
+                        raise SiteError('自定义模型文件不存在', 404)
+                    asset = sites.asset(parts[3], parts[4])
+                    with asset.open('rb') as source:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'image/jpeg' if asset.suffix == '.jpg'
+                                         else 'application/json; charset=utf-8')
+                        self.send_header('Content-Length', str(asset.stat().st_size))
+                        self.send_header('Cache-Control', 'no-cache')
+                        self.end_headers()
+                        shutil.copyfileobj(source, self.wfile, length=1024 * 1024)
+                elif method == 'GET' and path == '/api/sites':
+                    self.reply(200, {'sites': sites.list_sites()})
+                elif method == 'POST' and path == '/api/sites/uploads':
+                    self.reply(201, sites.create())
+                else:
+                    parts = path.split('/', 5)
+                    if len(parts) < 5 or not ID.fullmatch(parts[4]):
+                        raise SiteError('自定义模型接口或会话不存在', 404)
+                    resource, uid = parts[3:5]
+                    if method == 'PUT' and resource == 'uploads' and len(parts) == 6:
+                        self.connection.settimeout(60)
+                        self.reply(201, sites.put_file(uid, parts[5], self.headers.get('Content-Length'), self.rfile))
+                    elif method == 'POST' and resource == 'uploads' and parts[5:] == ['build']:
+                        data = self.read_json()
+                        if not isinstance(data, dict):
+                            raise SiteError('需要包含模型名称的请求')
+                        self.reply(202, sites.start(uid, data.get('name')))
+                    elif method == 'DELETE' and resource == 'uploads' and len(parts) == 5:
+                        self.reply(200, sites.cancel(uid))
+                    elif method == 'GET' and resource == 'builds' and len(parts) == 5:
+                        self.reply(200, sites.state(uid))
+                    else:
+                        raise SiteError('自定义模型接口不存在', 404)
+            except SiteError as exc:
+                self.reply(exc.status, {'error': str(exc)})
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                pass
+            except TimeoutError:
+                self.reply(408, {'error': '上传等待超时，请重新选择文件并生成'})
+            except ValueError:
+                self.reply(400, {'error': '模型请求内容无效，请检查后重试'})
+            except OSError:
+                logging.exception('自定义模型存储错误')
+                self.reply(500, {'error': '模型存储暂时不可用，请稍后重试'})
+            return True
 
         def project_chat(self):
             key = project_chat.api_key()
@@ -117,6 +175,8 @@ def make_handler(service):
 
         def do_GET(self):
             path = urlsplit(self.path).path
+            if self.custom_sites('GET', path):
+                return
             if path == '/api/auth/check':
                 if self.authenticated():
                     self.reply(200, {'ok': True})
@@ -152,6 +212,8 @@ def make_handler(service):
 
         def do_POST(self):
             path = urlsplit(self.path).path
+            if self.custom_sites('POST', path):
+                return
             if path == '/api/auth/login':
                 if not auth.enabled():
                     self.reply(503, {'error': '网站登录尚未配置'})
@@ -194,6 +256,14 @@ def make_handler(service):
                 return
             self.reply(404, {'error': '接口不存在'})
 
+        def do_PUT(self):
+            if not self.custom_sites('PUT', urlsplit(self.path).path):
+                self.reply(404, {'error': '接口不存在'})
+
+        def do_DELETE(self):
+            if not self.custom_sites('DELETE', urlsplit(self.path).path):
+                self.reply(404, {'error': '接口不存在'})
+
     return Handler
 
 
@@ -205,7 +275,8 @@ def main():
         service = CapabilityService()
     except FileNotFoundError:
         parser.exit(1, '请先执行 python scripts/prepare_data.py 生成 public/data/city.json\n')
-    server = ThreadingHTTPServer(('127.0.0.1', args.port), make_handler(service))
+    sites = SiteService()
+    server = ThreadingHTTPServer(('127.0.0.1', args.port), make_handler(service, sites))
     print(f'光电／声学 Python 服务：http://127.0.0.1:{args.port}', flush=True)
     try:
         server.serve_forever()
@@ -213,6 +284,7 @@ def main():
         pass
     finally:
         server.server_close()
+        sites.close()
 
 
 if __name__ == '__main__':

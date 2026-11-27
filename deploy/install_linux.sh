@@ -49,12 +49,16 @@ id -u uav >/dev/null 2>&1 || useradd --system --home-dir "$APP_DIR" --shell /sbi
 
 echo "==> 部署代码到 $APP_DIR"
 mkdir -p "$APP_DIR"
+install -d -o uav -g uav -m 0755 "$APP_DIR/custom-sites"
+install -d -o uav -g uav -m 0700 "$APP_DIR/.custom-sites-work"
 rm -rf "$APP_DIR/dist" "$APP_DIR/backend" "$APP_DIR/equipment_models" "$APP_DIR/deploy"
 cp -a "$SRC_DIR/dist" "$APP_DIR/"
 cp -a "$SRC_DIR/backend" "$APP_DIR/"
 cp -a "$SRC_DIR/equipment_models" "$APP_DIR/"
 cp -a "$SRC_DIR/deploy" "$APP_DIR/"
 cp -a "$SRC_DIR/requirements.txt" "$APP_DIR/"
+install -d "$APP_DIR/scripts"
+cp -a "$SRC_DIR/scripts/"{build_custom_site,prepare_data,imagery}.py "$APP_DIR/scripts/"
 [ -f "$SRC_DIR/启动平台.sh" ] && cp -a "$SRC_DIR/启动平台.sh" "$APP_DIR/"
 
 # The backend reads public/data/city.json; dist already contains the same data.
@@ -77,10 +81,12 @@ print('optical/acoustic model imports OK')
 PYCHECK
 
 echo "==> 权限与 SELinux"
-chown -R uav:uav "$APP_DIR"
-chmod -R a+rX "$APP_DIR"
+chown uav:uav "$APP_DIR"
+chmod a+rX "$APP_DIR"
+find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name custom-sites ! -name .custom-sites-work \
+  -exec chown -R uav:uav {} + -exec chmod -R a+rX {} +
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" != "Disabled" ]; then
-  chcon -R -t httpd_sys_content_t "$WEB_ROOT" || true
+  chcon -R -t httpd_sys_content_t "$WEB_ROOT" "$APP_DIR/custom-sites" "$APP_DIR/.custom-sites-work" || true
   setsebool -P httpd_can_network_connect 1 || true
 fi
 

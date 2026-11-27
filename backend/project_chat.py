@@ -72,13 +72,13 @@ def upstream_payload(data):
     if not isinstance(data, dict):
         raise ValueError('请求格式有误。')
     scene = data.get('scene')
-    if not isinstance(scene, str) or scene not in SCENES:
+    if not isinstance(scene, str) or (scene not in SCENES and not re.fullmatch(r'custom-[0-9a-f]{32}', scene)):
         raise ValueError('无法识别当前场景。')
     messages = data.get('messages')
     if not isinstance(messages, list) or not 1 <= len(messages) <= 9 or len(messages) % 2 == 0:
         raise ValueError('对话长度有误。')
     summary = json.dumps(summarize_plan(data.get('plan')), ensure_ascii=False, separators=(',', ':'))
-    payload = [{'role': 'system', 'content': f'{PROJECT_GUIDE}\n当前地图：{SCENES[scene]}。\n本轮方案摘要：{summary}'}]
+    payload = [{'role': 'system', 'content': f'{PROJECT_GUIDE}\n当前地图：{SCENES.get(scene, "自定义模型")}。\n本轮方案摘要：{summary}'}]
     for index, item in enumerate(messages):
         role = 'assistant' if index % 2 else 'user'
         limit = 8000 if role == 'assistant' else 1200

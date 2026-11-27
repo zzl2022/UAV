@@ -8,6 +8,7 @@ User=uav
 Group=uav
 WorkingDirectory=/opt/uav
 Environment=PYTHONUNBUFFERED=1
+Environment=UAV_CUSTOM_SITES_DIR=/opt/uav/custom-sites
 EnvironmentFile=-/etc/uav/uav-web.env
 ExecStart=/opt/uav/.venv/bin/python -u backend/server.py --port 8765
 Restart=always
