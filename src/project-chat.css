@@ -5,11 +5,17 @@
   right: max(20px, env(safe-area-inset-right));
   bottom: max(var(--project-chat-bottom), calc(env(safe-area-inset-bottom) + 12px));
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
   color: #deedf4;
   font-size: 13px;
+}
+
+.project-chat.has-custom-position {
+  right: auto;
+  bottom: auto;
+}
+
+.project-chat-dragging {
+  user-select: none;
 }
 
 .project-chat button:focus-visible,
@@ -23,7 +29,7 @@
   align-items: center;
   gap: 9px;
   min-height: 44px;
-  padding: 9px 13px;
+  padding: 8px 13px;
   border: 1px solid #4b93a6;
   border-radius: 22px;
   background: #0c2b3d;
@@ -31,7 +37,12 @@
   box-shadow: 0 4px 20px #0009;
   font-size: 13px;
   font-weight: 650;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+
+.project-chat.is-dragging .project-chat__toggle { cursor: grabbing; }
 
 .project-chat__toggle:hover,
 .project-chat__toggle[aria-expanded="true"] {
@@ -39,38 +50,28 @@
 }
 
 .project-chat__icon {
-  display: grid;
-  position: relative;
-  place-items: center;
-  width: 18px;
-  height: 14px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.project-chat__icon::after {
-  content: "";
-  position: absolute;
-  bottom: -4px;
-  left: 3px;
-  width: 4px;
-  height: 4px;
-  border-left: 1px solid currentColor;
-  transform: skewY(-36deg);
+  display: block;
+  flex: 0 0 26px;
 }
 
 .project-chat__panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: min(370px, calc(100vw - 40px));
-  height: min(460px, calc(100dvh - var(--project-chat-bottom) - 68px));
+  height: min(460px, var(--project-chat-panel-space, 400px));
   border: 1px solid #366577;
   border-radius: 14px;
   background: #071923;
   box-shadow: 0 20px 56px #000a;
   overflow: hidden;
+}
+
+.project-chat__panel.opens-below {
+  top: calc(100% + 10px);
+  bottom: auto;
 }
 
 .project-chat [hidden] {
@@ -210,6 +211,5 @@
     right: max(12px, env(safe-area-inset-right));
   }
 
-  .project-chat__panel { width: min(370px, calc(100vw - 24px)); }
   .project-chat__form textarea { font-size: 16px; }
 }
