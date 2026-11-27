@@ -17,7 +17,7 @@ try{
  await waitInfo('equipmentConfig',equipment);
  assert.equal((await info('equipmentConfig').textContent()).trim(),equipment);
  assert.doesNotMatch(await info('equipmentConfig').textContent(),/(^|\s)\d+\s*台|[/·]/);
- for(const fragment of ['范围 2400 × 2400 m','网格 500 m','预算 600','设备上限 64','威胁 单机单点入侵','8 架','速度 15 m/s'])await waitInfo('deploymentInput',fragment);
+ for(const fragment of ['范围 2400 × 2400 m','网格 500 m','预算 600','设备上限 64','威胁 单机单点入侵','1 架','速度 15 m/s'])await waitInfo('deploymentInput',fragment);
  for(const key of ['planComparison','blindAnalysis','emc'])await waitInfo(key,'尚未生成');
 
  await page.locator('#toggle-deployment').click();

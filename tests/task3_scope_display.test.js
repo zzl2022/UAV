@@ -39,11 +39,13 @@ test('task3 scope: 自定义矩形贯穿真实流水线、运行记录和威胁�
  const inside=position=>position[0]>=b.west&&position[0]<b.east&&position[2]>=b.south&&position[2]<b.north;
  assert.ok(report.sampling.samples.length>0);assert.ok(report.sampling.samples.every(p=>inside(p.position)));
  for(const plan of report.plans){assert.ok(plan.devices.every(d=>inside(d.position)));assert.ok(plan.sites.every(s=>inside(s.position)));}
- // 威胁从矩形边缘外 150 m 起飞：东西向宽度与南北向深度分别生效。
+ // 威胁从矩形边缘外 1000 m 起飞并穿越核心：东西向宽度与南北向深度分别生效。
  const flat={groundAt:()=>0,surfaceAt:()=>0,trace:()=>({blocked:false,clearance:0})};
  const north=buildRadialRoute(flat,b,{azimuthDeg:0,aglM:45,speedMps:15,id:'north'}),east=buildRadialRoute(flat,b,{azimuthDeg:90,aglM:45,speedMps:15,id:'east'});
- assert.ok(Math.abs(north.points[0].position[2]-(b.south-150))<1e-9);
- assert.ok(Math.abs(east.points[0].position[0]-(b.east+150))<1e-9);
+ assert.ok(Math.abs(north.points[0].position[2]-(b.south-1000))<1e-9);
+ assert.ok(Math.abs(east.points[0].position[0]-(b.east+1000))<1e-9);
+ assert.ok(Math.abs(north.points.at(-1).position[2]-(b.north+1000))<1e-9);
+ assert.ok(Math.abs(east.points.at(-1).position[0]-(b.west-1000))<1e-9);
 },{timeout:60000});
 
 test('task3 scope: 非法范围、无有效采样点和完全超出 DEM 均明确报错',async()=>{

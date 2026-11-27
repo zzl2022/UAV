@@ -24,24 +24,43 @@ function finalizeRoute(query,positions,speedMps,startDelayS){
  return {points,duration:points.at(-1).time,length,repairs,blockedSegments};
 }
 
-// 从 bounds 边缘沿方位角直线飞向 core 中心；方位角定义与 engine.angles 一致（北为 0°，顺时针）。
-export function buildRadialRoute(query,bounds,{azimuthDeg,aglM,speedMps,id,lateralOffsetM=0,startDelayS=0}){
- const core=bounds.core,a=azimuthDeg*DEG,dx=Math.sin(a),dz=-Math.cos(a);
+const LAUNCH_BUFFER_M=1000;
+function distanceToBounds(x,z,bounds){
+ return Math.hypot(Math.max(bounds.west-x,0,x-bounds.east),Math.max(bounds.south-z,0,z-bounds.north));
+}
+function rayExit(core,dx,dz,bounds){
  let edge=Infinity;
  if(dx>1e-9)edge=Math.min(edge,(bounds.east-core[0])/dx);if(dx<-1e-9)edge=Math.min(edge,(bounds.west-core[0])/dx);
  if(dz>1e-9)edge=Math.min(edge,(bounds.north-core[2])/dz);if(dz<-1e-9)edge=Math.min(edge,(bounds.south-core[2])/dz);
+ return edge;
+}
+// 来向角为核心指向起点的方位角（北 0°，顺时针）；自动航线穿过核心至起点的对称位置。
+export function buildRadialRoute(query,bounds,{azimuthDeg,aglM,speedMps,id,startDelayS=0}){
+ const core=bounds.core,a=azimuthDeg*DEG,dx=Math.sin(a),dz=-Math.cos(a);
+ const edge=rayExit(core,dx,dz,bounds);
  if(!Number.isFinite(edge)||edge<=0)throw Error('核心区不在 bounds 内，无法生成径向航路');
- const radius=edge+150,px=Math.cos(a),pz=Math.sin(a);
- const sx=core[0]+dx*radius+px*lateralOffsetM,sz=core[2]+dz*radius+pz*lateralOffsetM,ex=core[0],ez=core[2];
- const length2d=Math.hypot(ex-sx,ez-sz),n=Math.max(1,Math.ceil(length2d/STEP)),positions=[];let skipped=0;
- for(let i=0;i<=n;i++){
-  const f=i/n,x=sx+(ex-sx)*f,z=sz+(ez-sz)*f,ground=query.groundAt(x,z);
-  if(ground===null){skipped++;continue;}
+ // 按到矩形范围的最短水平距离求 1 km 外扩，斜向和非正方形范围也采用同一口径。
+ const cornerRadius=Math.hypot(Math.max(Math.abs(bounds.west-core[0]),Math.abs(bounds.east-core[0])),Math.max(Math.abs(bounds.south-core[2]),Math.abs(bounds.north-core[2])));
+ let low=edge,high=cornerRadius+LAUNCH_BUFFER_M;
+ for(let i=0;i<60;i++){const middle=(low+high)/2;if(distanceToBounds(core[0]+dx*middle,core[2]+dz*middle,bounds)<LAUNCH_BUFFER_M)low=middle;else high=middle;}
+ const requestedRadius=high,mapBounds=query.getDataBounds?.()?.dem;
+ if(mapBounds&&(core[0]<mapBounds.west||core[0]>mapBounds.east||core[2]<mapBounds.south||core[2]>mapBounds.north))throw Error('核心目标不在有效地图范围内，无法生成自动航线');
+ const startRadius=Math.min(requestedRadius,mapBounds?rayExit(core,dx,dz,mapBounds):Infinity);
+ const endRadius=Math.min(startRadius,mapBounds?rayExit(core,-dx,-dz,mapBounds):Infinity);
+ const positions=[];let skipped=0;
+ const append=radius=>{
+  const x=core[0]+dx*radius,z=core[2]+dz*radius,ground=query.groundAt(x,z);
+  if(!Number.isFinite(ground)){skipped++;return;}
   const surface=query.surfaceAt(x,z);
   positions.push([x,Math.max(ground+aglM,(surface??ground)+CLEARANCE),z]);
- }
+ };
+ // 分成入场、离场两段采样，保证核心点本身也在航线上；地图不足时仅截断越界部分。
+ const incoming=Math.max(1,Math.ceil(startRadius/STEP)),outgoing=Math.max(1,Math.ceil(endRadius/STEP));
+ for(let i=0;i<incoming;i++)append(startRadius*(1-i/incoming));
+ append(0);
+ for(let i=1;i<=outgoing;i++)if(endRadius>0)append(-endRadius*i/outgoing);
  if(positions.length<2)throw Error(`径向航路 ${id} 全段无有效地形点（跳过 ${skipped} 点）`);
- return {id,azimuthDeg,...finalizeRoute(query,positions,speedMps,startDelayS),speed:speedMps,startDelayS,skipped,notes:'直线径向入侵航路；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
+ return {id,azimuthDeg,...finalizeRoute(query,positions,speedMps,startDelayS),speed:speedMps,aglM,startDelayS,skipped,launch:{requestedBufferM:LAUNCH_BUFFER_M,actualBufferM:distanceToBounds(positions[0][0],positions[0][2],bounds),clippedByMap:startRadius<requestedRadius-1e-6,startRadiusM:startRadius,endRadiusM:endRadius},notes:'按来向角直线穿越核心至对称位置；起点距部署范围 1000 m，起终点受有效地图边界限制；高程取 max(地面+agl, 表面+25)，坡度包络 ±1/3，建筑阻挡抬升；不是真实导航方案。'};
 }
 
 // 用户路点接受 [x,z] 或 [x,y,z]；输入 y 不参与飞行高度，高度统一由当前地形、AGL 与表面净空计算。
@@ -76,6 +95,7 @@ export function normalizeThreatConfig(scenarioKey,config={}){
  const defaults=Object.hasOwn(DEFAULT_THREAT_CONFIGS,scenarioKey)?DEFAULT_THREAT_CONFIGS[scenarioKey]:null;if(!defaults)throw Error(`未知威胁场景 ${scenarioKey}`);
  if(!config||typeof config!=='object'||Array.isArray(config))throw Error(`威胁场景 ${scenarioKey} 配置必须是对象`);
  const s={...defaults,...config},l=THREAT_CONFIG_LIMITS;
+ if(scenarioKey==='single'&&(s.count!==1||s.directions!==1||!Array.isArray(s.azimuthsDeg)||s.azimuthsDeg.length!==1||!Array.isArray(s.aglM)||s.aglM.length!==1))throw Error('单机单点入侵只能设置 1 架目标、1 个来向和1个离地高度');
  if(!Number.isInteger(s.count)||s.count<l.minCount||s.count>l.maxCount)throw Error(`威胁场景 ${scenarioKey} 数量必须是 ${l.minCount}–${l.maxCount} 的整数`);
  if(!Number.isInteger(s.directions)||s.directions<l.minDirections||s.directions>l.maxDirections||s.directions>s.count)throw Error(`威胁场景 ${scenarioKey} 方位数必须是 ${l.minDirections}–${l.maxDirections} 且不超过总数量的整数`);
  if(!Array.isArray(s.azimuthsDeg)||s.azimuthsDeg.length!==s.directions)throw Error(`威胁场景 ${scenarioKey} 必须提供与方位数一致的攻击来向方位角数组`);
@@ -86,15 +106,15 @@ export function normalizeThreatConfig(scenarioKey,config={}){
  return {count:s.count,directions:s.directions,azimuthsDeg:s.azimuthsDeg.map(a=>Object.is(a,-0)?0:a),aglM:[...s.aglM],speedMps:s.speedMps,simultaneous:defaults.simultaneous};
 }
 
-// 总架数均分到各方位，余数从第一个方位依次加一；蜂群保留横向铺开和方向内 2 秒错峰。
+// 总架数均分到各方位，余数从第一个方位依次加一；所有自动航线穿越核心，蜂群按方向内 2 秒错峰。
 export function buildThreatRoutes(query,bounds,scenarioKey,config){
- const s=normalizeThreatConfig(scenarioKey,config),routes=[],offsets=[0,30,-30,60,-60];
+ const s=normalizeThreatConfig(scenarioKey,config),routes=[];
  const base=Math.floor(s.count/s.directions),remainder=s.count%s.directions;
  for(let d=0;d<s.directions;d++){
   const directionCount=base+(d<remainder?1:0);
   for(let k=0;k<directionCount;k++){
    const swarm=scenarioKey==='swarm';
-   routes.push(buildRadialRoute(query,bounds,{azimuthDeg:s.azimuthsDeg[d],aglM:s.aglM[(d+k)%s.aglM.length],speedMps:s.speedMps,id:`${scenarioKey}-${d+1}-${k+1}`,lateralOffsetM:swarm?offsets[k%offsets.length]:0,startDelayS:swarm?k*2:0}));
+   routes.push(buildRadialRoute(query,bounds,{azimuthDeg:s.azimuthsDeg[d],aglM:s.aglM[(d+k)%s.aglM.length],speedMps:s.speedMps,id:`${scenarioKey}-${d+1}-${k+1}`,startDelayS:swarm?k*2:0}));
   }
  }
  return routes;

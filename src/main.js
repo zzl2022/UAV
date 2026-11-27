@@ -624,7 +624,9 @@ try {
     const threat=report?.threatsByPlan?.[threatPlanId]?.swarm??(threatPlanId===report?.recommendedId?report?.threats?.swarm:null);
     if(!threat?.summary)return '蜂群验证 尚未生成';
     const summary=threat.summary,detected=(threat.perTarget??[]).filter(row=>row.firstDetectionTime!==null).length;
-    const source=plan?.derivation?'（原方案，派生未重算）':'';
+    const review=report?.finalMobileThreatRevalidated;
+    const finalReviewed=review?.planId===plan?.id&&JSON.stringify(review?.deviceIds)===JSON.stringify(plan?.devices?.map(d=>d.id));
+    const source=plan?.derivation?(finalReviewed?'（最终组合已重算）':'（原方案，派生未重算）'):'';
     return `蜂群验证${source} ${summary.targetCount??0} 架 · 检出 ${detected} 架 · 平均首报 ${summary.meanFirstDetectionTime==null?'—':`${summary.meanFirstDetectionTime.toFixed(1)} s`} · 容量溢出 ${summary.overflowedTargets??0} 架`;
   }
   function planComparisonText(){
@@ -739,6 +741,7 @@ try {
   function updateSimulationBar(){
     if(!task3)return;
     const state=currentPlayback();
+    if(simScenario&&['single','multi','swarm'].includes(state.key)&&simScenario.value!==state.key)simScenario.value=state.key;
     simStart.disabled=!!state.busy;
     simStart.textContent=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
     simStart.dataset.playing=String(!!state.playing);

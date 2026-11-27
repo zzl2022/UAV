@@ -39,11 +39,11 @@ const plans=Object.entries(deviceSets).map(([id,devices],index)=>({
  areaEstimates:Object.fromEntries(conditions.map(condition=>[condition.id,[30,60,100].map((height,hindex)=>({height,validGridCells:100+hindex*20,blindGridCells:10+hindex*3,approximateBlindAreaMeters2:(10+hindex*3)*250000}))])),
  derivation:null,
 }));
-const threatKeys=['single','multi','swarm'],scenarioTarget={single:8,multi:4,swarm:42};
+const threatKeys=['single','multi','swarm'],scenarioTarget={single:1,multi:4,swarm:42};
 const threatsFor=(plan,index)=>Object.fromEntries(threatKeys.map((key,kindex)=>[key,{
  summary:{targetCount:scenarioTarget[key],meanFirstDetectionTime:5+index+kindex,meanDetectedFraction:0.82-index*0.05,minDetectedFraction:0.42-index*0.05,overflowEvents:key==='swarm'?3:0,overflowedTargets:key==='swarm'?3:0},
  perTarget:Array.from({length:Math.min(6,scenarioTarget[key])},(_,slot)=>({id:`${plan.id}-${key}-t${slot+1}`,firstDetectionTime:slot%3===2?null:2+slot,detectedFraction:1-slot*0.08,lossEvents:slot%3===2?1:0})),
- config:{count:scenarioTarget[key],directions:key==='single'?8:key==='multi'?4:3,azimuthsDeg:[0,90,180],aglM:[30,60],speedMps:15,simultaneous:key!=='single'},
+ config:{count:scenarioTarget[key],directions:key==='single'?1:key==='multi'?4:3,azimuthsDeg:key==='single'?[0]:key==='multi'?[0,90,180,270]:[0,120,240],aglM:key==='single'?[30]:[30,60],speedMps:15,simultaneous:key!=='single'},
  text:`${key} 场景逐帧实判汇总`,
 }]));
 const emcFor=(plan,index)=>{

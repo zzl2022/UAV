@@ -56,6 +56,20 @@ try{
  const customState=()=>page.evaluate(()=>window.task3Diagnostics.customEditor);
 
  await openInput();
+ await page.locator('#task3-panel [data-sub="threat"]').click();
+ assert.equal(await page.locator('#task3-threat-count').inputValue(),'1');
+ assert.equal(await page.locator('#task3-threat-count').evaluate(el=>el.readOnly),true);
+ assert.equal(await page.locator('#task3-threat-azimuths').inputValue(),'0');
+ assert.equal(await page.locator('#task3-threat-agl').inputValue(),'30');
+ await page.locator('#task3-threat').selectOption('multi');
+ assert.equal(await page.locator('#task3-threat-count').inputValue(),'4');
+ assert.equal(await page.locator('#task3-threat-count').evaluate(el=>el.readOnly),false);
+ await page.locator('#task3-threat').selectOption('single');
+ await page.locator('#task3-threat-count').evaluate(el=>{el.value='8';el.dispatchEvent(new Event('input',{bubbles:true}));});
+ assert.equal(await page.locator('#task3-threat-count').inputValue(),'1');
+ await page.locator('#task3-threat-defaults').click();
+ assert.equal(await page.locator('#task3-threat-count').inputValue(),'1');
+ await page.screenshot({path:'artifacts/task3/single-one-target.png'});
  await page.locator('#task3-panel [data-sub="generate"]').click();
  await page.locator('#task3-run-side').click();
  await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
@@ -65,7 +79,7 @@ try{
   const report=window.__task3Report,planId=window.task3Diagnostics.planId,byPlan=report.threatsByPlan[planId];
   return {planId,recommendedId:report.recommendedId,singleSummary:structuredClone(byPlan.single.summary),singleRoutes:byPlan.single.routes.map(route=>route.id),multiSummary:structuredClone(byPlan.multi.summary),swarmSummary:structuredClone(byPlan.swarm.summary)};
  });
- assert.equal(baseline.singleSummary.targetCount,8);
+ assert.equal(baseline.singleSummary.targetCount,1);
  await page.locator('#task3-custom-route').click();
  await page.locator('#task3-custom-editor').waitFor({state:'visible'});
  assert.equal(await page.locator('#task3-custom-editor .task3-custom-hint').textContent(),'右键功能暂时无效，当前左键替代原右键功能');
@@ -167,7 +181,7 @@ try{
  await openThreat();await page.locator('#task3-threat-defaults').click();
  await page.waitForFunction(()=>!window.__task3Report.threatsByPlan[window.task3Diagnostics.planId].single.custom);
  const restored=await page.evaluate(planId=>{const single=window.__task3Report.threatsByPlan[planId].single;return {summary:single.summary,routeIds:single.routes.map(route=>route.id),azimuths:single.config.azimuthsDeg};},baseline.planId);
- assert.deepEqual(restored.summary,baseline.singleSummary);assert.deepEqual(restored.routeIds,baseline.singleRoutes);assert.deepEqual(restored.azimuths,[0,45,90,135,180,225,270,315]);
+ assert.deepEqual(restored.summary,baseline.singleSummary);assert.deepEqual(restored.routeIds,baseline.singleRoutes);assert.deepEqual(restored.azimuths,[0]);
  await closeDeployment();await page.locator('#ac8-sim-scenario').selectOption('single');await page.locator('#ac8-sim-speed').selectOption('1');await page.locator('#ac8-sim-start').click();
  await page.waitForFunction(routeId=>window.task3Diagnostics.threatPlaying&&window.task3Diagnostics.threatRouteCount===1&&window.task3Diagnostics.threatTargets[0]?.id===routeId,baseline.singleRoutes[0],{timeout:30000});
  await page.locator('#ac8-sim-start').click();await page.waitForFunction(()=>!window.task3Diagnostics.threatPlaying);

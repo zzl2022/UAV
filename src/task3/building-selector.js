@@ -57,5 +57,10 @@ export function mountBuildingSelector({canvas,camera,controls,scene,getContext,c
  canvas.addEventListener('pointercancel',release,true);canvas.addEventListener('lostpointercapture',()=>{gesture=null;},true);
  window.addEventListener('blur',()=>setActive(false));window.addEventListener('keydown',event=>{if(event.key==='Escape'&&active){event.preventDefault();setActive(false);}});
  function snapshot(){return {sceneKey:context?.sceneKey??'recon',buildingIds:[...current()].flatMap(id=>index?.componentById.get(id)?.buildingIds??[]).sort()};}
- return {refresh,setActive,snapshot,clear(){if(!current().size)return;current().clear();changed();},diagnostics(){return {active,sceneKey:context?.sceneKey??'recon',count:current().size,buildingIds:snapshot().buildingIds,highlightedBuildings:layer.children.length?current().size:0};}};
+ function restore(value){
+  refresh();if(!value||value.sceneKey!==context?.sceneKey||!Array.isArray(value.buildingIds))throw Error('禁部署清单与当前地图不一致');
+  const next=new Set();for(const id of value.buildingIds){const c=index?.componentById.get(id);if(!c)throw Error(`当前地图没有建筑 ${id}`);next.add(c.id);}
+  selections.set(context.sceneKey,next);changed();
+ }
+ return {refresh,setActive,snapshot,restore,clear(){if(!current().size)return;current().clear();changed();},diagnostics(){return {active,sceneKey:context?.sceneKey??'recon',count:current().size,buildingIds:snapshot().buildingIds,highlightedBuildings:layer.children.length?current().size:0};}};
 }
