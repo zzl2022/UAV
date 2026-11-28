@@ -19,10 +19,11 @@ export function advanceRecordedFrame(frames,index,time){
 
 export function createRecordedPlaybackVisuals(layer){
  const drones=new Map(),targets=[],routes=[],detectedIds=new Set(),targetDetectors=new Set();
- const prevPositions=new Map(),nextPositions=new Map();
+ const prevPositions=new Map(),nextPositions=new Map(),followingPositions=new Map(),motionById=new Map();
  const direction=new THREE.Vector3(),previous=new THREE.Vector3(),forward=new THREE.Vector3(0,0,1);
  const allocations={geometries:0,materials:0};
  let record=null,devices=null,lines=null,segmentCount=0;
+ let sampleTime=0,sampleInterval=0,lastBlend=0;
 
  function collectResources(object,geometries,materials){
   object.traverse(mesh=>{
@@ -50,7 +51,8 @@ export function createRecordedPlaybackVisuals(layer){
   release(lines?[...drones.values(),...routes,lines]:[...drones.values(),...routes]);
   record=null;devices=null;lines=null;segmentCount=0;
   routes.length=0;targets.length=0;drones.clear();detectedIds.clear();
-  prevPositions.clear();nextPositions.clear();targetDetectors.clear();
+  prevPositions.clear();nextPositions.clear();followingPositions.clear();motionById.clear();targetDetectors.clear();
+  sampleInterval=0;
  }
  function select(nextRecord){
   if(record===nextRecord)return;
@@ -80,6 +82,8 @@ export function createRecordedPlaybackVisuals(layer){
    if(drones.has(target.id))continue;
    const drone=createDroneMesh();
    drone.scale.setScalar(5);drone.userData.targetId=target.id;drone.visible=false;
+   motionById.set(target.id,{from:new THREE.Vector3(),fromRotation:new THREE.Quaternion(),toRotation:new THREE.Quaternion(),
+    to:null,firstVertex:0,vertexLimit:0});
    drones.set(target.id,drone);add(drone);
   }
   const capacity=devices.size*drones.size;
@@ -93,21 +97,33 @@ export function createRecordedPlaybackVisuals(layer){
  }
  function install(index){
   const frames=record.frames,frame=frames[index];
-  prevPositions.clear();nextPositions.clear();
+  const nextFrame=frames[index+1],followingFrame=frames[index+2];
+  sampleTime=frame.time;sampleInterval=nextFrame?nextFrame.time-frame.time:0;lastBlend=0;
+  prevPositions.clear();nextPositions.clear();followingPositions.clear();
   for(const target of frames[Math.max(0,index-1)].targets)prevPositions.set(target.id,target.position);
-  for(const target of frames[Math.min(frames.length-1,index+1)].targets)nextPositions.set(target.id,target.position);
+  if(nextFrame)for(const target of nextFrame.targets)nextPositions.set(target.id,target.position);
+  if(followingFrame)for(const target of followingFrame.targets)followingPositions.set(target.id,target.position);
   for(const drone of targets)drone.visible=false;
   targets.length=0;detectedIds.clear();
   const position=lines?.geometry.getAttribute('position');
   let vertex=0;
   for(const target of frame.targets){
-   const drone=drones.get(target.id),next=nextPositions.get(target.id),prev=prevPositions.get(target.id);
+   const drone=drones.get(target.id),motion=motionById.get(target.id);
+   const next=nextPositions.get(target.id),prev=prevPositions.get(target.id);
    drone.visible=true;drone.position.fromArray(target.position);targets.push(drone);
+   motion.from.copy(drone.position);motion.to=next??null;
    direction.set(0,0,0);
    if(next)direction.fromArray(next).sub(drone.position);
    if(direction.lengthSq()<1e-6&&prev)direction.copy(drone.position).sub(previous.fromArray(prev));
    if(direction.lengthSq()>1e-6)drone.quaternion.setFromUnitVectors(forward,direction.normalize());
    else drone.quaternion.identity();
+   motion.fromRotation.copy(drone.quaternion);motion.toRotation.copy(drone.quaternion);
+   const following=followingPositions.get(target.id);
+   if(next&&following){
+    direction.fromArray(following).sub(previous.fromArray(next));
+    if(direction.lengthSq()>1e-6)motion.toRotation.setFromUnitVectors(forward,direction.normalize());
+   }
+   motion.firstVertex=vertex+1;
    targetDetectors.clear();
    for(const detector of target.detectedBy){
     detectedIds.add(detector.id);
@@ -117,15 +133,44 @@ export function createRecordedPlaybackVisuals(layer){
     position.setXYZ(vertex++,device.position[0],device.position[1],device.position[2]);
     position.setXYZ(vertex++,target.position[0],target.position[1],target.position[2]);
    }
+   motion.vertexLimit=vertex;
   }
   segmentCount=vertex/2;
   if(lines){
    lines.visible=vertex>0;lines.geometry.setDrawRange(0,vertex);
-   if(vertex>0){position.clearUpdateRanges();position.addUpdateRange(0,vertex*3);position.needsUpdate=true;}
+   if(vertex>0)uploadLinePositions(position);
   }
   return frame;
  }
- return {clear,select,prepare,install,drones,targets,routes,detectedIds,allocations,
+ function uploadLinePositions(position){
+  position.clearUpdateRanges();position.addUpdateRange(0,segmentCount*6);position.needsUpdate=true;
+ }
+ function present(time){
+  if(sampleInterval<=0)return;
+  const blend=THREE.MathUtils.clamp((time-sampleTime)/sampleInterval,0,1);
+  if(blend===lastBlend)return;
+  lastBlend=blend;
+  const position=lines?.geometry.getAttribute('position');
+  let movedLines=false;
+  for(const drone of targets){
+   const motion=motionById.get(drone.userData.targetId);
+   if(!motion.to)continue;
+   const {from,to}=motion;
+   drone.position.set(from.x+(to[0]-from.x)*blend,from.y+(to[1]-from.y)*blend,from.z+(to[2]-from.z)*blend);
+   drone.quaternion.slerpQuaternions(motion.fromRotation,motion.toRotation,blend);
+   if(!position||motion.firstVertex>=motion.vertexLimit)continue;
+   for(let vertex=motion.firstVertex;vertex<motion.vertexLimit;vertex+=2){
+    position.setXYZ(vertex,drone.position.x,drone.position.y,drone.position.z);
+   }
+   movedLines=true;
+  }
+  if(movedLines)uploadLinePositions(position);
+ }
+ function copyRecordedPose(id,position,quaternion){
+  const motion=motionById.get(id);
+  motion.from.toArray(position);motion.fromRotation.toArray(quaternion);
+ }
+ return {clear,select,prepare,install,present,copyRecordedPose,drones,targets,routes,detectedIds,allocations,
   get record(){return record;},
   get lines(){return lines;},
   get segmentCount(){return segmentCount;},

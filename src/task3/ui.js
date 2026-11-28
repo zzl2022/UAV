@@ -183,6 +183,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  let buildingLoad=null,buildingError='';
  const selectedDevices=new Set();
  let threatPlaying=false,threatFrameIndex=0,threatFrameTime=0,threatLastStamp=0,threatDuration=0,threatSpeed=10;
+ document.addEventListener('visibilitychange',()=>{threatLastStamp=0;});
  let threatHudTimer=null,pendingThreatKey=null,threatGroundAt=null,threatTracking=false,lastThreatTelemetry=null;
  const playbackVisuals=createRecordedPlaybackVisuals(layer);
  const deviceById=new Map(),deviceMeshById=new Map(),activeHalos=new Map(),changedHalos=new Set();
@@ -510,9 +511,9 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  }
  function threatPlayLoop(stamp){
   playbackDiagnosticsDirty=true;
-  if(threatLastStamp)threatFrameTime=Math.min(threatDuration,threatFrameTime+Math.min(.2,(stamp-threatLastStamp)/1000)*threatSpeed);
+  const elapsed=threatLastStamp?Math.max(0,(stamp-threatLastStamp)/1000):0;
+  threatFrameTime=Math.min(threatDuration,threatFrameTime+elapsed*threatSpeed);
   threatLastStamp=stamp;
-  for(const drone of playbackVisuals.targets)for(const rotor of drone.userData.rotors)rotor.rotation.y+=0.42;
   const measureStarted=performance.now();
   const index=advanceRecordedFrame(playbackVisuals.record.frames,threatFrameIndex,threatFrameTime);
   playbackPerf.frameAdvanceMs+=performance.now()-measureStarted;
@@ -520,6 +521,8 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    playbackPerf.frameAdvances+=index-threatFrameIndex;
    threatFrameIndex=index;installThreatFrame();
   }
+  playbackVisuals.present(threatFrameTime);
+  for(const drone of playbackVisuals.targets)for(const rotor of drone.userData.rotors)rotor.rotation.y+=elapsed*25.2;
   if(threatFrameTime>=threatDuration){
    pauseThreatPlayback(false);hideThreatHud(1500);
   }else threatVoice.update(threatDetected,lastThreatTelemetry);
@@ -539,7 +542,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   const {geometries,materials}=playbackVisuals.allocations;
   playbackAllocationStart.geometries=geometries;playbackAllocationStart.materials=materials;
   playbackPerf.frameAdvances=0;playbackPerf.frameAdvanceMs=0;
-  showThreatHud();installThreatFrame();flushThreatHud(performance.now(),true);
+  showThreatHud();installThreatFrame();playbackVisuals.present(threatFrameTime);flushThreatHud(performance.now(),true);
   threatPlaying=true;threatLastStamp=0;threatVoice.update(threatDetected,lastThreatTelemetry);
   updateDiagnostics();return true;
  }
@@ -679,7 +682,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    const id=mesh.userData.targetId;
    let target=targetDiagnostics.get(id);
    if(!target){target={id,position:[],quaternion:[]};targetDiagnostics.set(id,target);}
-   mesh.position.toArray(target.position);mesh.quaternion.toArray(target.quaternion);targets[index++]=target;
+   playbackVisuals.copyRecordedPose(id,target.position,target.quaternion);targets[index++]=target;
   }
   for(const id of changedHalos)updateHaloDiagnostic(id);
   for(const id of activeHalos.keys())updateHaloDiagnostic(id);
@@ -998,7 +1001,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   if(value){deviceDemo.stop();resetCustomEditing();stopBuildingSelection();setThreatTracking(false);stopThreatPlayback();pendingThreatKey=null;}
   controlsEnabled();updateLayerVisibility();updateDiagnostics();
  }
- return {panel,layer,setStatus,setScene,setMapSwitching,getPlanChatContext,showTab(id){if(!TABS[id])return;activeTab=id;activeSub=TABS[id].subs[0]?.[0]??null;applyTab();},setMapActive(value){mapActive=!!value;if(!mapActive){deviceDemo.stop();resetCustomEditing();stopBuildingSelection();}updateLayerVisibility();updateDiagnostics();},selectThreatScenario,startThreatSimulation,pauseThreatSimulation,getThreatPlayback,getThreatResult,setThreatSpeed,setThreatProgress,renderDeviceDemo:deviceDemo.render,update(stamp){
+ return {panel,layer,setStatus,setScene,setMapSwitching,getPlanChatContext,showTab(id){if(!TABS[id])return;activeTab=id;activeSub=TABS[id].subs[0]?.[0]??null;applyTab();},setMapActive(value){mapActive=!!value;if(!mapActive){deviceDemo.stop();resetCustomEditing();stopBuildingSelection();}updateLayerVisibility();updateDiagnostics();},selectThreatScenario,startThreatSimulation,pauseThreatSimulation,getThreatPlayback,getThreatResult,setThreatSpeed,setThreatProgress,renderDeviceDemo:deviceDemo.render,isPlayingRecordedFlight:()=>threatPlaying,update(stamp){
   if(threatPlaying)threatPlayLoop(stamp);
   if(layer.visible){
    if(activeHalos.size){

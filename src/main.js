@@ -21,6 +21,8 @@ import {mountUiToast} from './ui-toast.js';
 import {flightTelemetry} from './planning/telemetry.js';
 import {terrainSampler} from './sensors/terrain-query.js';
 import {CATALOG_TYPES} from './sensors/equipment-models.js';
+import {createPlaybackBuildingBatches} from './task3/playback-building-batches.js';
+import {createPlaybackMapCache} from './task3/playback-map-cache.js';
 import logoFullUrl from './assets/logo-full.png';
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
@@ -172,14 +174,19 @@ try {
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x000000,0);renderer.localClippingEnabled=true;
   viewport.appendChild(renderer.domElement);
   scene=new THREE.Scene();scene.background=null;
+  const playbackBuildings=createPlaybackBuildingBatches();
   coreHighlight=new THREE.Group();coreHighlight.name='Core_Building_Highlight';scene.add(coreHighlight);
   const draftCoreHighlight=new THREE.Group();draftCoreHighlight.name='Draft_Core_Highlight';scene.add(draftCoreHighlight);
   neighborHighlight=new THREE.Group();neighborHighlight.name='Core_Neighbor_Highlight';scene.add(neighborHighlight);
   coreLabel=document.createElement('button');coreLabel.id='core-label';coreLabel.className='map-landmark';coreLabel.hidden=true;viewport.append(coreLabel);coreLabel.onclick=()=>focusCore();
   camera=new THREE.PerspectiveCamera(42,1,1,100000);
   controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.49;controls.maxDistance=90000;controls.minDistance=20;
-  scene.add(new THREE.HemisphereLight(0xd9efff,0x63757b,2.3));
+  const ambient=new THREE.HemisphereLight(0xd9efff,0x63757b,2.3);scene.add(ambient);
   const sun=new THREE.DirectionalLight(0xffeed5,3);sun.position.set(-4000,8000,3000);scene.add(sun);
+  const renderPlaybackSurfaces=buildings=>{
+    if(!playbackBuildings.render(renderer,scene,camera,buildings))renderer.render(scene,camera);
+  };
+  const playbackMap=createPlaybackMapCache({renderer,scene,camera,lights:[ambient,sun],renderSurfaces:renderPlaybackSurfaces});
   [city,terrain]=await Promise.all([fetchJSON('./data/city.json'),fetchJSON('./data/terrain.json')]);
   const reconCityMetadata=city.metadata;
   status('正在生成建筑与地形网格…');
@@ -488,6 +495,7 @@ try {
     if(visible){coreLabel.style.left=`${(point.x+1)/2*viewport.clientWidth}px`;coreLabel.style.top=`${(1-point.y)/2*viewport.clientHeight}px`;}
   }
   function applyModeLayers(){
+    playbackMap.invalidate();
     const showBuildings=el('buildings').checked;
     const showTerrain=el('terrain').checked;
     const showImagery=el('imagery').checked;
@@ -515,6 +523,7 @@ try {
     el('imagery').disabled=mode==='recon'?!imageryMaterial:!siteParts[mode]?.ground?.userData.textureMaterial;
   }
   function applyModeUI(next){
+    playbackBuildings.clear();playbackMap.clear();
     // Restore the metadata before rendering the panel: switching back to recon
     // used to read the previous site metadata because this assignment came later.
     if(next==='recon')city.metadata=reconCityMetadata;
@@ -601,12 +610,22 @@ try {
   let sensors;
   const landmarks=mountLandmarks({city,scene,camera,controls,viewport,tweenCamera});
   const museumFocus=el('museum-focus');if(museumFocus)el('city-views').append(museumFocus);
-  let lastHudStamp=0;
+  const slowFrameSeconds=.055,slowFramesRequired=3;
+  let lastHudStamp=0,consecutiveSlowFrames=0,usePlaybackMapCache=false;
   renderer.setAnimationLoop(stamp=>{
     const dt=lastHudStamp?Math.min(.1,(stamp-lastHudStamp)/1000):0;lastHudStamp=stamp;
+    consecutiveSlowFrames=dt>slowFrameSeconds?Math.min(consecutiveSlowFrames+1,slowFramesRequired):0;
     controls.update();landmarks.update();updateCoreLabel();task3?.update?.(stamp);
     window.__ac8Hud?.update?.(dt);
-    if(!task3?.renderDeviceDemo()&&!sensors?.render())renderer.render(scene,camera);
+    if(!task3?.renderDeviceDemo()&&!sensors?.render()){
+      if(!task3?.isPlayingRecordedFlight())usePlaybackMapCache=false;
+      else if(consecutiveSlowFrames===slowFramesRequired)usePlaybackMapCache=true;
+      if(!usePlaybackMapCache)renderer.render(scene,camera);
+      else{
+        const parts=mode==='recon'?model:siteParts[mode];
+        if(!playbackMap.render(parts?.buildings,parts?.ground))renderPlaybackSurfaces(parts?.buildings);
+      }
+    }
     window.__ac8Hud?.render?.();
   });
   disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeUI(mode);updateStatus();

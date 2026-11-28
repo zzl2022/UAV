@@ -11,9 +11,13 @@ const gpuArgs=hardware?['--enable-gpu','--ignore-gpu-blocklist',...(process.plat
 const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox',...gpuArgs]});
 const duration=Number(process.env.UAV_REPLAY_BENCH_MS)||4800;
 const scenario=process.env.UAV_REPLAY_BENCH_SCENARIO==='multi'?'multi':'single';
+const fixtureSeconds=Math.max(66,Math.ceil(duration/1000)+20);
 try{
  const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
+ page.on('console',message=>{
+  if(/THREE\.WebGLProgram: Shader Error|WebGL: INVALID_(?:OPERATION|FRAMEBUFFER_OPERATION)/.test(message.text()))errors.push(message.text());
+ });
  await page.route(/\/src\/task3\/ui\.js(?:\?.*)?$/,async route=>{
   const response=await route.fetch();
   let source=await response.text();
@@ -26,15 +30,15 @@ try{
   let diagnosticCalls=0,gpu;
   return {
    diagnosticCall(){diagnosticCalls++;},
-   prepare(scenario){
+   prepare(scenario,seconds){
     // 仅为此测试页面注入渲染样例，应用、部署报告和后台计算不会读取这些数据。
     const devices=Array.from({length:16},(_,i)=>({id:'demo-'+i,type:'radar',presetId:'radar-02c',position:[(i%4-1.5)*88,110,(Math.floor(i/4)-1.5)*88]}));
-    const frames=Array.from({length:661},(_,i)=>({time:i/10,targets:Array.from({length:3},(_,j)=>({
+    const frames=Array.from({length:seconds*10+1},(_,i)=>({time:i/10,targets:Array.from({length:3},(_,j)=>({
       id:'sample-'+j,position:[180*Math.sin(i/170+j),160+40*j,180*Math.cos(i/170+j)],
       detectedBy:devices.map(({id})=>({id})),
     }))}));
     const coverage={covered:1,total:1,coverageRate:1,blindRate:0,coreCoverageRate:1,coreRedundantRate:0};
-    plan={id:'ui-fixture',name:'界面测试样例',devices,sites:[],metrics:[{...coverage,condition:'nominal'},{...coverage,condition:'other'}]};
+    plan={id:'ui-fixture',name:'界面测试样例',devices,sites:[],cost:0,metrics:[{...coverage,condition:'nominal'},{...coverage,condition:'other'}]};
     report={plans:[plan],recommendedId:plan.id,conditions:[{id:'nominal',name:'界面测试'},{id:'other',name:'备用测试工况'}],
       sampling:{bounds:{core:[0,85,0]}},settings:{coreRadius:180},comparison:{rows:[]},scoring:{plans:[{id:plan.id,indicators:{feasibility:1}}]},
       blindspots:{[plan.id]:[]},emc:{[plan.id]:{verdict:'pass',counts:{fail:0,warning:0}}},threatsByPlan:{[plan.id]:{[scenario]:{frames}}}};
@@ -46,10 +50,14 @@ try{
    },
    read(){
     if(!gpu){const gl=renderer.getContext(),info=gl.getExtension('WEBGL_debug_renderer_info');gpu=info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);}
-    return {diagnosticCalls,playing:threatPlaying,frame:threatFrameIndex,
-      targets:[...(typeof playbackVisuals==='undefined'?threatDrones:playbackVisuals.drones).values()].map(mesh=>mesh.id),
-      line:(typeof playbackVisuals==='undefined'?threatDetectLines:playbackVisuals.lines)?.geometry.id??null,
-      geometries:renderer.info.memory.geometries,
+    const visuals=typeof playbackVisuals==='undefined'?null:playbackVisuals;
+    const display=visuals?.targets[0]?.position,saved=visuals?.record?.frames?.[threatFrameIndex]?.targets[0]?.position;
+    return {diagnosticCalls,playing:threatPlaying,frame:threatFrameIndex,playbackTime:threatFrameTime,
+      interpolated:!!(display&&saved&&Math.abs(display.x-saved[0])+Math.abs(display.y-saved[1])+Math.abs(display.z-saved[2])>1e-6),
+      targets:[...(visuals?visuals.drones:threatDrones).values()].map(mesh=>mesh.id),
+      line:(visuals?visuals.lines:threatDetectLines)?.geometry.id??null,
+      geometries:renderer.info.memory.geometries,triangles:renderer.info.render.triangles,
+      groundVisible:typeof getActiveModel==='function'?getActiveModel()?.ground?.visible:undefined,
       gpu};
    },
   };
@@ -59,17 +67,21 @@ try{
  });
  await page.goto(url.href,{timeout:120000});
  await page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.__uavReplayFixture&&window.task3Diagnostics,null,{timeout:180000});
- assert.equal(await page.evaluate(scenario=>window.__uavReplayFixture.prepare(scenario),scenario),true);
+ assert.equal(await page.evaluate(({scenario,fixtureSeconds})=>window.__uavReplayFixture.prepare(scenario,fixtureSeconds),{scenario,fixtureSeconds}),true);
  await page.waitForFunction(()=>window.__uavReplayFixture.read().frame>=3,{},{timeout:15000});
+ if(duration>=60000)await page.waitForTimeout(2500);
  const metrics=await page.evaluate(async duration=>{
   const fixture=window.__uavReplayFixture,initial=fixture.read();
   const targetIds=new Set(initial.targets),lineIds=new Set([initial.line]),intervals=[];
-  let final,peakTargets=initial.targets.length,minGeometries=initial.geometries,maxGeometries=initial.geometries;
+  let final,firstPlaybackTime,interpolated=false;
+  let peakTargets=initial.targets.length,minGeometries=initial.geometries,maxGeometries=initial.geometries;
   const elapsed=await new Promise(resolve=>{
    let start=null,last=null;
    function tick(stamp){
     start??=stamp;if(last!==null)intervals.push(stamp-last);last=stamp;
     final=fixture.read();
+    firstPlaybackTime??=final.playbackTime;
+    interpolated||=final.interpolated;
     for(const id of final.targets)targetIds.add(id);
     lineIds.add(final.line);
     minGeometries=Math.min(minGeometries,final.geometries);maxGeometries=Math.max(maxGeometries,final.geometries);
@@ -81,6 +93,7 @@ try{
   const fps=intervals.length*1000/elapsed,longFrames=intervals.filter(ms=>ms>100).length;
   return {durationMs:elapsed,fps,longFrames,maxFrameMs:Math.max(...intervals),diagnosticsHz:(final.diagnosticCalls-initial.diagnosticCalls)*1000/elapsed,
     distinctTargets:targetIds.size,distinctLineGeometries:lineIds.size,peakTargets,minGeometries,maxGeometries,frameAdvances:final.frame-initial.frame,
+    interpolated,playbackSeconds:final.playbackTime-firstPlaybackTime,lastRenderTriangles:final.triangles,
     gpu:final.gpu,perf:window.task3Diagnostics.perf??null};
  },duration);
  assert.deepEqual(errors,[]);
@@ -94,21 +107,38 @@ try{
   assert.ok(metrics.perf&&metrics.perf.hudUpdatesPerSecond<=10&&metrics.perf.playbackGeometryCreations===0&&metrics.perf.playbackMaterialCreations===0);
   assert.equal(metrics.perf.targetMeshCount,3);assert.equal(metrics.perf.detectionLineGeometryCount,1);
   assert.ok(metrics.perf.frameAdvances>0&&metrics.perf.frameAdvanceMs>=0);
+  assert.equal(metrics.interpolated,true);
+  assert.ok(Math.abs(metrics.playbackSeconds*1000-metrics.durationMs)<100);
   if(hardware){assert.doesNotMatch(metrics.gpu,/SwiftShader|software|llvmpipe/i);assert.ok(metrics.fps>=45);assert.equal(metrics.longFrames,0);}
   if(duration>=60000)assert.equal(metrics.minGeometries,metrics.maxGeometries);
   const screenshot=duration>=60000?(hardware?'replay-hardware-60s.png':'replay-60s.png'):(hardware?'replay-hardware.png':'replay-after.png');
-  await page.screenshot({path:`artifacts/uav-ux/${screenshot}`});
+  await page.screenshot({path:process.env.UAV_REPLAY_BENCH_SCREENSHOT||`artifacts/uav-ux/${screenshot}`});
+  if(duration<10000){
+   const terrain=page.locator('#terrain');
+   for(const show of [false,true]){
+    const before=await page.evaluate(()=>window.__uavReplayFixture.read());
+    await terrain.evaluate((input,show)=>{input.checked=show;input.dispatchEvent(new Event('change',{bubbles:true}));},show);
+    await page.waitForFunction(({show,triangles})=>{
+     const state=window.__uavReplayFixture.read();return state.groundVisible===show&&state.triangles!==triangles;
+    },{show,triangles:before.triangles},{timeout:15000});
+    assert.deepEqual((await page.evaluate(()=>window.__uavReplayFixture.read())).targets,before.targets);
+   }
+  }
   const beforeCondition=await page.evaluate(()=>window.__uavReplayFixture.read());
-  await page.locator('#task3-condition').evaluate(select=>{select.value='other';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  const condition=await page.locator('#task3-condition').evaluate(select=>{
+   select.value='other';select.dispatchEvent(new Event('change',{bubbles:true}));
+   return {value:select.value,options:Array.from(select.options,option=>option.value),reported:window.task3Diagnostics.condition};
+  });
   const afterCondition=await page.evaluate(()=>window.__uavReplayFixture.read());
-  assert.equal(await page.evaluate(()=>window.task3Diagnostics.condition),'other');
+  assert.deepEqual(errors,[]);
+  assert.equal(condition.reported,'other',JSON.stringify(condition));
   assert.equal(afterCondition.playing,true);
   assert.deepEqual(afterCondition.targets,beforeCondition.targets);assert.equal(afterCondition.line,beforeCondition.line);
   const playback=page.locator('#ac8-sim-start'),progress=page.locator('#ac8-sim-progress');
   await playback.click();
   assert.equal(await page.evaluate(()=>window.task3Diagnostics.threatPlaying),false);
   const beforeSeek=await page.evaluate(()=>window.__uavReplayFixture.read());
-  for(const [progressValue,frame] of [[500,330],[0,0]]){
+  for(const [progressValue,frame] of [[500,fixtureSeconds*5],[0,0]]){
    await progress.evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},progressValue);
    const state=await page.evaluate(()=>window.__uavReplayFixture.read());
    assert.equal(state.frame,frame);assert.deepEqual(state.targets,beforeSeek.targets);assert.equal(state.line,beforeSeek.line);
