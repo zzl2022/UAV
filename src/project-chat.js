@@ -1,4 +1,5 @@
 import './project-chat.css';
+import policePortrait from './assets/project-chat-police.png';
 
 const endpoint = '/api/project-chat';
 const positionKey = 'uav.project-chat.position.v1';
@@ -125,7 +126,6 @@ function positionChat(root, toggle, panel, simulationBar) {
     document.body.classList.remove('project-chat-dragging');
     if (toggle.hasPointerCapture(event.pointerId)) toggle.releasePointerCapture(event.pointerId);
     if (suppressClick) save();
-    event.stopPropagation();
   }
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) toggle.addEventListener(type, endDrag);
   toggle.addEventListener('click', event => {
@@ -170,22 +170,19 @@ export function mountProjectChat(app, getContext) {
         <button class="project-chat__send" type="submit" disabled>发送</button>
       </form>
     </div>
-    <button class="project-chat__toggle" type="button" aria-controls="project-chat-panel" aria-expanded="false" title="拖动移动，双击复位">
-      <svg class="project-chat__icon" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" focusable="false">
-        <path d="M4 25v-2.2c0-3.1 3-5.3 6.2-5.3h5.6c3.2 0 6.2 2.2 6.2 5.3V25Z" fill="#163c68" stroke="#7fb6e3"/>
-        <path d="m9.5 18.5 3.5 4 3.5-4" fill="#c5ecff" stroke="#c5ecff" stroke-linejoin="round"/>
-        <path d="m13 21-1.1 1.5.5 2h1.2l.5-2Z" fill="#3988dc"/>
-        <path d="M7.1 10h11.8v3.7a5.9 5.9 0 0 1-11.8 0Z" fill="#ffce9f" stroke="#603b37" stroke-width=".85"/>
-        <path d="M5 10.2c.1-2.8 1.4-5.4 3.2-6.7L13 1.8l4.8 1.7c1.8 1.3 3.1 3.9 3.2 6.7Z" fill="#296cb1" stroke="#9bdcff" stroke-width=".95" stroke-linejoin="round"/>
-        <path d="m13 4.5 1.9.7-.2 1.7L13 8.3l-1.7-1.4-.2-1.7Z" fill="#ffdc7e"/>
-        <path d="M6.1 9.2h13.8l.7 1.7c-4.6 1.5-10.6 1.5-15.2 0Z" fill="#142a50" stroke="#77baeb" stroke-width=".7"/>
-        <path d="M10.4 13.4v.3m5.2-.3v.3m-4 1.8c.8.8 2 .8 2.8 0" fill="none" stroke="#503238" stroke-width="1" stroke-linecap="round"/>
-        <path d="m18.5 21 .9.5-.2 1-.7.5-.7-.5-.2-1Z" fill="#ffdc7e"/>
-      </svg>项目问答
+    <button class="project-chat__toggle" type="button" aria-label="项目问答" title="项目问答（拖动移动，双击复位）" aria-controls="project-chat-panel" aria-expanded="false">
+      <img class="project-chat__portrait" draggable="false" alt="" aria-hidden="true">
+      <span class="project-chat__fallback" aria-hidden="true" hidden><span>?</span>项目问答</span>
     </button>`;
   app.append(root);
   const panel = root.querySelector('.project-chat__panel');
   const toggle = root.querySelector('.project-chat__toggle');
+  const portrait = toggle.querySelector('.project-chat__portrait');
+  portrait.addEventListener('error', () => {
+    portrait.hidden = true;
+    toggle.querySelector('.project-chat__fallback').hidden = false;
+  }, {once: true});
+  portrait.src = policePortrait;
   positionChat(root, toggle, panel, app.querySelector('#ac8-simulation-bar'));
   const close = root.querySelector('.project-chat__close');
   const thread = root.querySelector('.project-chat__thread');

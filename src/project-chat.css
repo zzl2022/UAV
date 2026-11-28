@@ -25,13 +25,14 @@
 }
 
 .project-chat__toggle {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 8px 13px;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
   border: 1px solid #4b93a6;
-  border-radius: 22px;
+  border-radius: 50%;
+  overflow: hidden;
   background: #0c2b3d;
   color: #d9faff;
   box-shadow: 0 4px 20px #0009;
@@ -47,11 +48,32 @@
 .project-chat__toggle:hover,
 .project-chat__toggle[aria-expanded="true"] {
   background: #17475b;
+  box-shadow: 0 4px 20px #0009, 0 0 14px #5cceff52;
 }
 
-.project-chat__icon {
+.project-chat__portrait {
   display: block;
-  flex: 0 0 26px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.project-chat__fallback {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.project-chat__fallback > span {
+  width: 21px;
+  height: 21px;
+  line-height: 19px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 13px;
 }
 
 .project-chat__panel {
@@ -211,5 +233,6 @@
     right: max(12px, env(safe-area-inset-right));
   }
 
+  .project-chat__toggle { width: 60px; height: 60px; }
   .project-chat__form textarea { font-size: 16px; }
 }

@@ -48,17 +48,27 @@ try{
   const toggle=toggleOf(page),panel=panelOf(page);
   const initial=await toggle.boundingBox();
   assert.ok(initial.x>1000&&initial.y>700);
-  assert.equal(await toggle.getAttribute('title'),'拖动移动，双击复位');
-  assert.equal(await toggle.locator('svg').getAttribute('aria-hidden'),'true');
+  assert.equal(initial.width,64);
+  assert.equal(initial.height,64);
+  assert.equal(await toggle.getAttribute('title'),'项目问答（拖动移动，双击复位）');
+  const portrait=toggle.locator('img');
+  assert.equal(await portrait.getAttribute('aria-hidden'),'true');
+  assert.equal(await portrait.getAttribute('alt'),'');
+  assert.equal(await portrait.getAttribute('draggable'),'false');
+  await page.waitForFunction(()=>document.querySelector('.project-chat__portrait').naturalWidth>0);
+  assert.deepEqual(await portrait.evaluate(img=>[img.naturalWidth,img.naturalHeight]),[1254,1254]);
   await page.evaluate(()=>{
     window.chatTestMapClicks=0;
+    window.chatTestPointerReleases=0;
     document.querySelector('canvas').addEventListener('pointerdown',()=>window.chatTestMapClicks++);
+    document.addEventListener('pointerup',()=>window.chatTestPointerReleases++);
   });
   await drag(page,toggle,255,145);
   const moved=await toggle.boundingBox();
   assert.ok(Math.abs(initial.x-moved.x)>600);
   assert.equal(await panel.isHidden(),true);
   assert.equal(await page.evaluate(()=>window.chatTestMapClicks),0);
+  assert.equal(await page.evaluate(()=>window.chatTestPointerReleases),1);
   const point=center(moved);
   await page.mouse.move(point.x,point.y);
   await page.mouse.down();
@@ -77,7 +87,7 @@ try{
   const lower=await assertLayout(page,toggle,panel);
   assert.ok(lower.dialog.y<lower.button.y&&lower.dialog.x<lower.button.x);
   assert.ok(Math.abs(upper.dialog.x-lower.dialog.x)>500);
-  await page.screenshot({path:'artifacts/project-chat/desktop-1500x1000.png'});
+  await page.screenshot({path:'artifacts/project-chat/police-desktop-1500x1000.png'});
   const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
   assert.ok(Math.abs(saved.x-lower.button.x)<1&&Math.abs(saved.y-lower.button.y)<1);
   await page.reload();
@@ -108,6 +118,10 @@ try{
   await mobile.goto(base);
   await ready(mobile);
   const button=toggleOf(mobile),dialog=panelOf(mobile),start=center(await button.boundingBox());
+  const mobileButton=await button.boundingBox();
+  assert.equal(mobileButton.width,mobileButton.height);
+  assert.ok(mobileButton.width>=60);
+  await mobile.waitForFunction(()=>document.querySelector('.project-chat__portrait').naturalWidth>0);
   const cdp=await mobile.context().newCDPSession(mobile);
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[start]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:170,y:310}]});
@@ -118,8 +132,15 @@ try{
   await button.tap();
   await dialog.waitFor({state:'visible'});
   await assertLayout(mobile,button,dialog);
-  await mobile.screenshot({path:'artifacts/project-chat/mobile-390x844.png'});
-  console.log('项目问答浏览器冒烟通过，已覆盖鼠标、触摸、键盘、缩放夹取、位置持久化和双击复位。');
+  await mobile.screenshot({path:'artifacts/project-chat/police-mobile-390x844.png'});
+  await mobile.route(/project-chat-police.*\.png/,route=>route.request().resourceType()==='image'?route.abort():route.continue());
+  await mobile.reload();await ready(mobile);
+  const fallback=button.locator('.project-chat__fallback');
+  await fallback.waitFor({state:'visible'});
+  assert.match(await fallback.textContent(),/项目问答/);
+  assert.equal(await button.locator('img').isHidden(),true);
+  await button.tap();await dialog.waitFor({state:'visible'});
+  console.log('项目问答浏览器冒烟通过，已覆盖图片加载与回退、鼠标和触摸、键盘、位置持久化和双击复位。');
 }finally{
   await browser.close();
 }
