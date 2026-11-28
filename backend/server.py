@@ -5,6 +5,7 @@ from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -90,11 +91,15 @@ def make_handler(service, sites=None):
                     if len(parts) != 5:
                         raise SiteError('自定义模型文件不存在', 404)
                     asset = sites.asset(parts[3], parts[4])
-                    with asset.open('rb') as source:
+                    try:
+                        source = asset.open('rb')
+                    except FileNotFoundError as exc:
+                        raise SiteError('自定义模型文件不存在', 404) from exc
+                    with source:
                         self.send_response(200)
                         self.send_header('Content-Type', 'image/jpeg' if asset.suffix == '.jpg'
                                          else 'application/json; charset=utf-8')
-                        self.send_header('Content-Length', str(asset.stat().st_size))
+                        self.send_header('Content-Length', str(os.fstat(source.fileno()).st_size))
                         self.send_header('Cache-Control', 'no-cache')
                         self.end_headers()
                         shutil.copyfileobj(source, self.wfile, length=1024 * 1024)
@@ -102,6 +107,8 @@ def make_handler(service, sites=None):
                     self.reply(200, {'sites': sites.list_sites()})
                 elif method == 'POST' and path == '/api/sites/uploads':
                     self.reply(201, sites.create())
+                elif method == 'DELETE' and path.startswith('/api/sites/') and path.count('/') == 3:
+                    self.reply(200, sites.delete(path.rsplit('/', 1)[-1]))
                 else:
                     parts = path.split('/', 5)
                     if len(parts) < 5 or not ID.fullmatch(parts[4]):

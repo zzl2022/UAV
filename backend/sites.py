@@ -27,6 +27,7 @@ BUILD_TIMEOUT = 900
 EXTENSIONS = {'.shp', '.dbf', '.prj', '.cpg', '.tif', '.tiff', '.json', '.glb', '.jpg', '.jpeg', '.png'}
 ID = re.compile(r'[0-9a-f]{32}')
 SLUG = re.compile(r'custom-[0-9a-f]{32}')
+DELETED_PREFIX = '.deleted-'
 ASSET_SUFFIXES = ('-gba.json', '-gba-meta.json', '-terrain.json', '-imagery.jpg', '-imagery.json')
 LOGGER = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class SiteService:
         self.uploads = {}
         self.builds = {}
         self.queue = Queue()
+        self._recover_deletions()
         self._prune()
         self.worker = Thread(target=self._work, name='custom-sites', daemon=True)
         self.worker.start()
@@ -246,6 +248,56 @@ class SiteService:
         with self.lock:
             return json_file(self.index) if self.index.exists() else []
 
+    def _site_directory(self, slug):
+        path = self.folder / slug
+        if linked(self.folder) or linked(path) or path.resolve().parent != self.folder:
+            raise SiteError('自定义模型目录无效', 400)
+        if not path.is_dir():
+            raise SiteError('自定义模型文件不存在', 404)
+        return path
+
+    def delete(self, slug):
+        if not SLUG.fullmatch(slug):
+            raise SiteError('只能删除有效的自定义模型', 400)
+        with self.lock:
+            entries = self.list_sites()
+            retained = [entry for entry in entries if entry['slug'] != slug]
+            if len(retained) == len(entries):
+                raise SiteError('自定义模型不存在', 404)
+            directory = self._site_directory(slug)
+            pending = self.folder / f'{DELETED_PREFIX}{slug}'
+            if pending.exists() or linked(pending):
+                raise SiteError('该模型有未完成的删除记录，请稍后重试', 409)
+            directory.rename(pending)
+            try:
+                self._write_index(retained)
+            except Exception:
+                pending.rename(directory)
+                raise
+            self._remove_deleted(pending)
+        return {'ok': True, 'slug': slug}
+
+    def _remove_deleted(self, pending):
+        try:
+            shutil.rmtree(pending)
+        except OSError:
+            LOGGER.exception('清理已删除的自定义模型失败：%s', pending.name)
+
+    def _recover_deletions(self):
+        candidates = [path for path in self.folder.glob(f'{DELETED_PREFIX}custom-*')
+                      if SLUG.fullmatch(path.name.removeprefix(DELETED_PREFIX))
+                      and not linked(path) and path.is_dir()]
+        if not candidates:
+            return
+        indexed = {entry['slug'] for entry in self.list_sites()}
+        for pending in candidates:
+            slug = pending.name.removeprefix(DELETED_PREFIX)
+            original = self.folder / slug
+            if slug not in indexed:
+                self._remove_deleted(pending)
+            elif not original.exists() and not linked(original):
+                pending.rename(original)
+
     def asset(self, slug, filename):
         if not (SLUG.fullmatch(slug) and filename in {slug + suffix for suffix in ASSET_SUFFIXES}):
             raise SiteError('自定义模型文件不存在', 404)
@@ -335,18 +387,21 @@ class SiteService:
         destination = self.folder / slug
         source.rename(destination)
         try:
-            temporary = None
-            try:
-                with NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.folder, delete=False) as stream:
-                    temporary = Path(stream.name)
-                    json.dump(entries, stream, ensure_ascii=False, allow_nan=False)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                temporary.replace(self.index)
-            finally:
-                if temporary:
-                    temporary.unlink(missing_ok=True)
+            self._write_index(entries)
         except Exception:
             shutil.rmtree(destination)
             raise
         return entry
+
+    def _write_index(self, entries):
+        temporary = None
+        try:
+            with NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.folder, delete=False) as stream:
+                temporary = Path(stream.name)
+                json.dump(entries, stream, ensure_ascii=False, allow_nan=False)
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary.replace(self.index)
+        finally:
+            if temporary:
+                temporary.unlink(missing_ok=True)

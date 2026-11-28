@@ -174,6 +174,51 @@ def test_no_imagery(api, layers):
     assert '未提供影像底图' in call('GET', state['site']['base'].removeprefix('.') + '-meta.json')[1]['limitations'][-1]
 
 
+def test_delete_model_and_persist_after_restart(api, layers):
+    call, service = api
+    site = wait_job(call, upload(call, layers))['site']
+    slug = site['slug']
+    route = '/api/sites/' + slug
+    generated = site['base'].removeprefix('.') + '.json'
+    unlisted = service.folder / ('custom-' + 'f' * 32)
+    unlisted.mkdir()
+    assert call('DELETE', '/api/sites/' + unlisted.name)[0] == 404 and unlisted.is_dir()
+    for attempted in ('recon', 'custom-123', '%2e%2e', '../index.json', '%2e%2e%2findex.json'):
+        assert call('DELETE', '/api/sites/' + attempted)[0] in (400, 404)
+    assert call('GET') == (200, {'sites': [site]})
+    assert call('DELETE', route) == (200, {'ok': True, 'slug': slug})
+    assert call('DELETE', route)[0] == 404
+    assert call('GET') == (200, {'sites': []})
+    assert call('GET', generated)[0] == 404
+    assert not (service.folder / slug).exists() and unlisted.is_dir()
+    with running_server(service.folder) as (restarted, _):
+        assert restarted('GET') == (200, {'sites': []})
+        assert restarted('GET', generated)[0] == 404
+
+
+def test_delete_restores_directory_when_index_write_fails(api, layers, monkeypatch):
+    call, service = api
+    site = wait_job(call, upload(call, layers))['site']
+    slug = site['slug']
+
+    def fail_write(_):
+        raise OSError('模拟文件系统写入失败')
+
+    with monkeypatch.context() as broken_disk:
+        broken_disk.setattr(service, '_write_index', fail_write)
+        assert call('DELETE', '/api/sites/' + slug)[0] == 500
+    assert call('GET') == (200, {'sites': [site]})
+    assert call('GET', site['base'].removeprefix('.') + '.json')[0] == 200
+    assert not any(service.folder.glob('.deleted-*'))
+
+    # 恢复进程在目录移出之后、索引提交之前中断的删除。
+    directory = service.folder / slug
+    directory.rename(service.folder / ('.deleted-' + slug))
+    with running_server(service.folder) as (restarted, _):
+        assert restarted('GET') == (200, {'sites': [site]})
+        assert directory.is_dir()
+
+
 def test_upload_rejects_invalid_requests(api, monkeypatch):
     call, _ = api
     session = upload(call, {})
@@ -228,6 +273,7 @@ def test_cancel_queued_build_and_require_login(api, monkeypatch):
     assert call('POST', '/api/sites/uploads')[0] == 401
     assert call('PUT', session + '/shape.shp', b'a')[0] == 401
     assert call('DELETE', session)[0] == 401
+    assert call('DELETE', '/api/sites/custom-' + '0' * 32)[0] == 401
     assert call('GET', '/data/custom-sites/index.json')[0] == 401
 
 

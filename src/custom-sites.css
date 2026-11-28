@@ -1,3 +1,28 @@
+#model-section .model-select-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: stretch;
+}
+#model-section .model-select-row select { flex: 1; min-width: 0; }
+#delete-custom-site[hidden] { display: none; }
+#delete-custom-site {
+  flex: 0 0 36px;
+  padding: 0;
+  border: 1px solid #448f9f;
+  border-radius: 2px;
+  background: #12313f;
+  color: #d4f6ff;
+  font: inherit;
+  font-size: 20px;
+}
+#delete-custom-site:hover:not(:disabled),
+#delete-custom-site:focus-visible {
+  outline: 1px solid #8ee8ff;
+  background: #1b4656;
+}
+#delete-custom-site:disabled { opacity: .55; cursor: default; }
+
 #add-custom-site {
   display: block;
   margin: 12px 0 8px;

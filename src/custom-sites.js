@@ -137,7 +137,7 @@ async function request(path='',options={}){
   }
 }
 
-export function mountCustomSites({menu,select,register,switchTo}){
+export function mountCustomSites({menu,select,register,unregister,switchTo,currentSite,announce}){
   const trigger=document.createElement('button');
   trigger.id='add-custom-site';trigger.type='button';trigger.textContent='增加新模型';
   trigger.setAttribute('aria-controls','custom-site-panel');trigger.setAttribute('aria-expanded','false');
@@ -171,8 +171,14 @@ export function mountCustomSites({menu,select,register,switchTo}){
   const submit=get('[type=submit]'),cancel=get('[data-cancel]'),feedback=get('#custom-site-feedback');
   const summary=get('#custom-site-summary'),progress=get('progress'),roleValues=panel.querySelectorAll('dd');
   const inputs=[name,...panel.querySelectorAll('[data-pick], [data-clear]')],files=new Map();
-  let operation=null,inspection=0,omitted=0,available=false,listError='';
-  const group=document.createElement('optgroup');group.label='自定义模型';
+  let operation=null,inspection=0,listRevision=0,omitted=0,available=false,listError='',deleting=false;
+  const customOptions=new Map(),removeButton=menu.querySelector('#delete-custom-site');
+
+  function syncDeleteButton(){
+    removeButton.hidden=!customOptions.has(select.value);
+    removeButton.disabled=deleting||select.disabled||!!operation;
+    removeButton.textContent=deleting?'…':'×';
+  }
 
   function showMessage(message,error=false){
     feedback.textContent=message;
@@ -186,17 +192,62 @@ export function mountCustomSites({menu,select,register,switchTo}){
   function addSite(site){
     if(!site||!SLUG.test(site.slug)||typeof site.name!=='string')return;
     register(site);
-    if(!group.isConnected)select.append(group);
-    if(!Array.from(group.children).some(option=>option.value===site.slug))group.append(new Option(site.name,site.slug));
+    let option=customOptions.get(site.slug);
+    if(!option){
+      option=new Option(site.name,site.slug);
+      customOptions.set(site.slug,option);
+      select.append(option);
+    }else option.textContent=site.name;
+  }
+  function removeSite(slug){
+    customOptions.get(slug)?.remove();
+    customOptions.delete(slug);
+    unregister(slug);
+    syncDeleteButton();
   }
   async function refresh(){
+    const revision=++listRevision;
     try{
       const result=await request();
-      for(const site of result.sites??[])addSite(site);
+      if(revision!==listRevision)return;
+      const sites=result.sites??[];
+      const slugs=new Set(sites.map(site=>site.slug));
+      for(const slug of customOptions.keys())if(!slugs.has(slug)&&slug!==currentSite())removeSite(slug);
+      for(const site of sites)addSite(site);
       available=true;listError='';
-    }catch(error){listError=error.message;}
+    }catch(error){if(revision===listRevision)listError=error.message;}
+    syncDeleteButton();
     if(!panel.hidden&&!operation)await validate();
   }
+  select.addEventListener('change',syncDeleteButton);
+  new MutationObserver(syncDeleteButton).observe(select,{attributes:true,attributeFilter:['disabled']});
+  removeButton.onclick=async()=>{
+    const slug=select.value,option=customOptions.get(slug);
+    if(!option||deleting||operation||select.disabled)return;
+    const name=option.textContent;
+    if(!window.confirm(`删除自定义模型“${name}”？该操作会删除服务器上的模型文件，且无法恢复。`))return;
+    const wasActive=currentSite()===slug;
+    deleting=true;trigger.disabled=true;syncDeleteButton();
+    try{
+      if(wasActive&&!await switchTo('recon'))throw Error('无法切换到河南博物院，已中止删除。');
+      select.disabled=true;
+      announce(`正在删除自定义模型 ${name}…`);
+      try{
+        await request(`/${slug}`,{method:'DELETE'});
+      }catch(error){
+        select.disabled=false;
+        if(wasActive&&!await switchTo(slug))throw Error(`${error.message}。请在下拉框中重新选择原模型。`);
+        throw error;
+      }
+      removeSite(slug);
+      await refresh();
+      announce(`已删除自定义模型 ${name}`);
+    }catch(error){announce(error.message);}
+    finally{
+      deleting=false;select.disabled=false;trigger.disabled=false;syncDeleteButton();
+      (removeButton.hidden?select:removeButton).focus({preventScroll:true});
+    }
+  };
   function refreshSummary(){
     const total=[...files.values()].reduce((sum,file)=>sum+file.size,0);
     summary.textContent=`已选 ${files.size} 个文件 · ${(total/MB).toFixed(2)} MB${omitted?` · 已忽略 ${omitted} 个其他文件`:''}`;
@@ -223,7 +274,7 @@ export function mountCustomSites({menu,select,register,switchTo}){
     }
     input.value='';void validate();
   }
-  trigger.onclick=()=>{if(!operation)setOpen(panel.hidden);if(!available)void refresh();};
+  trigger.onclick=()=>{if(!operation&&!deleting)setOpen(panel.hidden);if(!available)void refresh();};
   for(const [input,kind] of [[folder,'folder'],[picker,'files']]){
     get(`[data-pick=${kind}]`).onclick=()=>input.click();
     input.onchange=()=>append(input);
@@ -244,10 +295,11 @@ export function mountCustomSites({menu,select,register,switchTo}){
   }
   form.onsubmit=async event=>{
     event.preventDefault();
-    if(operation||!await validate())return;
+    if(operation||deleting||!await validate()||deleting)return;
     const active={controller:new AbortController(),upload:null,applying:false};
     const {signal}=active.controller;
     operation=active;
+    syncDeleteButton();
     for(const input of inputs)input.disabled=true;
     submit.disabled=true;progress.hidden=false;progress.value=0;
     showMessage('正在创建上传会话…');
@@ -268,6 +320,7 @@ export function mountCustomSites({menu,select,register,switchTo}){
         if(state.status==='done'){
           active.applying=true;cancel.disabled=true;
           progress.value=100;showMessage('模型已生成，正在切换…');
+          listRevision++;
           addSite(state.site);
           if(!await switchTo(state.site.slug))throw Error('模型已生成，但当前无法加载。请从模型下拉框重试。');
           files.clear();omitted=0;name.value='';setOpen(false);
@@ -282,9 +335,11 @@ export function mountCustomSites({menu,select,register,switchTo}){
       showMessage(signal.aborted?'已取消，已选文件可用于重新生成。':error.message,!signal.aborted);
     }finally{
       operation=null;progress.hidden=true;cancel.disabled=false;
+      syncDeleteButton();
       for(const input of inputs)input.disabled=false;
       submit.disabled=!files.size;
     }
   };
+  syncDeleteButton();
   void refresh();
 }

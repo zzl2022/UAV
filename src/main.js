@@ -74,12 +74,12 @@ app.innerHTML=`<header id="platform-topbar">
 </div>
 <div id="city-panel">
   <section id="model-section"><h2>场景模型</h2>
-  <label>模型<select id="model-select" aria-label="选择地图模型">
+  <label for="model-select">模型</label><div class="model-select-row"><select id="model-select" aria-label="选择地图模型">
     <option value="recon" selected>复杂城市——河南博物院</option>
     <option value="shenzhen">复杂城市——深圳国际交流中心(APEC举办地)</option>
     <option value="wuxi">复杂城市——无锡市市民中心</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
-  </select></label></section>
+  </select><button id="delete-custom-site" type="button" aria-label="删除当前自定义模型" hidden>×</button></div></section>
   <section id="layers-section"><h2>场景图层</h2>
   <label><input type="checkbox" id="buildings" checked>建筑</label>
   <label><input type="checkbox" id="terrain" checked>地形</label>
@@ -673,11 +673,25 @@ try {
     emc:emcText(),
   });
   mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
-  mountCustomSites({menu:el('ac8-scene-menu'),select:el('model-select'),switchTo:setMode,register(site){
+  mountCustomSites({menu:el('ac8-scene-menu'),select:el('model-select'),switchTo:setMode,currentSite:()=>mode,announce:status,register(site){
     const base=`./data/custom-sites/${site.slug}/${site.slug}`;
     SITES[site.slug]={custom:true,label:site.name,short:site.name,base:`${base}-gba`,
       buildings:`${base}-gba.json`,imagery:site.imagery?`${base}-imagery.jpg`:null,
       buildingCount:site.buildingCount,maxHeight:site.maxHeight};
+    updateDiagnostics();
+  },unregister(slug){
+    const parts=siteParts[slug];
+    if(parts){
+      scene.remove(parts.group);
+      parts.buildings.geometry.dispose();
+      parts.buildings.material.dispose();
+      parts.ground.geometry.dispose();
+      const {plainMaterial,textureMaterial}=parts.ground.userData;
+      plainMaterial.dispose();
+      textureMaterial?.map?.dispose();
+      textureMaterial?.dispose();
+    }
+    delete SITES[slug];delete siteGroups[slug];delete siteMeta[slug];delete siteParts[slug];
     updateDiagnostics();
   }});
   function restoreOverview(){

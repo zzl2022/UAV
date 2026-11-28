@@ -28,6 +28,8 @@ try{
   const submit=panel.getByRole('button',{name:'开始生成'});
   const input=page.locator('#custom-site-name');
   const select=page.locator('#model-select');
+  const remove=page.getByRole('button',{name:'删除当前自定义模型'});
+  assert.equal(await remove.isHidden(),true);
   const open=async()=>{
     await page.locator('#add-custom-site').click();
     await panel.waitFor({state:'visible'});
@@ -48,7 +50,9 @@ try{
     const slug=await select.inputValue();
     assert.match(slug,/^custom-[a-f0-9]{32}$/);
     assert.equal(await select.locator('option:checked').textContent(),modelName);
-    assert.equal(await select.locator('option:checked').evaluate(option=>option.parentElement.label),'自定义模型');
+    assert.equal(await select.locator('option:checked').evaluate(option=>option.parentElement.id),'model-select');
+    assert.equal(await select.locator('optgroup').count(),0);
+    assert.equal(await remove.isVisible(),true);
     const model=await page.evaluate(id=>window.cityDiagnostics.models[id],slug);
     assert.ok(model.loaded&&model.buildingCount>15000);
     assert.equal(model.maxHeight,136);
@@ -118,8 +122,49 @@ try{
   assert.equal(task3.plans,1);
   assert.ok(task3.samples>0);
   assert.ok(!geometryRequests.some(url=>url.endsWith('.glb')));
+
+  for(let i=0;i<2&&await page.evaluate(()=>window.__ac8DeploymentMenu?.isOpen());i++){
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+  }
+  await openSceneMenu(page,'scene');
+  const cancelled=page.waitForEvent('dialog').then(dialog=>{
+    assert.equal(dialog.message(),`删除自定义模型“${plain}”？该操作会删除服务器上的模型文件，且无法恢复。`);
+    return dialog.dismiss();
+  });
+  await remove.click();
+  await cancelled;
+  assert.equal(await select.inputValue(),plainSlug);
+
+  const deletionPattern=`**/api/sites/${plainSlug}`;
+  const failedDelete=route=>{
+    assert.equal(route.request().method(),'DELETE');
+    return route.fulfill({status:500,json:{error:'删除失败，请稍后重试'}});
+  };
+  await page.route(deletionPattern,failedDelete);
+  page.once('dialog',dialog=>dialog.accept());
+  await remove.click();
+  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('删除失败，请稍后重试'),null,{timeout:90000});
+  assert.equal(await select.inputValue(),plainSlug);
+  assert.equal(await page.evaluate(()=>window.cityDiagnostics.modelMode),plainSlug);
+  assert.equal(await select.locator(`option[value="${plainSlug}"]`).count(),1);
+  await page.unroute(deletionPattern,failedDelete);
+
+  // 后端删除另一个测试模型时，页面上的当前场景继续显示。
+  assert.equal((await page.request.delete(new URL(`api/sites/${slug}`,base.endsWith('/')?base:base+'/').href)).status(),200);
+  assert.equal(await page.evaluate(()=>window.cityDiagnostics.modelMode),plainSlug);
+  page.once('dialog',dialog=>dialog.accept());
+  await remove.click();
+  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('已删除自定义模型'),null,{timeout:90000});
+  assert.equal(await select.inputValue(),'recon');
+  assert.equal(await remove.isHidden(),true);
+  for(const id of [slug,plainSlug])assert.equal(await select.locator(`option[value="${id}"]`).count(),0);
+  const refreshed=page.waitForResponse(response=>response.url().endsWith('/api/sites')&&response.request().method()==='GET');
+  await page.reload({timeout:120000});await ready();await refreshed;
+  await openSceneMenu(page,'scene');
+  for(const id of [slug,plainSlug])assert.equal(await select.locator(`option[value="${id}"]`).count(),0);
   assert.deepEqual(errors,[]);
-  console.log('自定义模型浏览器冒烟通过，已覆盖真实目录导入、无影像、刷新、失败提示、建筑选择和任务三方案。');
+  console.log('自定义模型浏览器冒烟通过，已覆盖导入、刷新、任务三方案、删除确认、失败恢复与删除持久化。');
 }finally{
   await browser.close();
   if(fixtures.startsWith(join(artifacts,'fixtures-')))await rm(fixtures,{recursive:true,force:true});
