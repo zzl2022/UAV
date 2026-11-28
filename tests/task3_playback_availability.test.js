@@ -19,5 +19,6 @@ test('自定义区域、无报告、旧报告和设备仿真有各自的播放�
  const old=resolvePlaybackAvailability({hasPlan:true});
  assert.equal(old.status,'no-recording');assert.equal(old.blocked,true);
  assert.equal(resolvePlaybackAvailability({hasPlan:true,record,deviceDemo:true}).status,'device-demo');
+ assert.equal(resolvePlaybackAvailability({hasPlan:true,record,staleResult:true}).status,'stale');
  assert.deepEqual(resolvePlaybackAvailability({hasPlan:true,record}),{status:'ready',blocked:false,message:''});
 });

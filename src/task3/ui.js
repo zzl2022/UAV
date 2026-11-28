@@ -76,7 +76,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  const customEditLayer=new THREE.Group();customEditLayer.name='Task3_Custom_Route_Editor';customEditLayer.visible=false;scene.add(customEditLayer);
  const view=renderer.domElement.parentElement;
  const customEditPanel=document.createElement('aside');customEditPanel.id='task3-custom-editor';customEditPanel.hidden=true;customEditPanel.setAttribute('aria-label','自定义单机轨迹编辑');
- customEditPanel.innerHTML=`<h3>自定义单机轨迹</h3><p class="task3-custom-hint">右键功能暂时无效，当前左键替代原右键功能</p><p class="task3-custom-help">在当前地图左键单击建筑或地表，按顺序生成红点与连线；拖动视角不会加点。</p><div class="task3-custom-count">已输入 <strong id="task3-custom-count">0</strong> 个路点</div><div class="task3-custom-actions"><button id="task3-custom-complete" class="primary" type="button">完成并计算</button><button id="task3-custom-clear" type="button">清除轨迹</button><button id="task3-custom-cancel" type="button">取消编辑</button><button id="task3-custom-restore" type="button">恢复默认八方位</button></div><div id="task3-custom-status" role="status">请至少单击两个不同位置。</div>`;
+ customEditPanel.innerHTML=`<h3>自定义单机轨迹</h3><p class="task3-custom-hint">右键功能暂时无效，当前左键替代原右键功能</p><p class="task3-custom-help">在当前地图左键单击建筑或地表，按顺序生成红点与连线；拖动视角不会加点。</p><div class="task3-custom-count">已输入 <strong id="task3-custom-count">0</strong> 个路点</div><div class="task3-custom-actions"><button id="task3-custom-complete" class="primary" type="button">完成并计算</button><button id="task3-custom-clear" type="button">清除轨迹</button><button id="task3-custom-cancel" type="button">取消编辑</button><button id="task3-custom-restore" type="button">恢复默认单机航线</button></div><div id="task3-custom-status" role="status">请至少单击两个不同位置。</div>`;
  view.append(customEditPanel);
  const ce$=id=>customEditPanel.querySelector('#'+id);
  const threatHud=document.createElement('section');threatHud.id='threat-hud';threatHud.hidden=true;
@@ -188,7 +188,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  const playbackVisuals=createRecordedPlaybackVisuals(layer);
  const deviceById=new Map(),deviceMeshById=new Map(),activeHalos=new Map(),changedHalos=new Set();
  const trackedCameraPosition=new THREE.Vector3(),trackingOffset=new THREE.Vector3(900,1100,900);
- let hudTargetCount=0,hudDetectedCount=0,hudDirty=false,lastHudUpdate=-Infinity;
+ let hudTargetCount=0,hudDetectedCount=0,hudDirty=false,lastHudUpdate=-Infinity,playbackInvalidated=false;
  let lastDiagnosticUpdate=-Infinity,projectionDirty=true,playbackDiagnosticsDirty=false,markersById=new Map();
  const targetDiagnostics=new Map();
  const projectionScratch=new THREE.Vector3(),projectedCamera=new THREE.Matrix4(),projectedLens=new THREE.Matrix4();
@@ -206,12 +206,16 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  const parseThreatList=value=>String(value).split(/[,，\s]+/).filter(Boolean).map(Number);
 function renderThreatConfig(){
   const key=$('task3-threat').value,config=threatConfigs[key];if(!config)return;
+  const single=key==='single',count=$('task3-threat-count');
   $('task3-custom-route').hidden=key!=='single';
-  $('task3-threat-count').value=config.count;$('task3-threat-azimuths').value=config.azimuthsDeg.join(',');$('task3-threat-agl').value=config.aglM.join(',');$('task3-threat-speed').value=config.speedMps;
+  count.readOnly=single;count.max=single?'1':'128';
+  count.value=single?1:config.count;$('task3-threat-azimuths').value=config.azimuthsDeg.join(',');$('task3-threat-agl').value=config.aglM.join(',');$('task3-threat-speed').value=config.speedMps;
+  $('task3-threat-coordinate-hint').textContent=(single?'单机单点入侵固定为1架目标，只设置一个来向和一个离地高度。':'多个角度、高度用逗号分隔。')+'以核心目标正北为0°，顺时针增加。自动航线从部署范围外1公里飞向核心，穿过核心至对称位置，超出地图时截至边界；手绘轨迹保留原路径。高度为离地高度，速度为轨迹标称速度。修改参数后请重新生成方案。';
 }
 function saveThreatConfigForm(){
   const key=$('task3-threat').value,azimuthsDeg=parseThreatList($('task3-threat-azimuths').value),aglM=parseThreatList($('task3-threat-agl').value);
-  threatConfigs[key]={...threatConfigs[key],count:Number($('task3-threat-count').value),directions:azimuthsDeg.length,azimuthsDeg,aglM,speedMps:Number($('task3-threat-speed').value)};
+  if(key==='single')$('task3-threat-count').value=1;
+  threatConfigs[key]={...threatConfigs[key],count:key==='single'?1:Number($('task3-threat-count').value),directions:azimuthsDeg.length,azimuthsDeg,aglM,speedMps:Number($('task3-threat-speed').value)};
 }
 function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries(Object.keys(THREAT_SCENARIOS).map(key=>[key,normalizeThreatConfig(key,threatConfigs[key])]));}
  function setCustomStatus(text,tone=''){ce$('task3-custom-status').textContent=text;ce$('task3-custom-status').dataset.tone=tone;}
@@ -281,10 +285,10 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  $('task3-custom-route').onclick=enterCustomEditor;
  function restoreDefaultSingle(){
   resetCustomEditing();if(!report||!plan)return false;
-  const baseline=customDefaultSingles.get(plan.id);if(!baseline){setStatus('当前单机威胁已使用原八方位默认结果。');updateDiagnostics();return false;}
+  const baseline=customDefaultSingles.get(plan.id);if(!baseline){setStatus('当前单机威胁已使用默认单机航线结果。');updateDiagnostics();return false;}
   report.threatsByPlan??={};report.threatsByPlan[plan.id]??={};report.threatsByPlan[plan.id].single=structuredClone(baseline);
   if(report.recommendedId===plan.id)report.threats={...report.threats,single:report.threatsByPlan[plan.id].single};
-  resetThreatVisuals();setStatus('已恢复原八方位单机航线；多方向和蜂群结果保持不变。');updateDiagnostics();return true;
+  resetThreatVisuals();setStatus('已恢复默认单机航线；多方向和蜂群结果保持不变。');updateDiagnostics();return true;
  }
  function failCustomRequest(requestId,text){
   if(!customPending||customPending.id!==requestId)return;
@@ -575,7 +579,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  function playbackAvailability(record=threatForPlan()){
   return resolvePlaybackAvailability({
    custom:!!getSite?.()?.custom,mapSwitching,selectingBuildings:buildingSelector.active,
-   invalidConstraints:constraintsInvalid,deviceDemo:deviceDemo.active,busy,hasPlan:!!plan,record,
+   invalidConstraints:constraintsInvalid,deviceDemo:deviceDemo.active,busy,staleResult:playbackInvalidated,hasPlan:!!plan,record,
   });
  }
  function getThreatPlayback(){
@@ -793,7 +797,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
     const v=data.value;$('task3-progress-side').value=v.total?v.completed/v.total:0;setStatus(`${request.updateReason} · ${STAGE_NAMES[v.stage]??v.stage} ${v.completed}/${v.total}`);
    }else if(data.type==='report'){
     const request=activePipelineRequest;if(!request||data.requestId!==request.id||!scheduler.succeed(request.id))return;
-    activePipelineRequest=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;mobileSnapshots=new Map();report=data.report;run=data.run;constraintsInvalid=false;selectedDevices.clear();
+    activePipelineRequest=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;mobileSnapshots=new Map();report=data.report;run=data.run;constraintsInvalid=false;playbackInvalidated=false;selectedDevices.clear();
     report.requestId=request.id;report.updateReason=request.updateReason;report.equipmentSnapshot=request.snapshot.equipmentSnapshot;run.requestId=request.id;run.updateReason=request.updateReason;run.equipmentSnapshot=request.snapshot.equipmentSnapshot;
     const previousPlanId=plan?.id;originalRun=run;plan=report.plans.find(p=>p.id===previousPlanId)??report.plans.find(p=>p.id===report.recommendedId)??report.plans[0];
     if(!scheduler.getState().staleResult)threatConfigs=structuredClone(report.settings.threatConfigs);
@@ -908,6 +912,9 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  $('task3-building-clear').onclick=()=>{
   buildingError='';buildingSelector.clear();updateDiagnostics();
  };
+ const exclusionImport=document.createElement('input');exclusionImport.type='file';exclusionImport.accept='.json';exclusionImport.id='task3-building-import';exclusionImport.setAttribute('aria-label','导入当前地图禁部署建筑清单');
+ const exclusionLabel=document.createElement('label');exclusionLabel.textContent='导入禁部署清单 ';exclusionLabel.append(exclusionImport);$('task3-building-clear').after(exclusionLabel);
+ exclusionImport.onchange=async()=>{try{const file=exclusionImport.files?.[0];if(file){buildingSelector.restore(JSON.parse(await file.text()));setStatus('禁部署清单已导入，请重新生成方案。');}}catch(error){setStatus(`无法导入禁部署清单：${error.message}`,'error');}finally{exclusionImport.value='';}};
  window.addEventListener('blur',stopBuildingSelection);
  function updateExplanationButton(){
   const valid=!!report&&!!plan&&!busy&&!constraintsInvalid&&!scheduler.getState().staleResult;
@@ -924,7 +931,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   catch(error){setStatus(`解释明细下载失败：${error.message}`,'error');}
   finally{explanationExporting=false;updateExplanationButton();}
  };
- const markInputsChanged=()=>{scheduler.markStale();controlsEnabled();updateDiagnostics();};
+ const markInputsChanged=()=>{playbackInvalidated=true;if(threatPlaying||pendingThreatKey)stopThreatPlayback();scheduler.markStale();controlsEnabled();updateDiagnostics();};
  sensors.subscribeEquipmentChanges(snapshot=>{renderEquipmentSelection(snapshot);markInputsChanged();});
  sensors.subscribeScenarioChanges(markInputsChanged);
  const pipelineInputSelector='#task3-scope-width,#task3-scope-depth,#task3-spacing,#task3-budget,#task3-max-devices,#task3-weights input,#task3-costs input,#task3-plan-types input,#task3-threat-count,#task3-threat-azimuths,#task3-threat-agl,#task3-threat-speed';
@@ -943,7 +950,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  for(const id of ['task3-threat-count','task3-threat-azimuths','task3-threat-agl','task3-threat-speed']){
   $(id).addEventListener('input',saveThreatConfigForm);$(id).addEventListener('change',saveThreatConfigForm);
  }
- $('task3-threat-defaults').onclick=()=>{const key=$('task3-threat').value;if(key==='single')restoreDefaultSingle();else resetCustomEditing();threatConfigs[key]=structuredClone(DEFAULT_THREAT_CONFIGS[key]);renderThreatConfig();markInputsChanged();};
+ $('task3-threat-defaults').onclick=()=>{const key=$('task3-threat').value,restored=key==='single'?restoreDefaultSingle():false;if(key!=='single')resetCustomEditing();threatConfigs[key]=structuredClone(DEFAULT_THREAT_CONFIGS[key]);renderThreatConfig();if(restored)updateDiagnostics();else markInputsChanged();};
  $('task3-restore-defaults').onclick=()=>{
   stopBuildingSelection();buildingSelector.clear();
   $('task3-scope-width').value=2400;$('task3-scope-depth').value=2400;$('task3-spacing').value=500;$('task3-budget').value=600;$('task3-max-devices').value=64;

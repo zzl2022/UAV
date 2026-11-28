@@ -63,7 +63,7 @@ export const EMC_RULES={
 
 // 威胁场景定义（任务书：单机单点入侵、多方向同步入侵、蜂群饱和攻击）。
 export const THREAT_SCENARIOS={
- single:{name:'单机单点入侵',directions:8,dronesPerDirection:1,speedMps:15,aglM:[30,60]},
+ single:{name:'单机单点入侵',directions:1,dronesPerDirection:1,speedMps:15,aglM:[30]},
  multi:{name:'多方向同步入侵',directions:4,dronesPerDirection:1,speedMps:15,aglM:[45,60],simultaneous:true},
  swarm:{name:'蜂群饱和攻击',directions:3,dronesPerDirection:14,speedMps:12,aglM:[30,45,60],simultaneous:true,note:'42 架，超出 TDOA-X1B(35)/OA-X1Bmini(30)/X1C(15) 并发容量，用于检验容量溢出与漏探'},
 };

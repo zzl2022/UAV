@@ -65,7 +65,7 @@ try{
   const report=window.__task3Report,planId=window.task3Diagnostics.planId,byPlan=report.threatsByPlan[planId];
   return {planId,recommendedId:report.recommendedId,singleSummary:structuredClone(byPlan.single.summary),singleRoutes:byPlan.single.routes.map(route=>route.id),multiSummary:structuredClone(byPlan.multi.summary),swarmSummary:structuredClone(byPlan.swarm.summary)};
  });
- assert.equal(baseline.singleSummary.targetCount,8);
+ assert.equal(baseline.singleSummary.targetCount,1);
  await page.locator('#task3-custom-route').click();
  await page.locator('#task3-custom-editor').waitFor({state:'visible'});
  assert.equal(await page.locator('#task3-custom-editor .task3-custom-hint').textContent(),'右键功能暂时无效，当前左键替代原右键功能');
@@ -174,13 +174,13 @@ try{
  await page.screenshot({path:'artifacts/task3/custom-route-playback.png'});
 
  await page.locator('#ac8-sim-scenario').selectOption('multi');
- await page.waitForFunction(()=>window.task3Diagnostics.threatRouteCount===4&&window.task3Diagnostics.threatTargets.length===0&&window.task3Diagnostics.threatDetectionSegments===0&&!window.task3Diagnostics.threatPlaying,null,{timeout:10000});
+ await page.waitForFunction(()=>window.task3Diagnostics.threatScenario==='multi'&&!window.task3Diagnostics.threatPlaying,null,{timeout:10000});
  assert.equal(await page.evaluate(()=>window.__task3Report.threatsByPlan[window.task3Diagnostics.planId].single.custom),true,'切换场景只清理旧视觉，不应误删可恢复的单机结果');
- await page.locator('#ac8-sim-scenario').selectOption('single');await page.waitForFunction(()=>window.task3Diagnostics.threatRouteCount===1&&window.task3Diagnostics.threatTargets.length===0);
+ await page.locator('#ac8-sim-scenario').selectOption('single');await page.waitForFunction(()=>window.task3Diagnostics.threatScenario==='single');
  await openThreat();await page.locator('#task3-threat-defaults').click();
  await page.waitForFunction(()=>!window.__task3Report.threatsByPlan[window.task3Diagnostics.planId].single.custom);
  const restored=await page.evaluate(planId=>{const single=window.__task3Report.threatsByPlan[planId].single;return {summary:single.summary,routeIds:single.routes.map(route=>route.id),azimuths:single.config.azimuthsDeg};},baseline.planId);
- assert.deepEqual(restored.summary,baseline.singleSummary);assert.deepEqual(restored.routeIds,baseline.singleRoutes);assert.deepEqual(restored.azimuths,[0,45,90,135,180,225,270,315]);
+ assert.deepEqual(restored.summary,baseline.singleSummary);assert.deepEqual(restored.routeIds,baseline.singleRoutes);assert.deepEqual(restored.azimuths,[0]);
  await closeDeployment();await page.locator('#ac8-sim-scenario').selectOption('single');await page.locator('#ac8-sim-speed').selectOption('1');await page.locator('#ac8-sim-start').click();
  await page.waitForFunction(routeId=>window.task3Diagnostics.threatPlaying&&window.task3Diagnostics.threatRouteCount===1&&window.task3Diagnostics.threatTargets[0]?.id===routeId,baseline.singleRoutes[0],{timeout:30000});
  await page.locator('#ac8-sim-start').click();await page.waitForFunction(()=>!window.task3Diagnostics.threatPlaying);

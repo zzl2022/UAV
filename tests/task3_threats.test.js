@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildCustomRoute,buildRadialRoute,buildThreatRoutes,simulateThreat,threatSummaryText} from '../src/task3/threats.js';
+import {buildCustomRoute,buildRadialRoute,buildThreatRoutes,simulateThreat,threatSummaryText,normalizeThreatConfig} from '../src/task3/threats.js';
 import {computeCustomSingleThreat} from '../src/task3/worker.js';
 import {THREAT_SCENARIOS} from '../src/task3/constants.js';
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../src/sensors/presets.js';
@@ -14,11 +14,12 @@ const flatQuery={
  trace:(a,b)=>({blocked:false,buildingCount:0,clearance:0,obstacleDistance:null,sensorGround:0,targetGround:0,known:true}),
 };
 
-test('radial route flies from bounds edge to core with monotone time and start delay',()=>{
+test('automatic route starts 1 km outside deployment and crosses core to symmetric endpoint',()=>{
  const r=buildRadialRoute(flatQuery,bounds,{azimuthDeg:0,aglM:45,speedMps:15,id:'t0',startDelayS:5});
  assert.equal(r.points[0].time,5);assert.ok(r.duration>5);assert.equal(r.speed,15);
- assert.ok(Math.abs(r.points[0].position[0])<1e-9&&r.points[0].position[2]<-1100,'方位 0° 应从北侧边界外进入');
- assert.ok(Math.hypot(r.points.at(-1).position[0],r.points.at(-1).position[2])<1e-9,'终点为 core 中心');
+ assert.deepEqual(r.points[0].position,[0,45,-2000]);
+ assert.deepEqual(r.points.at(-1).position,[0,45,2000]);
+ assert.ok(r.points.some(p=>p.position[0]===0&&p.position[2]===0),'必须穿过核心');
  assert.ok(r.points.every(p=>Math.abs(p.position[1]-45)<1e-9),'平地无遮挡时保持 max(ground+agl, surface+25)');
  for(let i=1;i<r.points.length;i++){
   assert.ok(r.points[i].time>r.points[i-1].time);
@@ -36,18 +37,61 @@ test('radial route skips DEM gaps and throws when nothing valid remains',()=>{
  assert.throws(()=>buildRadialRoute(voidQuery,bounds,{azimuthDeg:0,aglM:45,speedMps:15,id:'void'}));
 });
 
-test('threat scenarios build the required route counts, offsets and delays',()=>{
- const single=buildThreatRoutes(flatQuery,bounds,'single');assert.equal(single.length,8);
- assert.deepEqual(single.map(r=>r.azimuthDeg),[0,45,90,135,180,225,270,315]);
+test('threat scenarios retain counts and delays while every automatic route crosses core',()=>{
+ const single=buildThreatRoutes(flatQuery,bounds,'single');assert.equal(single.length,1);
+ assert.deepEqual(single.map(r=>r.azimuthDeg),[0]);assert.ok(single[0].points.every(p=>p.position[1]===30));
  assert.ok(single.every(r=>r.startDelayS===0));
  assert.equal(buildThreatRoutes(flatQuery,bounds,'multi').length,4);
  const swarm=buildThreatRoutes(flatQuery,bounds,'swarm');assert.equal(swarm.length,42);
  for(let d=1;d<=3;d++){
   const group=swarm.filter(r=>r.id.startsWith(`swarm-${d}-`));
   assert.equal(group.length,14);assert.deepEqual(group.map(r=>r.startDelayS),Array.from({length:14},(_,k)=>k*2));
-  assert.ok(new Set(group.map(r=>r.points[0].position.map(v=>v.toFixed(1)).join(','))).size>1,'同方向横向铺开');
+  assert.ok(group.every(r=>r.points.some(p=>Math.hypot(p.position[0],p.position[2])<1e-9)),'同方向每架均穿越核心');
  }
  assert.throws(()=>buildThreatRoutes(flatQuery,bounds,'nope'));
+});
+
+test('oblique automatic routes preserve bearing, 1 km shortest distance, symmetry, height and speed',()=>{
+ const area={west:-700,east:1300,south:-400,north:1600,core:[200,0,300]};
+ for(const azimuthDeg of [0,30,45,90,125,180,225,270,315,359]){
+  const route=buildRadialRoute(flatQuery,area,{azimuthDeg,aglM:55,speedMps:20,id:`angle-${azimuthDeg}`});
+  const start=route.points[0].position,end=route.points.at(-1).position;
+  const gap=Math.hypot(Math.max(area.west-start[0],0,start[0]-area.east),Math.max(area.south-start[2],0,start[2]-area.north));
+  assert.ok(Math.abs(gap-1000)<1e-6);assert.equal(route.launch.clippedByMap,false);
+  assert.ok(Math.abs(start[0]+end[0]-2*area.core[0])<1e-6&&Math.abs(start[2]+end[2]-2*area.core[2])<1e-6);
+  const bearing=(Math.atan2(start[0]-area.core[0],-(start[2]-area.core[2]))*180/Math.PI+360)%360;
+  assert.ok(Math.abs(bearing-azimuthDeg)<1e-9);
+  assert.ok(route.points.some(p=>p.position[0]===area.core[0]&&p.position[2]===area.core[2]));
+  for(const p of route.points){assert.equal(p.position[1],55);assert.ok(Math.abs((p.position[0]-area.core[0])*Math.cos(azimuthDeg*Math.PI/180)+(p.position[2]-area.core[2])*Math.sin(azimuthDeg*Math.PI/180))<1e-6);}
+  assert.ok(Math.abs(route.duration-route.length/20)<1e-9);
+ }
+});
+
+test('map boundary clips launch and reflected endpoint independently, including full-map deployment',()=>{
+ const dem={west:-1600,east:2400,south:-1300,north:1800};
+ const query={...flatQuery,getDataBounds:()=>({dem,gis:{west:-10,east:10,south:-10,north:10}}),groundAt:(x,z)=>x>=dem.west-1e-8&&x<=dem.east+1e-8&&z>=dem.south-1e-8&&z<=dem.north+1e-8?0:null};
+ for(const area of [bounds,{...dem,core:[0,0,0]}])for(const azimuthDeg of [0,45,90,135,180,225,270,315]){
+  const route=buildRadialRoute(query,area,{azimuthDeg,aglM:30,speedMps:15,id:'clipped'});
+  assert.equal(route.skipped,0);
+  for(const p of route.points){assert.ok(query.groundAt(p.position[0],p.position[2])!==null);}
+  const start=route.points[0].position,end=route.points.at(-1).position;
+  if(route.launch.clippedByMap)assert.ok(Math.min(Math.abs(start[0]-dem.west),Math.abs(start[0]-dem.east),Math.abs(start[2]-dem.south),Math.abs(start[2]-dem.north))<1e-6,'起点精确落在地图边界');
+  if(route.launch.endRadiusM<route.launch.startRadiusM)assert.ok(Math.min(Math.abs(end[0]-dem.west),Math.abs(end[0]-dem.east),Math.abs(end[2]-dem.south),Math.abs(end[2]-dem.north))<1e-6,'对侧不足时终点精确落在边界');
+  if(area!==bounds)assert.ok(route.launch.actualBufferM<1e-6,'全图部署从边界起飞');
+ }
+ assert.throws(()=>buildRadialRoute(query,{...bounds,core:[9999,0,0]},{azimuthDeg:0,aglM:30,speedMps:15,id:'outside'}),/核心/);
+});
+
+test('near-parallel approach on a long narrow deployment still launches 1000 m outside',()=>{
+ const narrow={west:-10,east:10,south:-10000,north:10000,core:[0,0,0]};
+ const route=buildRadialRoute(flatQuery,narrow,{azimuthDeg:1,aglM:30,speedMps:15,id:'narrow'});
+ assert.ok(Math.abs(route.launch.actualBufferM-1000)<1e-6);
+});
+
+test('单机单点只允许一架一个来向一条航线，仍可调整来向高度和速度',()=>{
+ for(const config of [{count:8},{directions:2,azimuthsDeg:[0,90]},{aglM:[30,60]},{azimuthsDeg:[0,90]}])assert.throws(()=>normalizeThreatConfig('single',config),/单机单点/);
+ const config=normalizeThreatConfig('single',{azimuthsDeg:[125],aglM:[55],speedMps:20});
+ const routes=buildThreatRoutes(flatQuery,bounds,'single',config);assert.equal(routes.length,1);assert.equal(routes[0].azimuthDeg,125);assert.ok(routes[0].points.every(p=>p.position[1]===55));assert.equal(routes[0].speed,20);
 });
 
 test('capacity=1 device reports one target per frame and records the overflow honestly',async()=>{
@@ -146,8 +190,8 @@ test('real city smoke: single scenario over the selected deployment plan',async(
  const routes=buildThreatRoutes(query,bounds,'single');
  assert.equal(routes.length,THREAT_SCENARIOS.single.directions);
  const result=await simulateThreat({query,devices,routes,target:report.target,environment:report.environment,core});
- assert.equal(result.summary.targetCount,8);assert.ok(result.frames.length>0);
- assert.equal(result.perTarget.length,8);
+ assert.equal(result.summary.targetCount,1);assert.ok(result.frames.length>0);
+ assert.equal(result.perTarget.length,1);assert.ok(result.frames.every(frame=>frame.targets.length===1));
  for(const p of result.perTarget){assert.ok(p.detectedFraction>=0&&p.detectedFraction<=1);assert.ok(p.firstDetectionTime===null||p.firstDetectionTime>=0);}
  assert.ok(result.summary.meanDetectedFraction>=0&&result.summary.meanDetectedFraction<=1);
  assert.ok(typeof threatSummaryText(result)==='string');

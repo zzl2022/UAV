@@ -335,7 +335,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  progress({stage:'scoring',completed:1,total:1});
  // ④ 三类威胁场景验证：三套方案分别计算，推荐方案结果同时保留在 report.threats 兼容既有界面。
  const threatKeys=['single','multi','swarm'];
- if(threatKeys.length)progress({stage:'threats',completed:0,total:plans.length*threatKeys.length});
+ if(threatKeys.length)if(threatKeys.length)progress({stage:'threats',completed:0,total:plans.length*threatKeys.length});
  const threatsByPlan=Object.fromEntries(plans.map(plan=>[plan.id,{}]));
  const scenarioEnv=conditions[0].environment,scenarioTarget={...target,...conditions[0].target};
  let ti=0;

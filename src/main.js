@@ -836,7 +836,7 @@ try {
     if(simStart.disabled!==disabled)simStart.disabled=disabled;
     if(simStart.title!==message)simStart.title=message;
     if(simScenario.disabled!==scenarioDisabled)simScenario.disabled=scenarioDisabled;
-    const visibleMessage=['scene-unavailable','device-demo','no-recording'].includes(state.status)?state.message:'';
+    const visibleMessage=['scene-unavailable','device-demo','no-recording','stale'].includes(state.status)?state.message:'';
     if(simStatus.textContent!==visibleMessage)simStatus.textContent=visibleMessage;
     const showStatus=!!visibleMessage;
     if(simStatus.hidden===showStatus)simStatus.hidden=!showStatus;
