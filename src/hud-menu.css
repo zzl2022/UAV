@@ -432,6 +432,13 @@ body.hud-menu-open #ac8-main-menu-toggle {
 #ac8-equipment-menu .ac8-hud-content {
   width: min(780px, calc(100vw - var(--ac8-bend-x, 300px) - 220px));
 }
+#ac8-equipment-menu.is-inventory .ac8-hud-content {
+  left: var(--ac8-options-left, 30px);
+  width: min(420px, calc(100vw - 64px));
+}
+#ac8-equipment-menu.is-inventory .ac8-hud-back {
+  left: var(--ac8-options-left, 30px);
+}
 #ac8-equipment-menu #equipment-panel {
   display: flex !important;
   flex-direction: column;
@@ -779,6 +786,9 @@ body.hud-menu-open #ac8-main-menu-toggle {
     padding: 10px 12px 8px;
   }
   .ac8-hud-back { left: 16px; top: auto; bottom: 38px; }
+  #ac8-equipment-menu.is-inventory .ac8-hud-content,
+  #ac8-equipment-menu.is-inventory .ac8-hud-back { left: 16px; }
+  #ac8-equipment-menu.is-inventory .ac8-hud-content { width: calc(100vw - 32px); }
   #ac8-equipment-menu .equipment-editor { grid-template-columns: 1fr; }
   #ac8-equipment-menu .equipment-group-nav {
     flex-direction: row;

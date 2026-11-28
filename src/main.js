@@ -752,7 +752,6 @@ try {
     if(!rect)return .18;
     return Math.max(.1,Math.min(.34,(rect.right+56-window.innerWidth/2)/window.innerWidth));
   }
-  window.addEventListener('resize',()=>{if(equipmentShift>0)applyEquipmentShift(equipmentShift);});
   const equipmentMenu=mountHudMenu({
     app,launchers,kind:'equipment',launcher:app.querySelector('#toggle-sensors'),
     panel:app.querySelector('#equipment-panel'),contentClass:'is-equipment',
@@ -770,17 +769,26 @@ try {
       app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'}));
       sensors.activate();
     },
-    onSelect:type=>{
-      if(type==='inventory'){sensors.showEquipmentInventory();animateEquipmentShift(0,850);return;}
-      document.querySelector(`#equipment-tab-${type}`)?.click();
+    onSelect:(type,{content})=>{
+      const inventory=type==='inventory';
+      content.parentElement.classList.toggle('is-inventory',inventory);
+      if(inventory)sensors.showEquipmentInventory();
+      else document.querySelector(`#equipment-tab-${type}`)?.click();
       animateEquipmentShift(equipmentFocusShift(),1100);
     },
-    onDetailExit:()=>{animateEquipmentShift(0,850);restoreOverview();},
+    onDetailExit:()=>{
+      app.querySelector('#ac8-equipment-menu')?.classList.remove('is-inventory');
+      animateEquipmentShift(0,850);restoreOverview();
+    },
     onClose:()=>{
-      app.querySelector('#ac8-equipment-menu')?.classList.remove('is-demo-details');
+      app.querySelector('#ac8-equipment-menu')?.classList.remove('is-demo-details','is-inventory');
       sensors.hideDemoHud();sensors.stopDemo();
       animateEquipmentShift(0,850);sensors.deactivate();restoreOverview();
     },
+  });
+  window.addEventListener('resize',()=>{
+    if(equipmentMenu?.active()==='inventory')animateEquipmentShift(equipmentFocusShift(),260);
+    else if(equipmentShift>0)applyEquipmentShift(equipmentShift);
   });
   app.addEventListener('equipment-demo-details',()=>{
     if(!sensors.showDemoHud())return;

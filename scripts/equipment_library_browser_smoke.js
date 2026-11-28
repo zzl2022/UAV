@@ -13,6 +13,8 @@ try{
   page.on('pageerror',error=>errors.push(error.message));
   const ready=()=>page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:180000});
   const inventory=page.locator('#equipment-inventory'),save=page.locator('#equipment-profile-save');
+  const equipmentMenu=page.locator('#ac8-equipment-menu'),content=equipmentMenu.locator('.ac8-hud-content');
+  const museum=page.locator('#museum-label');
   const currentRange=page.locator('#profile-parameters-maxRange');
   const summary=page.locator('#equipment-inventory-count'),rows=page.locator('#equipment-inventory-list li');
   const info=page.locator('[data-info="equipmentConfig"]');
@@ -24,11 +26,13 @@ try{
     if(await page.evaluate(()=>window.__ac8EquipmentMenu?.isDetail())){
       await page.keyboard.press('Escape');
       await page.waitForFunction(()=>!window.__ac8EquipmentMenu?.isDetail());
+      assert.doesNotMatch(await equipmentMenu.getAttribute('class'),/\bis-inventory\b/);
     }
     await page.locator(`#ac8-equipment-menu .ac8-hud-tabs button[data-page="${id}"]`).click();
     await page.waitForFunction(id=>window.__ac8EquipmentMenu?.active()===id,id);
     const panel=id==='inventory'?inventory:page.locator('#equipment-profile-form');
     await panel.waitFor({state:'visible'});
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('#ac8-equipment-menu .ac8-hud-content')).transform==='none');
   }
 
   const observeInfo=()=>page.evaluate(()=>{
@@ -39,7 +43,14 @@ try{
   });
 
   await page.goto(url.href,{timeout:120000});await ready();await observeInfo();
+  await museum.waitFor({state:'visible'});
+  const overviewX=(await museum.boundingBox()).x;
   await enter('inventory');
+  await page.waitForFunction(x=>document.querySelector('#museum-label').getBoundingClientRect().left>x+100,overviewX);
+  assert.match(await equipmentMenu.getAttribute('class'),/\bis-inventory\b/);
+  const inventoryRect=await content.boundingBox(),coreRect=await museum.boundingBox();
+  assert.ok(inventoryRect.x>=0&&inventoryRect.x<=48&&inventoryRect.width>=380&&inventoryRect.width<=440);
+  assert.ok(coreRect.x>inventoryRect.x+inventoryRect.width+20&&coreRect.x+coreRect.width<=1500);
   assert.equal(await inventory.isVisible(),true);
   assert.equal(await page.locator('#equipment-profile-form').isHidden(),true);
   assert.equal(await summary.textContent(),'已加入 0 项装备');
@@ -48,6 +59,7 @@ try{
 
   await enter('radar');
   assert.equal(await inventory.isHidden(),true);
+  assert.ok((await content.boundingBox()).width>500,'型号编辑页应恢复原宽度');
   const defaultId=await selectedRadar();
   await page.locator('.equipment-model-trigger[data-type="radar"]').click();
   await page.locator('#equipment-model-menu [data-preset-id="radar-03d"]').click();
@@ -93,6 +105,9 @@ try{
 
   await page.setViewportSize({width:390,height:844});
   await enter('inventory');
+  const mobileContent=await content.boundingBox();
+  assert.ok(mobileContent.x>=12&&mobileContent.x+mobileContent.width<=378);
+  assert.ok(await inventory.evaluate(element=>element.scrollWidth<=element.clientWidth));
   const remove=rows.first().getByRole('button',{name:`移除 ${radarName}`});
   await remove.scrollIntoViewIfNeeded();
   const rect=await remove.boundingBox();
