@@ -813,20 +813,26 @@ try {
   function updateSimulationBar(){
     if(!task3)return;
     const state=currentPlayback();
-    simStart.disabled=!!state.blocked&&!state.playing;
-    simStart.title=state.message??'';
-    simScenario.disabled=state.status==='scene-unavailable';
+    const disabled=!!state.blocked&&!state.playing,message=state.message??'',scenarioDisabled=state.status==='scene-unavailable';
+    if(simStart.disabled!==disabled)simStart.disabled=disabled;
+    if(simStart.title!==message)simStart.title=message;
+    if(simScenario.disabled!==scenarioDisabled)simScenario.disabled=scenarioDisabled;
     const visibleMessage=['scene-unavailable','device-demo','no-recording'].includes(state.status)?state.message:'';
     if(simStatus.textContent!==visibleMessage)simStatus.textContent=visibleMessage;
-    simStatus.hidden=!visibleMessage;
-    simStart.textContent=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
-    simStart.dataset.playing=String(!!state.playing);
+    const showStatus=!!visibleMessage;
+    if(simStatus.hidden===showStatus)simStatus.hidden=!showStatus;
+    const startLabel=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
+    if(simStart.textContent!==startLabel)simStart.textContent=startLabel;
+    const playing=String(!!state.playing);
+    if(simStart.dataset.playing!==playing)simStart.dataset.playing=playing;
     if(simScenario&&state.key&&simScenario.value!==state.key)simScenario.value=state.key;
     if(Number(simSpeed.value)!==state.speed&&state.speed)simSpeed.value=String(state.speed);
     const progress=state.duration?Math.max(0,Math.min(100,state.time/state.duration*100)):0;
-    if(!simSeeking)simProgress.value=String(progress*10);
-    simProgress.style.setProperty('--ac8-progress',`${progress}%`);
-    simProgress.disabled=!state.enabled;
+    const sliderValue=String(Math.round(progress*10)),progressStyle=`${progress}%`;
+    if(!simSeeking&&simProgress.value!==sliderValue)simProgress.value=sliderValue;
+    if(simProgress.style.getPropertyValue('--ac8-progress')!==progressStyle)simProgress.style.setProperty('--ac8-progress',progressStyle);
+    const progressDisabled=!state.enabled;
+    if(simProgress.disabled!==progressDisabled)simProgress.disabled=progressDisabled;
   }
   if(simStart&&simSpeed&&simProgress){
     simStart.onclick=()=>{
