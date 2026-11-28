@@ -2,6 +2,7 @@
 import {TYPES} from '../sensors/presets.js';
 import {THREAT_SCENARIOS} from './constants.js';
 import {createDeviceDisplayMap} from './device-display.js';
+import {matchDeploymentRules} from './rule-matches.js';
 
 export const DEPLOYMENT_DOC_SCHEMA='task3-deployment-doc/1.0';
 const number=(value,digits=1)=>Number(value).toFixed(digits);
@@ -91,6 +92,8 @@ function comparisonModel(report,selectedPlanId){
 // 威胁场景验证结果：优先读取按方案缓存的 threatsByPlan；旧报告仅推荐方案有 threats 时如实标记可用性。
 function threatModel(report,run,plan){
  const derived=Boolean(plan.derivation),threatPlanId=derived?plan.derivation.basePlanId:plan.id;
+ const proof=report.finalMobileThreatRevalidated;
+ const revalidated=derived&&proof?.planId===plan.id&&proof.runId===run.runId&&proof.deviceIds?.length===plan.devices.length&&plan.devices.every((d,i)=>proof.deviceIds[i]===d.id)&&!!report.threatsByPlan?.[plan.id];
  const source=report.threatsByPlan?.[threatPlanId]??(threatPlanId===report.recommendedId?report.threats:null)??run?.threatsByPlan?.[threatPlanId]??(threatPlanId===report.recommendedId?run?.threats:null)??{};
  const scenarios=Object.entries(source).map(([key,value])=>{
   const config=value?.config??{},perTarget=Array.isArray(value?.perTarget)?value.perTarget:[];
@@ -108,7 +111,7 @@ function threatModel(report,run,plan){
    text:value?.text??null,
   };
  });
- return {planId:plan.id,planName:plan.name,sourcePlanId:threatPlanId,derived,available:scenarios.length>0,note:derived?'当前为警车移动补盲派生方案；威胁结果来自原方案，未对派生方案重新计算。':null,scenarios};
+ return {planId:plan.id,planName:plan.name,sourcePlanId:threatPlanId,derived,revalidated,available:scenarios.length>0,note:revalidated?'已按本次运行的最终车载与固定设备组合重新核验。':derived?'当前为警车移动补盲派生方案；威胁结果来自原方案，未对派生方案重新计算。':null,scenarios};
 }
 
 // 覆盖效果：工况指标 + 盲区四分类 + 单高度层面积估计，全部来自真实离散采样。
@@ -144,11 +147,12 @@ function emcModel(emc){
    actionCount:Array.isArray(emc.remediation.actions)?emc.remediation.actions.length:0,
    actions:Array.isArray(emc.remediation.actions)?emc.remediation.actions.map(action=>({...action})):[],
    unresolvedCount:Array.isArray(emc.remediation.unresolved)?emc.remediation.unresolved.length:0,
+   initial:emc.remediation.before??null,warningReview:emc.remediation.warningReview??null,
   }:null,
  };
 }
 
-function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId}){
+function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId,review}){
  if(!Array.isArray(plan.devices)||!plan.devices.length)throw Error(`方案 ${plan.id} 没有可解释的设备点位`);
  const {condition,cases}=representativeCases(report,plan,conditionId);
  const scope=report.scope??report.sampling.dataCoverage??{};
@@ -156,13 +160,20 @@ function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,gener
  if(!emc)throw Error(`方案 ${plan.id} 缺少 EMC 结果`);
  const scoring=report.scoring?.plans?.find(item=>item.id===plan.id);
  const coverage=coverageModel(report,plan);
+ const matched=review?.book?matchDeploymentRules(review.book.acceptedRules,report,plan,review.previousInputs).map(({rule,basis,deviceIds})=>({id:rule.id,condition:rule.condition,conclusion:rule.conclusion,basis,deviceIds})):null;
+ const first=cases[0],second=cases.find(c=>c.type!==first?.type)??cases[1];
+ const examples=[first,second].filter(Boolean).map(c=>({...c,bands:plan.deviceBands?.[c.deviceId]??null}));
  const usableRules=(Array.isArray(rules)?rules:rules.rules??[]).filter(rule=>rule?.evidence?.samples>0&&rule.evidence.runIds&&rule.evidence.method).map(rule=>({id:rule.id,title:rule.title,text:rule.text,evidence:{samples:rule.evidence.samples,runIds:rule.evidence.runIds,method:rule.evidence.method}}));
  const limitations=[...report.limitations];
+ const threats=threatModel(report,run,plan);
  if(derived){
-  limitations.push('当前为警车移动补盲派生方案：覆盖、盲区、设备贡献与 EMC 已按新增设备重算；原方案比较排名和威胁推演未对派生方案重算，不得当作移动方案的威胁验证结果。',...plan.derivation.assumptions??[]);
+  limitations.push(threats.revalidated?'固定方案比较排名沿用原值；动态检出指标按最终组合重新核验。':'当前为警车移动补盲派生方案：覆盖、盲区、设备贡献与 EMC 已按新增设备重算；原方案比较排名和威胁推演未对派生方案重算，不得当作移动方案的威胁验证结果。',...plan.derivation.assumptions??[]);
  }else limitations.push('本次仅包含固定点位流水线结果，未启用警车移动补盲；本文不包含也不声称任何移动补盲效果。');
  return {
   schema:DEPLOYMENT_DOC_SCHEMA,documentKind,generatedAt,
+  sceneName:review?.sceneName??report.sceneName??'当前场景',examples,matchedRules:matched,
+  ruleVersion:review?.book?.createdAt??null,
+  daily:review?.daily?.runId===run.runId&&review.daily.planId===plan.id&&review.daily.conditionId===condition.id?review.daily:null,
   source:{runId:run.runId,runCreatedAt:run.createdAt,reportCreatedAt:report.createdAt,activePlanId:plan.id,recommendedId:report.recommendedId,origin:report.origin,inputHashes:report.inputHashes},
   scope:{widthM:scope.widthM??settings.scopeWidthM,depthM:scope.depthM??settings.scopeDepthM,clipped:Boolean(scope.clipped),note:scope.note??'采样仅使用实际 GIS/DEM 数据，不外推无数据区域覆盖。'},
   buildingExclusions:structuredClone(settings.buildingExclusions??{buildingIds:[]}),
@@ -172,29 +183,29 @@ function buildPlanDocument({report,run,plan,rules,conditionId,documentKind,gener
   metrics:{conditions:coverage.conditions,averageBlindRate:coverage.conditions.reduce((sum,metric)=>sum+(metric.blindRate??0),0)/Math.max(1,coverage.conditions.length),weakestConditionId:[...coverage.conditions].sort((a,b)=>(a.coverageRate??0)-(b.coverageRate??0))[0]?.condition??null,...(scoring?{originalScore:scoring.score,originalRank:scoring.rank}:{})},
   coverage:{core:coverage.core,conditions:coverage.conditions},
   comparison:comparisonModel(report,selectedPlanId??plan.id),
-  threats:threatModel(report,run,plan),
+  threats,
   emc:{verdict:emc.verdict,counts:{...emc.counts},...emcModel(emc)},
   rules:usableRules,caseCondition:condition,cases,
-  mobileRepair:derived?{enabled:true,basePlanId:plan.derivation.basePlanId,addedDeviceCount:plan.derivation.addedDeviceCount,conditionId:plan.derivation.conditionId,status:plan.derivation.status}:{enabled:false},
+  mobileRepair:derived?{enabled:true,basePlanId:plan.derivation.basePlanId,addedDeviceCount:plan.derivation.addedDeviceCount,conditionId:plan.derivation.conditionId,status:plan.derivation.status,before:plan.derivation.beforeBlindCount,after:plan.derivation.afterBlindCount,addedCost:plan.derivation.addedCost}:{enabled:false},
   limitations,
  };
 }
 
-export function createDeploymentDocument({report,run,activePlanId=report?.recommendedId,rules=[],conditionId='nominal',documentKind='current',generatedAt=new Date().toISOString()}){
+export function createDeploymentDocument({report,run,activePlanId=report?.recommendedId,rules=[],conditionId='nominal',documentKind='current',generatedAt=new Date().toISOString(),review}){
  if(!report||!run?.runId)throw Error('生成布设文档需要完整 report 和带 runId 的 run');
  const plan=report.plans.find(item=>item.id===activePlanId);
  if(!plan)throw Error(`当前方案 ${activePlanId} 不在报告中`);
- return buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId:plan.id});
+ return buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId:plan.id,review});
 }
 
 // 三套方案合并文档：一次导出覆盖经济型、均衡型、增强型；每套方案均含部署、覆盖、威胁与 EMC 数据。
-export function createDeploymentDocumentAll({report,run,rules=[],conditionId='nominal',documentKind='all',generatedAt=new Date().toISOString(),activePlanId=report?.recommendedId}){
+export function createDeploymentDocumentAll({report,run,rules=[],conditionId='nominal',documentKind='all',generatedAt=new Date().toISOString(),activePlanId=report?.recommendedId,review}){
  if(!report||!run?.runId)throw Error('生成布设文档需要完整 report 和带 runId 的 run');
  const plans=Array.isArray(report.plans)?report.plans:[];
  if(!plans.length)throw Error('报告中没有任何布设方案');
  const selectedPlanId=plans.some(item=>item.id===activePlanId)?activePlanId:report.recommendedId;
  const comparison=comparisonModel(report,selectedPlanId);
- const models=plans.map(plan=>buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId}));
+ const models=plans.map(plan=>buildPlanDocument({report,run,plan,rules,conditionId,documentKind,generatedAt,selectedPlanId,review}));
  for(const model of models)model.comparison=comparison;
  return {
   schema:DEPLOYMENT_DOC_SCHEMA,documentKind,generatedAt,

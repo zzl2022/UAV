@@ -6,6 +6,7 @@ import {createDeploymentDocument,createDeploymentDocumentAll} from './deployment
 import {BLIND_CATEGORIES} from './constants.js';
 import {createDeviceExplanation} from './device-explanation.js';
 import {buildDeviceExplanationDocument} from './device-explanation-pdf.js';
+import {pairedCoverageSvg} from './coverage-figure.js';
 
 const FONT = 'NotoSansSC';
 const FONT_FILE = 'NotoSansSC-Regular.otf';
@@ -125,7 +126,7 @@ function buildCover(models) {
     {text: '反无人机装备优化部署与仿真推演平台', fontSize: 9, bold: true, color: ACCENT},
     {text: `部署方案仿真推演报告${models.length > 1 ? '（已生成 ' + models.length + ' 套方案）' : ''}`, fontSize: 24, bold: true, color: INK, margin: [0, 6, 0, 4]},
     {text: '核心优化目标', fontSize: 10, bold: true, color: GOLD, margin: [0, 10, 0, 2]},
-    {text: '最优装备配置体系实现核心防护区域全域无盲区感知覆盖', fontSize: 14, bold: true, color: INK},
+    {text: `${first.sceneName??'当前场景'} · 多工况覆盖与部署约束评估`, fontSize: 14, bold: true, color: INK},
     {text: '依托三维环境模型与多元装备特性模型，完成多套布设方案的自动化仿真推演与迭代优化。', fontSize: 10, color: MUTED, margin: [0, 4, 0, 10]},
     simpleTable(['方案', '设备', '平均覆盖率', '平均盲区占比', '相对成本', '推荐', 'EMC'], summaryRows, ['*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'], {fontSize: 8}),
     {text: '报告范围', bold: true, fontSize: 10, margin: [0, 12, 0, 4]},
@@ -143,6 +144,7 @@ function buildCover(models) {
       {text: '三、多维度方案择优：覆盖、盲区、成本、可行性四指标与综合排名', fontSize: 9},
       {text: '四、多威胁场景鲁棒性验证：单机、多方向、蜂群饱和三类场景', fontSize: 9},
       {text: '五、电磁兼容性校核：射频冲突、严重度与处置建议', fontSize: 9},
+      {text: '六、警车部署与资源评估　七、通用布设规则核验　八、必要假设与模型限制',fontSize:9},
     ]},
   ];
 }
@@ -155,7 +157,7 @@ function buildPlanDesign(models) {
     simpleTable(['约束项', '取值'], [
       ['请求范围', `东西 ${num(first.scope.widthM, 0)} m × 南北 ${num(first.scope.depthM, 0)} m${first.scope.clipped ? '（已按有效地形裁切）' : ''}`],
       ['覆盖网格间距', `${num(first.grid.spacingM, 0)} m`],
-      ['屋顶候选抽稀间距', `${num(first.grid.siteSpacingM, 0)} m`],
+      ['安装候选分格间距', `${num(first.grid.siteSpacingM, 0)} m`],
       ['离地高度层', first.grid.heightsM.map(value => `${num(value, 0)} m`).join(' / ')],
       ['有效空域采样 / 候选 / 初始站点', `${first.grid.sampleCount} / ${first.grid.candidateCount} / ${first.grid.siteCount}`],
       ['覆盖裕量门槛', `${num(first.grid.marginReserveDb)} dB`],
@@ -305,7 +307,7 @@ function buildThreats(models) {
       cell(scenario.meanFirstDetectionTime === null ? '未检出' : `${num(scenario.meanFirstDetectionTime)} s`),
       cell(pct(scenario.meanDetectedFraction)),
       cell(pct(scenario.minDetectedFraction)),
-      cell(`${num(scenario.overflowEvents, 0)} 架次${scenario.overflowedTargets ? `（${num(scenario.overflowedTargets, 0)} 架漏探）` : ''}`),
+      cell(`${num(scenario.overflowEvents, 0)} 架次${scenario.overflowedTargets ? `（涉及 ${num(scenario.overflowedTargets, 0)} 架）` : ''}`),
     ]);
     content.push(simpleTable(['威胁场景', '目标数', '检出数', '平均首报', '平均检出占比', '最低检出占比', '容量溢出'], rows, ['auto', 'auto', 'auto', 'auto', '*', '*', 'auto'], {fontSize: 7.5}));
 
@@ -335,7 +337,7 @@ function buildEmc(models) {
     if (emc.text) content.push({text: emc.text, fontSize: 8.5, color: INK, margin: [0, 0, 0, 4]});
 
     if (emc.conflicts.length) {
-      const rows = emc.conflicts.slice(0, 15).map(conflict => [
+      const rows = emc.conflicts.map(conflict => [
         cell(`${deviceName(model, conflict.a)} ↔ ${deviceName(model, conflict.b)}`),
         cell(EMC_KIND[conflict.kind] ?? conflict.kind),
         cell(conflict.severity === 'fail' ? '严重' : '提示', {color: conflict.severity === 'fail' ? '#b91c1c' : GOLD}),
@@ -343,7 +345,6 @@ function buildEmc(models) {
         cell(conflict.recommendation ?? '未提供'),
       ]);
       content.push(simpleTable(['设备对', '冲突类型', '严重度', '距离 / m', '处置建议'], rows, ['*', 'auto', 'auto', 'auto', '*'], {fontSize: 7.5}));
-      if (emc.conflicts.length > 15) content.push(muted(`仅列前 15 条冲突，共 ${emc.conflicts.length} 条；完整清单见导出 JSON。`));
     } else {
       content.push(muted('未发现装备间射频冲突。'));
     }
@@ -351,9 +352,18 @@ function buildEmc(models) {
     if (emc.remediation) {
       const statusText = emc.remediation.status === 'not-required' ? '无需处置' : emc.remediation.status === 'resolved' ? '已通过换频/局部移位解决严重冲突' : emc.remediation.status === 'unresolved' ? '仍有未解决的严重冲突，需要人工调整装备或点位' : '未提供处置状态';
       content.push({text: `自动处置：${statusText}；处置动作 ${emc.remediation.actionCount} 项；剩余未解决严重冲突 ${emc.remediation.unresolvedCount} 项。`, fontSize: 8.5, color: INK, margin: [0, 4, 0, 2]});
-      for (const action of emc.remediation.actions.slice(0, 6)) {
+      const initial=emc.remediation.initial?.conflicts??[];
+      for(const kind of new Set(initial.filter(c=>c.severity==='fail').map(c=>c.kind))){
+        const issues=initial.filter(c=>c.severity==='fail'&&c.kind===kind);
+        const remaining=emc.conflicts.filter(c=>c.severity==='fail'&&c.kind===kind);
+        content.push(muted(`${EMC_KIND[kind]??kind}：初检 ${issues.length} 项，最终 ${remaining.length} 项。处置建议：${[...new Set(issues.map(c=>c.recommendation).filter(Boolean))].join('；')}`));
+      }
+      for (const action of emc.remediation.actions) {
         content.push({text: `${num(action.step, 0)}. ${action.action === 'retune' ? '换频' : '局部移位'} · ${deviceName(model, action.deviceId)} · ${action.reason ?? ''}`, fontSize: 8, color: '#374151', margin: [8, 0, 0, 1]});
       }
+      const review=emc.remediation.warningReview;
+      content.push(muted(review?`提示级修复：提示项由 ${review.before.counts.warning} 项变为 ${review.after.counts.warning} 项，严重项由 ${review.before.counts.fail} 项变为 ${review.after.counts.fail} 项。${review.reason??''}`:'未记录提示级自动修复。'));
+      if(review?.actions?.length)content.push(simpleTable(['设备','调整方式','调整前','调整后'],review.actions.map(a=>[deviceName(model,a.replacementDeviceId??a.deviceId),a.action==='retune'?'换频':'移位',...([a.before,a.after].map(s=>a.action==='retune'?`${num(s.frequencyGHz,3)} GHz`:s.siteId??'未记录'))]),['*','auto','*','*']));
     } else {
       content.push(muted('当前方案未提供自动处置记录。'));
     }
@@ -366,10 +376,68 @@ function buildEmc(models) {
 function buildLimitations(models) {
   const limitations = [...new Set(models.flatMap(model => model.limitations))];
   return [
-    sectionTitle('六', '必要假设与模型限制'),
+    sectionTitle('八', '必要假设与模型限制'),
     {ul: limitations.map(item => ({text: item, fontSize: 9, color: INK, margin: [0, 0, 0, 2]})), margin: [0, 0, 0, 6]},
     {text: '覆盖率是离散有效采样的计算结果，不是连续空域无盲区证明；施工条件、道路可达性与电磁合规仍需现场实测。', fontSize: 9, color: GOLD},
   ];
+}
+
+const paragraph=text=>({text,leadingIndent:20,fontSize:10,margin:[0,3,0,5],lineHeight:1.35});
+function mobileText(model){
+ const m=model.mobileRepair,d=model.daily;
+ const base=m.enabled?`在${model.metrics.conditions.find(c=>c.condition===m.conditionId)?.name??m.conditionId}工况下，新增 ${num(m.addedDeviceCount,0)} 台车载设备，未覆盖采样点由 ${num(m.before,0)} 个变为 ${num(m.after,0)} 个。车载设备增量成本为 ${num(m.addedCost)} 个相对单位。`:'本轮方案采用固定设备，未启用警车补盲。';
+ return base+(d?`日常部署核算可用 ${d.available} 辆、使用 ${d.used} 辆，覆盖原有 ${d.total} 个未覆盖点中的 ${d.covered} 个。`:'当前工况未记录限额车辆的日常部署核算。');
+}
+function exampleFigures(model){
+ const index=model.metrics.conditions.findIndex(c=>c.condition===model.caseCondition.id);
+ return (model.examples??[]).map((e,i)=>{
+  const svg=e.bands&&pairedCoverageSvg(e.bands,index);
+  return {unbreakable:true,stack:[
+   subTitle(`${e.displayName}　${e.modelName}`),
+   paragraph(`${model.caseCondition.name}工况下，该设备覆盖 ${e.coveredSamples}／${e.totalSamples} 个采样点，其中独立覆盖 ${e.independentSamples} 个。`),
+   ...(svg?[{svg,width:430,alignment:'center'}, {...muted(`图 ${i+1}　距离—高度剖面（左）与同一设备的三维分层演示（右）`),alignment:'center'}]:[muted('该运行记录未保存距离及高度分档计数。')]),
+  ]};
+ });
+}
+const figureKey='横轴为水平距离（米），各层按离地高度标注。环带颜色由浅至深表示分档覆盖率升高，灰色表示无样本。各方位合并统计。';
+function ruleSection(models){
+ const content=[sectionTitle('七','通用布设规则核验')];
+ for(const model of models){
+  content.push(subTitle(model.plan.name));
+  if(!model.matchedRules){content.push(muted('该记录未附通用规则库。'));continue;}
+  content.push(muted(`规则库日期 ${model.ruleVersion?.slice(0,10)??'未记录'}。本轮逐条核对触发条件及关联设备。`));
+  for(const r of model.matchedRules){
+   content.push({unbreakable:true,stack:[
+    subTitle(`${r.id}　${r.condition}`),paragraph(r.conclusion),muted(r.basis),
+    muted(r.deviceIds.length?'关联设备：'+r.deviceIds.map(id=>deviceName(model,id)).join('、'):'本轮无匹配设备。')
+   ]});
+  }
+ }
+ return content;
+}
+
+export function buildBriefDocument(model){
+ validateDeploymentDocument(model);
+ const name=model.sceneName??'当前场景',figures=exampleFigures(model),rows=new Map();
+ for(const d of model.devices){const key=d.modelName+'｜'+(d.mobile?'车载':'固定');rows.set(key,(rows.get(key)??0)+1);}
+ const matches=model.matchedRules?.filter(r=>r.deviceIds.length);
+ const metrics=model.metrics.conditions;
+ const weakest=metrics.find(c=>c.condition===model.metrics.weakestConditionId);
+ return {pageSize:'A4',pageMargins:[42,40,42,42],defaultStyle:{font:FONT,fontSize:10,color:INK},
+  info:{title:name+'仿真部署方案（精简版）'},footer:(p,n)=>({text:`第 ${p} / ${n} 页`,alignment:'center',fontSize:8,color:MUTED,margin:[0,15]}),
+  content:[{text:name+'仿真部署方案',fontSize:19,bold:true,alignment:'center'},{text:model.plan.name,alignment:'center',margin:[0,4,0,6]},
+   sectionTitle('一','部署方案概述'),paragraph(`推演范围为 ${num(model.scope.widthM,0)} 米 × ${num(model.scope.depthM,0)} 米。水平网格间距 ${model.grid.spacingM} 米，离地高度层为 ${model.grid.heightsM.join('、')} 米，共有 ${model.grid.sampleCount} 个有效采样点。覆盖指标按各工况独立计算。`),
+   sectionTitle('二','装备部署清单'),simpleTable(['装备型号','部署方式','数量／台'],[...rows].map(([k,n])=>[...k.split('｜'),n]),['*','*','auto']),
+   paragraph(`本方案共 ${model.devices.length} 台设备，相对成本为 ${num(model.plan.cost)}。`+mobileText(model)),
+   sectionTitle('三','关键点位展示'),muted(figureKey),...figures.slice(0,1),
+   ...(figures.length>1?[{text:'关键点位展示（续）',pageBreak:'before',fontSize:13,bold:true},...figures.slice(1)]:[]),
+   {...sectionTitle('四','推演效果分析'),...(figures.length<2?{pageBreak:'before'}:{})},simpleTable(['工况','覆盖点／有效点','全域覆盖率','核心二重覆盖率'],metrics.map(c=>[c.name,`${num(c.covered,0)}／${num(c.total,0)}`,pct(c.coverageRate),pct(c.coreRedundantRate)]),['*','auto','auto','auto']),
+   ...(weakest?[paragraph(`全域采样覆盖率最低的工况为“${weakest.name}”，覆盖 ${num(weakest.covered,0)} 个采样点。该工况的核心二重覆盖率为 ${pct(weakest.coreRedundantRate)}，表示核心区内至少两台设备同时达到判定门限的采样比例。`)]:[]),
+   paragraph(`电磁兼容校核记录严重冲突 ${model.emc.counts.fail} 项、提示 ${model.emc.counts.warning} 项。`+(model.emc.remediation?.warningReview?'已执行提示级修复，表述采用修复后的校核结果。':'未记录提示级自动修复。')),
+   paragraph(matches?`通用规则核验共匹配 ${matches.length} 条。`+matches.map(r=>`${r.id}（${r.condition}）关联 ${r.deviceIds.length} 台`).join('；')+(matches.length?'。':''):'本轮未附通用规则核验记录。'),
+   ...(model.threats.available?[paragraph((model.threats.note??'动态推演按有效目标帧统计。')+model.threats.scenarios.map(s=>`${s.name}平均检出占比 ${pct(s.meanDetectedFraction)}`).join('，')+'。')]:[]),
+   muted('覆盖率适用于本轮离散采样与模型条件。'),muted(`运行编号　${model.source.runId}`)
+  ]};
 }
 
 // 单方案或全部方案共用同一渲染入口；传入数组即生成合并报告。
@@ -386,9 +454,12 @@ export function buildDocument(input) {
       ...buildCover(models),
       ...buildPlanDesign(models),
       ...buildCoverage(models),
+      ...models.flatMap(m=>[subTitle(m.plan.name+' · 代表设备分层覆盖'),muted(figureKey),...exampleFigures(m)]),
       ...buildScoring(models),
       ...buildThreats(models),
       ...buildEmc(models),
+      sectionTitle('六','警车部署与资源评估'),...models.flatMap(m=>[subTitle(m.plan.name),paragraph(mobileText(m))]),
+      ...ruleSection(models),
       ...buildLimitations(models),
     ],
   };
@@ -410,19 +481,17 @@ export async function exportDeviceExplanationPdf(input){
 
 // 导出入口：确保字体就绪后生成并下载 PDF。
 // planIds='all' 时一次生成三套方案的完整合并报告；否则仅导出当前方案。
-export async function exportDeploymentPdf({report, run, planIds = 'all', activePlanId, rules = [], conditionId}) {
+export async function exportDeploymentPdf({report,run,planIds='all',activePlanId,rules=[],conditionId,review,brief=false,isCurrent=()=>true}){
+  const args={report,run,activePlanId,rules,conditionId,review},all=!brief&&planIds==='all';
+  const document=all?createDeploymentDocumentAll(args):createDeploymentDocument(args);
+  const plans=all?document.plans:[document];
+  const definition=brief?buildBriefDocument(document):buildDocument(plans);
   await ensureFont();
-  if (planIds === 'all') {
-    const document = createDeploymentDocumentAll({report, run, activePlanId, rules, conditionId, documentKind: 'all'});
-    window.__task3DeploymentModel = document;
-    window.__task3DeploymentPlans = document.plans;
-    const docDefinition = buildDocument(document.plans);
-    await pdfMake.createPdf(docDefinition).download(`部署方案仿真推演报告-${run.runId}-已生成方案.pdf`);
-    return;
-  }
-  const model = createDeploymentDocument({report, run, activePlanId, rules, conditionId, documentKind: 'current'});
-  window.__task3DeploymentModel = model;
-  window.__task3DeploymentPlans = [model];
-  const docDefinition = buildDocument(model);
-  await pdfMake.createPdf(docDefinition).download(`部署方案仿真推演报告-${run.runId}-${activePlanId}.pdf`);
+  const blob=await pdfMake.createPdf(definition).getBlob();
+  if(!isCurrent())throw Error('导出期间方案或工况已变化，请重新导出。');
+  window.__task3DeploymentModel=document;window.__task3DeploymentPlans=plans;
+  const suffix=brief?'精简版':all?'已生成方案':activePlanId;
+  const a=window.document.createElement('a'),url=URL.createObjectURL(blob);
+  a.href=url;a.download=`${plans[0].sceneName}-部署方案仿真推演报告-${run.runId}-${suffix}.pdf`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }

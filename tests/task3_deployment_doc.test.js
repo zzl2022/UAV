@@ -1,6 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeploymentDocument,createDeploymentDocumentAll} from '../src/task3/deployment-doc.js';
+import {coverageBands,pairedCoverageSvg} from '../src/task3/coverage-figure.js';
+
+test('二维与三维共用工况计数，边缘采样保留在最外档',()=>{
+ const samples=[{position:[0,30,0],agl:30},{position:[8,60,0],agl:60}];
+ const bins=coverageBands({position:[0,2,0]},samples,[[1,0],[0,1]]);
+ assert.deepEqual(bins.heights,[30,60]);assert.equal(bins.totals[7],1);assert.equal(bins.hits[1][7],1);
+ assert.notEqual(pairedCoverageSvg(bins,0),pairedCoverageSvg(bins,1));
+ assert.equal(pairedCoverageSvg(bins,2),null);assert.throws(()=>coverageBands({position:[0,0,0]},samples,[[1]]));
+});
+
+test('限额车辆数据须匹配运行、方案和工况；单设备方案不补造第二台',()=>{
+ const {report,run,plan}=fixture();
+ plan.devices=plan.devices.slice(0,1);
+ const daily={runId:run.runId,planId:plan.id,conditionId:'nominal',available:0,used:0,total:2,covered:0};
+ const make=values=>createDeploymentDocument({report,run,review:{daily:{...daily,...values}}});
+ assert.equal(make({}).examples.length,1);assert.equal(make({}).daily.available,0);
+ for(const values of [{runId:'old'},{planId:'other'},{conditionId:'silent'}])assert.equal(make(values).daily,null);
+});
 
 const rule={id:'R1',title:'真实统计规则',text:'夹缝阈值为 45 m。',evidence:{samples:8,runIds:'run-real-1、run-real-2',method:'两轮 nominal 夹缝宽度 P90'}};
 function fixture(){

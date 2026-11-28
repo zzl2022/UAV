@@ -16,8 +16,13 @@ export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
   raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;
   return raycaster.intersectObject(model.ground)[0]?.point.y??null;
  }
- function surfaceAt(x,z){
-  raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;return raycaster.intersectObjects([model.buildings,model.ground])[0]?.point.y??null;
+ function surfaceIntersection(x,z){
+  raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;return raycaster.intersectObjects([model.buildings,model.ground])[0];
+ }
+ function surfaceAt(x,z){return surfaceIntersection(x,z)?.point.y??null;}
+ function surfaceHitAt(x,z){
+  const hit=surfaceIntersection(x,z);
+  return hit?{height:hit.point.y,buildingId:hit.object===model.buildings?featureAt(hit.faceIndex)?.id:null}:null;
  }
  function featureAt(faceIndex){
   let lo=0,hi=model.ranges.length-1;
@@ -56,5 +61,5 @@ export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
   }
   return result;
  }
- return {trace,groundAt,groundAtRaycast,surfaceAt,featureAt,getDataBounds};
+ return {trace,groundAt,groundAtRaycast,surfaceAt,surfaceHitAt,featureAt,getDataBounds};
 }

@@ -1,3 +1,4 @@
+import {buildingSites} from '../planning/building-sites.js';
 // 任务三自动化流水线：候选方案生成 → 覆盖推演 → 多指标择优 → 威胁场景验证 → 电磁兼容校核。
 // 候选生成/采样/贪心复用 src/planning/optimizer.js 的导出件；装备选择（presetIds）在本层注入，
 // optimizer 仅增加显式 custom 范围兼容分支，既有 city/core 路径不变。检出判定复用 sensors/engine.js evaluate + scene.js query.trace。
@@ -11,11 +12,13 @@ import {classifyBlindSpots} from './blindspots.js';
 import {scorePlans,comparisonTable} from './metrics.js';
 import {buildThreatRoutes,normalizeThreatConfig,simulateThreat,threatSummaryText} from './threats.js';
 import {emcAnalysis,emcVerdictText,distance3D} from './emc.js';
+import {coverageBands} from './coverage-figure.js';
 import {createRun,finalizeRun} from './runs.js';
 import {TASK3_VERSION,METRIC_WEIGHTS,EQUIPMENT_FACTS,EQUIPMENT_CHANNELS_GHZ,EMC_RULES} from './constants.js';
 import {TASK3_DEFAULT_SETTINGS,resolveTask3Settings,createScopeMetadata} from './scope.js';
 import {createDeploymentExclusion} from './building-constraints.js';
 import {collectDecisionEvidence} from './decision-evidence.js';
+import {withinTypeLimit} from '../planning/deployment-controls.js';
 
 export const PIPELINE_STAGES=['candidates','coverage','scoring','threats','emc'];
 export const STAGE_NAMES={candidates:'候选方案生成',coverage:'覆盖推演',scoring:'多指标择优',threats:'威胁场景验证',emc:'电磁兼容校核'};
@@ -40,32 +43,21 @@ function modelChannel(presetId,index){
  return channels?.length?channels[index%channels.length]:null;
 }
 
-// 与 optimizer.generateCandidates 同手法，但装备预设由用户选择注入；雷达俯仰与频道分组为模型假设。
+// 与基础规划共用安装点生成，装备预设由用户选择注入；雷达俯仰与频道分组为模型假设。
 export function generateCandidatesWithEquipment(city,query,settings,sampling,presetIds,equipmentSnapshot=null,exclusion=createDeploymentExclusion(city,settings)){
- const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot),{bounds}=sampling,sites=[],cells=new Map();
- for(const b of city.buildings){
-  if(b.height>140)continue;const ring=b.rings[0],x=ring.reduce((a,p)=>a+p[0],0)/ring.length,z=ring.reduce((a,p)=>a+p[2],0)/ring.length;
-  if(exclusion.blocked([x,0,z],b.id))continue;
-  if(x<bounds.west||x>bounds.east||z<bounds.south||z>bounds.north||query.groundAt(x,z)===null)continue;
-  const key=[Math.floor((x-bounds.west)/settings.siteSpacing),Math.floor((z-bounds.south)/settings.siteSpacing)].join(',');
-  const current=cells.get(key)??{};if(!current.low||b.height<current.low.building.height)current.low={x,z,building:b};if(!current.high||b.height>current.high.building.height)current.high={x,z,building:b};cells.set(key,current);
- }
- for(const site of [...cells.values()].flatMap(c=>c.low.building.id===c.high.building.id?[c.low]:[c.low,c.high]).sort((a,b)=>Math.hypot(a.x-bounds.core[0],a.z-bounds.core[2])-Math.hypot(b.x-bounds.core[0],b.z-bounds.core[2])).slice(0,Math.min(settings.maxSites,128))){
-  const surface=query.surfaceAt(site.x,site.z);if(surface===null||Math.abs(surface-(site.building.rings[0][0][1]+site.building.height))>2)continue;
-  sites.push({id:`site-${sites.length+1}`,position:[site.x,surface+2,site.z],buildingId:site.building.id,name:site.building.name,installationProxy:1+site.building.height/100,installation:'屋顶上方 2 m；施工条件未实测'});
- }
- if(!sites.length)throw Error('没有可用部署候选点');
+ const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot),{bounds}=sampling;
+ const sites=buildingSites(city,query,settings,bounds,exclusion);
  const variants=[];
  for(const presetId of presetIds){
   const preset=PRESETS.find(p=>p.id===presetId);
-  if(preset.type==='radar')for(const pitch of [0,-15,-30])variants.push({presetId,pitch});
+  if(preset.type==='radar')for(const pitch of settings.radarPitchesDeg??[0,-15,-30])variants.push({presetId,pitch});
   else variants.push({presetId,pitch:0});
  }
  const candidates=[];
  for(const [index,site] of sites.entries())for(const {presetId,pitch} of variants){
   const device=applyEquipmentProfile(createDevice(presetId,`task3-${index+1}-${presetId}-${pitch}`,site.position),equipmentProfiles);
   if(device.type==='radar'){device.parameters.pitch=pitch;device.parameters.frequencyGHz=modelChannel(presetId,index);} // X/Ku 带内既有模型频道
-  if(['optical','acoustic'].includes(device.type))device.parameters.heading=angles(device.position,bounds.core).azimuth;
+  if(['optical','acoustic'].includes(device.type))device.parameters.heading=(angles(device.position,bounds.core).azimuth+(settings.headingOffsetDeg??0)+360)%360;
   candidates.push({device,site,cost:settings.costs[device.type]+site.installationProxy*0.2});
  }
  return {candidates,sites};
@@ -118,15 +110,17 @@ function chooseRemedialAction(options,current,measureCoverage){
 
 // 确定性的单步贪心处置：每轮先试全部合法单设备换频，无改进再试既有候选点内的局部同型号替代。
 // 每步必须减少 fail 数，且状态签名去重；搜索规模随冲突设备数×频道数/局部候选数增长，不做组合枚举。
-export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=null,measureCoverage=null,maxSteps=null,exclusion=null}={}){
+export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=null,measureCoverage=null,maxSteps=null,exclusion=null,severity='fail',budget=Infinity}={}){
  exclusion?.assertDevices(devices,sites);
  let current={devices:structuredClone(devices),sites:structuredClone(sites),indices:indices?[...indices]:devices.map(()=>-1)};
  const initial=emcAnalysis(current.devices),before=emcSnapshot(initial),actions=[],visited=new Set([stateSignature(current.devices)]);
- const limit=maxSteps??Math.min(64,Math.max(8,devices.length*2));
+ const warningPass=severity==='warning',label=warningPass?'提示':'严重';
+ const limit=maxSteps??(warningPass?initial.counts.warning:Math.min(64,Math.max(8,devices.length*2)));
  let result=initial;
- if(!result.counts.fail)return {...current,before,after:emcSnapshot(result),actions,status:'not-required',deployable:true,unresolved:[]};
- for(let step=0;step<limit&&result.counts.fail;step++){
-  const involved=new Set(result.conflicts.filter(c=>c.severity==='fail').flatMap(c=>[c.a,c.b]));
+ const improves=next=>next.counts[severity]<result.counts[severity]&&(!warningPass||next.conflicts.filter(c=>c.severity==='fail').every(c=>result.conflicts.some(old=>old.severity==='fail'&&old.kind===c.kind&&old.a===c.a&&old.b===c.b)));
+ if(!result.counts[severity])return {...current,before,after:emcSnapshot(result),actions,status:'not-required',deployable:!result.counts.fail,unresolved:[]};
+ for(let step=0;step<limit&&result.counts[severity];step++){
+  const involved=new Set(result.conflicts.filter(c=>c.severity===severity).flatMap(c=>[c.a,c.b]));
   const options=[];
   // 第一阶段：只使用装备既有模型频道，优先换频。
   for(let i=0;i<current.devices.length;i++){
@@ -136,13 +130,13 @@ export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=nu
     if(Math.abs(frequencyGHz-oldFrequency)<1e-9)continue;
     const nextDevices=[...current.devices];nextDevices[i]=structuredClone(device);nextDevices[i].parameters.frequencyGHz=frequencyGHz;
     const signature=stateSignature(nextDevices);if(visited.has(signature))continue;
-    const nextResult=emcAnalysis(nextDevices);if(nextResult.counts.fail>=result.counts.fail)continue;
+    const nextResult=emcAnalysis(nextDevices);if(!improves(nextResult))continue;
     options.push({kind:'retune',deviceIndex:i,frequencyGHz,oldFrequency,devices:nextDevices,sites:current.sites,indices:current.indices,result:nextResult,signature,moveDistance:0,key:`${device.id}:${frequencyGHz}`});
    }
   }
   if(options.length){
    const best=chooseRemedialAction(options,current,measureCoverage),i=best.deviceIndex,old=current.devices[i];
-   actions.push({step:actions.length+1,action:'retune',deviceId:old.id,reason:'在装备既有模型频道内换频，减少 fail 级电磁冲突',before:{frequencyGHz:best.oldFrequency,position:[...old.position],emcCounts:{...result.counts}},after:{frequencyGHz:best.frequencyGHz,position:[...old.position],emcCounts:{...best.result.counts}},coverageLoss:best.coverageLoss});
+   actions.push({step:actions.length+1,action:'retune',deviceId:old.id,reason:`使用型号支持的频道，减少${label}级冲突`,before:{frequencyGHz:best.oldFrequency,position:[...old.position],emcCounts:{...result.counts}},after:{frequencyGHz:best.frequencyGHz,position:[...old.position],emcCounts:{...best.result.counts}},coverageLoss:best.coverageLoss});
    current={devices:best.devices,sites:best.sites,indices:best.indices};visited.add(best.signature);result=best.result;continue;
   }
   // 第二阶段：同型号、同俯仰变体在原有真实候选点内局部替代，保留当前合法载频。
@@ -153,29 +147,33 @@ export function remediateEmcConflicts({devices,sites=[],candidates=[],indices=nu
     if(current.indices.includes(index)||candidate.device.presetId!==device.presetId)return false;
     if(Math.abs((candidate.device.parameters?.pitch??0)-(device.parameters?.pitch??0))>1e-9)return false;
     const d=distance3D(device,candidate.device);return d>0&&d<=EMC_RULES.relocationSearchRadiusM;
-   }).map(entry=>({...entry,distance:distance3D(device,entry.candidate.device)})).sort((a,b)=>a.distance-b.distance||a.index-b.index).slice(0,EMC_RULES.maxRelocationCandidates);
-   for(const {candidate,index,distance} of alternatives){
+   }).map(entry=>({...entry,distance:distance3D(device,entry.candidate.device)})).sort((a,b)=>a.distance-b.distance||a.index-b.index);
+   // 多个高度可能聚集在同一栋楼。按距离分位分配原有检查名额，保留近端与远端。
+   const limit=EMC_RULES.maxRelocationCandidates;
+   const sampled=alternatives.length<=limit?alternatives:Array.from({length:limit},(_,j)=>alternatives[Math.round(j*(alternatives.length-1)/(limit-1))]);
+   for(const {candidate,index,distance} of sampled){
     const nextDevice=structuredClone(candidate.device),frequency=device.parameters?.frequencyGHz,channels=EQUIPMENT_CHANNELS_GHZ[device.presetId]??[];
     if(channels.some(f=>Math.abs(f-frequency)<1e-9))nextDevice.parameters.frequencyGHz=frequency;
     const nextDevices=[...current.devices];nextDevices[i]=nextDevice;
     const nextSites=[...current.sites];nextSites[i]=structuredClone(candidate.site);
     const nextIndices=[...current.indices];nextIndices[i]=index;
     const signature=stateSignature(nextDevices);if(visited.has(signature))continue;
-    const nextResult=emcAnalysis(nextDevices);if(nextResult.counts.fail>=result.counts.fail)continue;
+    if(Number.isFinite(budget)&&nextIndices.reduce((sum,j)=>sum+candidates[j].cost,0)>budget+1e-9)continue;
+    const nextResult=emcAnalysis(nextDevices);if(!improves(nextResult))continue;
     options.push({kind:'relocate',deviceIndex:i,candidate,index,distance,devices:nextDevices,sites:nextSites,indices:nextIndices,result:nextResult,signature,moveDistance:distance,key:`${device.id}:${candidate.device.id}`});
    }
   }
   if(!options.length)break;
   const best=chooseRemedialAction(options,current,measureCoverage),i=best.deviceIndex,old=current.devices[i];
-  actions.push({step:actions.length+1,action:'relocate',deviceId:old.id,replacementDeviceId:best.devices[i].id,reason:'合法换频无法继续减少 fail，在既有真实候选点内作局部同型号移位',before:{siteId:current.sites[i]?.id??null,position:[...old.position],frequencyGHz:old.parameters?.frequencyGHz??null,emcCounts:{...result.counts}},after:{siteId:best.sites[i]?.id??null,position:[...best.devices[i].position],frequencyGHz:best.devices[i].parameters?.frequencyGHz??null,emcCounts:{...best.result.counts}},coverageLoss:best.coverageLoss});
+  actions.push({step:actions.length+1,action:'relocate',deviceId:old.id,replacementDeviceId:best.devices[i].id,reason:`同型号设备移至既有候选点，减少${label}级冲突`,before:{siteId:current.sites[i]?.id??null,position:[...old.position],frequencyGHz:old.parameters?.frequencyGHz??null,emcCounts:{...result.counts}},after:{siteId:best.sites[i]?.id??null,position:[...best.devices[i].position],frequencyGHz:best.devices[i].parameters?.frequencyGHz??null,emcCounts:{...best.result.counts}},coverageLoss:best.coverageLoss});
   current={devices:best.devices,sites:best.sites,indices:best.indices};visited.add(best.signature);result=best.result;
  }
  result=emcAnalysis(current.devices);
- const after=emcSnapshot(result),unresolved=after.conflicts.filter(c=>c.severity==='fail');
- return {...current,before,after,actions,status:result.counts.fail?'unresolved':'resolved',deployable:!result.counts.fail,unresolved,...(!result.counts.fail?{}:{reason:'合法换频和既有候选点局部移位后仍有 fail 级冲突，需人工调整装备或点位。'})};
+ const after=emcSnapshot(result),unresolved=after.conflicts.filter(c=>c.severity===severity);
+ return {...current,before,after,actions,status:unresolved.length?'unresolved':'resolved',deployable:!result.counts.fail,unresolved,...(unresolved.length?{reason:`合法换频和候选点移位后仍有${label}级冲突，需人工复核。`}:{})};
 }
 
-export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},weights={...METRIC_WEIGHTS},presetIds=PRESETS.map(p=>p.id),equipmentSnapshot=null,progress=()=>{},yieldTask=async()=>{},withThreatFrames=true,planTypes=null}){
+export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SETTINGS},environment={...DEFAULT_ENV},target={...DEFAULT_TARGET},weights={...METRIC_WEIGHTS},presetIds=PRESETS.map(p=>p.id),equipmentSnapshot=null,progress=()=>{},yieldTask=async()=>{},withThreatFrames=true,planTypes=null,warningPlanIds=[]}){
  const equipmentProfiles=resolveEquipmentProfiles(equipmentSnapshot);
  settings=resolveTask3Settings(settings);
  const exclusion=createDeploymentExclusion(city,settings);
@@ -196,6 +194,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  const weights1=conditions.flatMap((_,c)=>sampling.samples.map(p=>p.weight*(c===0?2:1)));
  progress({stage:'candidates',completed:1,total:1});
  // ② 覆盖推演
+ if(settings.spacing<150&&sampling.samples.length*candidates.length>2000000)throw Error('精细网格的候选设备与采样点组合超过单次 200 万组，请缩小范围或增大间距。');
  const contexts=await evaluateCandidates({candidates,sampling,conditions,settings,environment,target,query,progress,yieldTask});
  // 残余盲点邻近补点（沿用 optimizer 的 repair 手法）：候选集仍无法覆盖的位置，在邻近真实表面搜索可见补点。
  {
@@ -209,13 +208,13 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
    for(const radius of [80,180,350]){for(let a=0;a<12;a++){
     const angle=a*Math.PI/6,x=p.position[0]+radius*Math.cos(angle),z=p.position[2]+radius*Math.sin(angle);
     if(exclusion.blocked([x,0,z]))continue;
-    if(settings.scope==='custom'&&(x<sampling.bounds.west||x>=sampling.bounds.east||z<sampling.bounds.south||z>=sampling.bounds.north))continue;
+    if(x<sampling.bounds.west||x>=sampling.bounds.east||z<sampling.bounds.south||z>=sampling.bounds.north)continue;
     const ground=query.groundAt(x,z),surface=query.surfaceAt(x,z);
-    if(ground===null||surface===null)continue;const position=[x,surface+2,z],direction=angles(position,p.position);
-    const device=applyEquipmentProfile(createDevice(repairPreset,`task3-repair-${repairSites+1}`,position),equipmentProfiles);device.parameters.pitch=Math.max(-60,Math.min(0,direction.elevation-30));device.parameters.frequencyGHz=modelChannel(repairPreset,repairSites);
+    if(ground===null||surface===null)continue;const mount=settings.installationHeightM??2,position=[x,surface+mount,z],direction=angles(position,p.position);
+    const device=applyEquipmentProfile(createDevice(repairPreset,`task3-repair-${repairSites+1}`,position),equipmentProfiles),idealPitch=Math.max(-60,Math.min(0,direction.elevation-30));device.parameters.pitch=settings.radarPitchesDeg?[...settings.radarPitchesDeg].sort((a,b)=>Math.abs(a-idealPitch)-Math.abs(b-idealPitch))[0]:idealPitch;device.parameters.frequencyGHz=modelChannel(repairPreset,repairSites);
     const context=query.trace(position,p.position);if(!context.known||context.blocked)continue;
     if(conditions.every(condition=>{const result=evaluate(device,{...target,position:p.position,...condition.target},condition.environment,context);return result.status==='within-model'&&result.marginDb>=settings.marginReserveDb;})){
-     found={device,site:{id:`repair-site-${repairSites+1}`,position,buildingId:null,name:'残余盲点邻近补点',installationProxy:1+(surface-ground)/100,installation:'实际网格表面上方 2 m，补点施工条件未实测'},cost:settings.costs.radar+(1+(surface-ground)/100)*0.2};break;
+     found={device,site:{id:`repair-site-${repairSites+1}`,position,buildingId:query.surfaceHitAt?.(x,z)?.buildingId??null,supportY:surface,mountHeightM:mount,aboveGroundM:position[1]-ground,name:'残余盲点邻近补点',installationProxy:1+(surface-ground+mount-2)/100,installation:`实际网格表面上方 ${mount} m，补点施工条件未实测`},cost:settings.costs.radar+(1+(surface-ground+mount-2)/100)*0.2};break;
     }
    }if(found)break;}
    if(found){candidates.push(found);await evaluateCandidates({candidates:[found],sampling,conditions,settings,environment,target,query,progress:()=>{},yieldTask}).then(r=>{for(const [k,v] of r.entries())contexts.set(k,v);});repairSites++;}
@@ -231,7 +230,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   {id:'enhanced',name:'增强型 · 全类型+核心双覆盖',presetSubset:presetIds,budget:settings.budget,maxDevices:settings.maxDevices,redundancy:0.5},
  ];
  const selectedPlanTypes=Array.isArray(planTypes)&&planTypes.length?planTypes:allPolicies.map(policy=>policy.id);
- const policies=allPolicies.filter(policy=>selectedPlanTypes.includes(policy.id));
+ const policies=allPolicies.filter(policy=>selectedPlanTypes.includes(policy.id)).map(policy=>({...policy,...(settings.typeLimits?{typeLimits:structuredClone(settings.typeLimits)}:{})}));
  if(!policies.length)throw Error('请至少选择一套方案（经济型/均衡型/增强型）');
  // 冗余增强：饱和后继续按“第二重覆盖增益 ×redundancy / 成本”补选，直至预算/设备上限。
  function chooseWithRedundancy(pool,policy){
@@ -242,7 +241,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   while(selected.length<policy.maxDevices){
    let best=-1,bestScore=0,bestGain=0;
    for(let i=0;i<pool.length;i++){
-    if(selected.includes(i)||cost+pool[i].cost>policy.budget+1e-9)continue;
+    if(selected.includes(i)||cost+pool[i].cost>policy.budget+1e-9||!withinTypeLimit(pool[i],selected.map(k=>pool[k]),policy.typeLimits))continue;
     let gain=0;for(const j of pool[i].cover){if(counts[j]===0)gain+=weights1[j];else if(counts[j]===1)gain+=weights1[j]*policy.redundancy;}
     const score=gain/pool[i].cost;if(score>bestScore+1e-10){bestScore=score;best=i;bestGain=gain;}
    }
@@ -301,7 +300,8 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
    const result=evaluate(device,{...target,position:sample.position,...condition.target},{...condition.environment,cochannelDb:condition.environment.cochannelDb+penalty},query.trace(device.position,sample.position));
    return [{condition:condition.id,sampleId:sample.id??`sample-${index}`,sampleIndex:index,position:[...sample.position],core:!!sample.core,covered,marginReserveDb:settings.marginReserveDb,emcPenaltyDb:penalty,...result}];
   }))]));
-  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds,linkExamples};
+  const deviceBands=Object.fromEntries(devices.map((d,k)=>[d.id,coverageBands(d,sampling.samples,deviceCoverage[k])]));
+  return {emc,coverage,metrics:coverageMetrics(coverage),coverageContributions,reevaluatedDeviceIds,linkExamples,deviceBands};
  }
  function candidateCoverageValue(pool){
   return (_devices,_sites,indices)=>{const covered=new Uint8Array(weights1.length);for(const i of indices)if(i>=0)for(const j of pool[i].cover)covered[j]=1;return covered.reduce((sum,v,j)=>sum+v*weights1[j],0);};
@@ -311,7 +311,13 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   const pool=candidates.filter(c=>policy.presetSubset.includes(c.device.presetId));
   const chosen=chooseWithRedundancy(pool,policy),initial={indices:[...chosen.indices],devices:chosen.indices.map(i=>structuredClone(pool[i].device)),sites:chosen.indices.map(i=>structuredClone(pool[i].site)),pool};
   assignRadarChannels(initial.devices);
-  const remediation=remediateEmcConflicts({...initial,candidates:pool,measureCoverage:candidateCoverageValue(pool),exclusion});
+  const constraints={candidates:pool,measureCoverage:candidateCoverageValue(pool),exclusion,budget:policy.budget};
+  let remediation=remediateEmcConflicts({...initial,...constraints});
+  if(warningPlanIds.includes(policy.id)){
+   const repair=remediateEmcConflicts({...remediation,...constraints,severity:'warning'});
+   const warningReview={before:repair.before,after:repair.after,actions:repair.actions,reason:repair.reason};
+   remediation={...remediation,devices:repair.devices,sites:repair.sites,indices:repair.indices,warningReview,actions:[...remediation.actions,...repair.actions].map((a,i)=>({...a,step:i+1}))};
+  }
   const beforeCoverage=remediation.before.counts.fail?await calculatePlanCoverage(initial):null;
   const finalState={indices:remediation.indices,devices:remediation.devices,sites:remediation.sites,pool},finalCoverage=await calculatePlanCoverage(finalState);
   exclusion.assertDevices(finalState.devices,finalState.sites);
@@ -320,6 +326,7 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
   plans.push({id:policy.id,name:policy.name,budget:policy.budget,maxDevices:policy.maxDevices,presetSubset:policy.presetSubset,devices:finalState.devices,cost:finalState.indices.reduce((sum,i)=>sum+pool[i].cost,0),installationProxy:finalState.sites.reduce((sum,s)=>sum+s.installationProxy,0),sites:finalState.sites,metrics:finalCoverage.metrics,coverage:finalCoverage.coverage.map(counts=>Array.from(counts)),coverageContributions:finalCoverage.coverageContributions,deployable:remediation.deployable,optimizationTrace:{policy:structuredClone(policy),poolSize:pool.length,events:chosen.events},emcRemediation:remediation});
   plans.at(-1).decisionEvidence=collectDecisionEvidence({plan:plans.at(-1),pool,candidates,sampling,conditions,settings});
   plans.at(-1).linkExamples=finalCoverage.linkExamples;
+  plans.at(-1).deviceBands=finalCoverage.deviceBands;
  }
  // 四类盲区分类（每方案 × 每工况）
  const blindspots={};
@@ -365,5 +372,12 @@ export async function runTask3Pipeline({city,query,settings={...TASK3_DEFAULT_SE
  runRecord.rulesInput=rulesInput;runRecord.scope=structuredClone(scope);
  runRecord.decisionEvidence=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.decisionEvidence)]));
  runRecord.linkExamples=Object.fromEntries(plans.map(plan=>[plan.id,structuredClone(plan.linkExamples)]));
+ report.sceneName=landmark.name;
+ const initialCoreSites=sites.filter(s=>landmark.buildingIds.includes(s.buildingId));
+ report.siteScreening={method:'surface-sites/2',initialCounts:Object.fromEntries(['roof','facade','ground'].map(kind=>[kind,sites.filter(s=>s.mountKind===kind).length])),
+  coreBuildings:landmark.buildingIds.map(id=>({id,presentInModel:city.buildings.some(b=>b.id===id),userExcluded:exclusion.buildingIds.includes(id),
+   initialSiteCount:initialCoreSites.filter(s=>s.buildingId===id).length,
+   selectedHostCountByPlan:Object.fromEntries(plans.map(p=>[p.id,p.sites.filter(s=>s.buildingId===id).length]))}))};
+ runRecord.siteScreening=structuredClone(report.siteScreening);
  return {report,run:runRecord};
 }

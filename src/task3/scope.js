@@ -6,7 +6,7 @@ export const TASK3_DEFAULT_SETTINGS={...DEFAULT_SETTINGS,scope:DEFAULT_SCOPE,sit
 
 export function parseTask3Spacing(value){
  const text=String(value??'').trim(),spacing=Number(text);
- if(!text||!Number.isFinite(spacing)||spacing<150||spacing>1000)throw Error('网格间距必须是 150–1000 米的有限数值。');
+ if(!text||!Number.isFinite(spacing)||spacing<50||spacing>1000)throw Error('网格间距必须是 50–1000 米的有限数值。');
  return spacing;
 }
 

@@ -1,11 +1,14 @@
+import {buildingSites} from './building-sites.js';
 import {createDevice,DEFAULT_ENV,DEFAULT_TARGET} from '../sensors/presets.js';
 import {evaluate,angles,validateTarget,validateEnvironment} from '../sensors/engine.js';
 import {museumLandmark} from '../landmarks.js';
 import {createDeploymentExclusion} from '../task3/building-constraints.js';
+import {validateDeploymentControls,withinTypeLimit} from './deployment-controls.js';
 export const PLAN_VERSION='deployment-1.0';
 export const DEFAULT_SETTINGS={scope:'city',spacing:500,heights:[30,60,100],siteSpacing:900,maxSites:192,maxDevices:64,budget:600,costs:{radar:12,radio:5,optical:4,acoustic:2},coreRadius:700,coreWeight:3,marginReserveDb:3};
 export function validateSettings(s){
- if(!['city','core','custom'].includes(s.scope)||!Number.isFinite(s.spacing)||s.spacing<150||s.spacing>1000||!Number.isFinite(s.siteSpacing)||s.siteSpacing<300||s.siteSpacing>1500)throw Error('优化范围或采样间距无效');
+ validateDeploymentControls(s);
+ if(!['city','core','custom'].includes(s.scope)||!Number.isFinite(s.spacing)||s.spacing<50||s.spacing>1000||!Number.isFinite(s.siteSpacing)||s.siteSpacing<300||s.siteSpacing>1500)throw Error('优化范围或采样间距无效');
  if(s.scope==='custom'&&(!Number.isFinite(s.scopeWidthM)||s.scopeWidthM<=0||!Number.isFinite(s.scopeDepthM)||s.scopeDepthM<=0))throw Error('自定义范围宽度和深度必须为有限正数（米）');
  if(s.scope==='custom'&&(!Number.isSafeInteger(Math.ceil(s.scopeWidthM/s.spacing))||!Number.isSafeInteger(Math.ceil(s.scopeDepthM/s.spacing))))throw Error('自定义范围相对采样间距过大，无法安全采样');
  if(!Array.isArray(s.heights)||s.heights.length<1||s.heights.length>5||s.heights.some(h=>!Number.isFinite(h)||h<10||h>500))throw Error('需设置 1–5 个 10–500 m 离地高度');
@@ -30,19 +33,25 @@ export function boundsFor(city,settings){
 export function generateSamples(city,query,settings,dataBounds=null){
  if(settings.scope==='custom'&&(!Number.isFinite(settings.scopeWidthM)||settings.scopeWidthM<=0||!Number.isFinite(settings.scopeDepthM)||settings.scopeDepthM<=0))throw Error('自定义范围宽度和深度必须为有限正数（米）');
  if(settings.scope==='custom'&&(!Number.isSafeInteger(Math.ceil(settings.scopeWidthM/settings.spacing))||!Number.isSafeInteger(Math.ceil(settings.scopeDepthM/settings.spacing))))throw Error('自定义范围相对采样间距过大，无法安全采样');
- const bounds=boundsFor(city,settings),samples=[],seen=new Set();let outsideDem=0,insideBuildings=0,sampleBounds=bounds,effectiveBounds={...bounds};
+ const bounds=boundsFor(city,settings),samples=[],seen=new Set();let outsideDem=0,insideBuildings=0,unknownSurface=0,sampleBounds=bounds,effectiveBounds={...bounds};
  if(settings.scope==='custom'&&dataBounds?.dem){
   const dem=dataBounds.dem;
   effectiveBounds={west:Math.max(bounds.west,dem.west),east:Math.min(bounds.east,dem.east),south:Math.max(bounds.south,dem.south),north:Math.min(bounds.north,dem.north),core:bounds.core};
   if(!(effectiveBounds.west<effectiveBounds.east&&effectiveBounds.south<effectiveBounds.north))throw Error('自定义范围超出 DEM 数据边界，没有可计算区域');
   sampleBounds=effectiveBounds;
  }
+ if(settings.spacing<150){
+  const columns=Math.ceil((sampleBounds.east-sampleBounds.west)/settings.spacing);
+  const rows=Math.ceil((sampleBounds.north-sampleBounds.south)/settings.spacing);
+  if(columns*rows*settings.heights.length>50000)throw Error('精细网格超过单次 50000 个采样位置，请缩小范围或增大网格间距。');
+ }
  function add(x,z,height,kind='grid'){
-  if(settings.scope==='custom'&&(x<bounds.west||x>=bounds.east||z<bounds.south||z>=bounds.north))return;
+  if(x<bounds.west||x>=bounds.east||z<bounds.south||z>=bounds.north)return;
   const key=[x.toFixed(1),z.toFixed(1),height].join(',');if(seen.has(key))return;seen.add(key);
-  const ground=query.groundAt(x,z);if(ground===null){outsideDem++;return;}
+  const ground=query.groundAt(x,z);if(!Number.isFinite(ground)){outsideDem++;return;}
   const surface=query.surfaceAt(x,z);const y=ground+height;
-  if(surface!==null&&y<=surface+1){insideBuildings++;return;}
+  if(!Number.isFinite(surface)){unknownSurface++;return;}
+  if(y<=surface+1){insideBuildings++;return;}
   const core=Math.hypot(x-bounds.core[0],z-bounds.core[2])<=settings.coreRadius;
   samples.push({id:`sample-${samples.length+1}`,position:[x,y,z],agl:height,weight:core?settings.coreWeight:1,core,kind});
  }
@@ -54,23 +63,11 @@ export function generateSamples(city,query,settings,dataBounds=null){
  const nearby=city.buildings.filter(b=>Math.hypot(b.rings[0][0][0]-bounds.core[0],b.rings[0][0][2]-bounds.core[2])<settings.coreRadius).sort((a,b)=>b.height-a.height).slice(0,24);
  for(const b of nearby){const r=b.rings[0],cx=r.reduce((a,p)=>a+p[0],0)/r.length,cz=r.reduce((a,p)=>a+p[2],0)/r.length;for(const p of [r[0],r[Math.floor(r.length/2)]]){const dx=p[0]-cx,dz=p[2]-cz,len=Math.hypot(dx,dz)||1;add(p[0]+dx/len*12,p[2]+dz/len*12,settings.heights[0],'facade');}}
  if(!samples.length)throw Error('选定区域没有可用空域采样点');
- return {bounds,...(settings.scope==='custom'?{effectiveBounds}:{}),samples,excluded:{outsideDem,insideBuildings},spacing:settings.spacing};
+ return {bounds,...(settings.scope==='custom'?{effectiveBounds}:{}),samples,excluded:{outsideDem,insideBuildings,unknownSurface},spacing:settings.spacing};
 }
 export function generateCandidates(city,query,settings,sampling){
  const exclusion=createDeploymentExclusion(city,settings);
- const {bounds}=sampling,sites=[],cells=new Map();
- for(const b of city.buildings){
-  if(b.height>140)continue;const ring=b.rings[0],x=ring.reduce((a,p)=>a+p[0],0)/ring.length,z=ring.reduce((a,p)=>a+p[2],0)/ring.length;
-  if(exclusion.blocked([x,0,z],b.id))continue;
-  if(x<bounds.west||x>bounds.east||z<bounds.south||z>bounds.north||query.groundAt(x,z)===null)continue;
-  const key=[Math.floor((x-bounds.west)/settings.siteSpacing),Math.floor((z-bounds.south)/settings.siteSpacing)].join(',');
-  const current=cells.get(key)??{};if(!current.low||b.height<current.low.building.height)current.low={x,z,building:b};if(!current.high||b.height>current.high.building.height)current.high={x,z,building:b};cells.set(key,current);
- }
- for(const site of [...cells.values()].flatMap(c=>c.low.building.id===c.high.building.id?[c.low]:[c.low,c.high]).sort((a,b)=>Math.hypot(a.x-bounds.core[0],a.z-bounds.core[2])-Math.hypot(b.x-bounds.core[0],b.z-bounds.core[2])).slice(0,Math.min(settings.maxSites,128))){
-  const surface=query.surfaceAt(site.x,site.z);if(surface===null||Math.abs(surface-(site.building.rings[0][0][1]+site.building.height))>2)continue;
-  sites.push({id:`site-${sites.length+1}`,position:[site.x,surface+2,site.z],buildingId:site.building.id,name:site.building.name,installationProxy:1+site.building.height/100,installation:'屋顶上方 2 m；施工条件未实测'});
- }
- if(!sites.length)throw Error('没有可用部署候选点');
+ const sites=buildingSites(city,query,settings,sampling.bounds,exclusion);
  const candidates=[];
  for(const [index,site] of sites.entries())for(const [presetId,pitch] of [['radar-03d',0],['radar-03d',-15],['radar-03d',-30],['radio-tdoa',0],['optical-nvt',0],['acoustic-cry',0]]){
   const device=createDevice(presetId,`plan-${index+1}-${presetId}-${pitch}`,site.position);
@@ -80,7 +77,7 @@ export function generateCandidates(city,query,settings,sampling){
  }
  return candidates;
 }
-export function chooseGreedy(candidates,weights,{budget,maxDevices}){
+export function chooseGreedy(candidates,weights,{budget,maxDevices,typeLimits}){
  const covered=new Uint8Array(weights.length),selected=[],events=[],totalWeight=weights.reduce((a,b)=>a+b,0);let cost=0;
  const coveredWeightPct=()=>totalWeight?100*weights.reduce((sum,w,i)=>sum+w*covered[i],0)/totalWeight:0;
  for(let pass=0;pass<4;pass++){
@@ -88,7 +85,7 @@ export function chooseGreedy(candidates,weights,{budget,maxDevices}){
   while(selected.length<maxDevices){
    let best=-1,bestScore=0,bestGain=0;
    for(let i=0;i<candidates.length;i++){
-    const candidate=candidates[i];if(selected.includes(i)||cost+candidate.cost>budget+1e-9)continue;
+    const candidate=candidates[i];if(selected.includes(i)||cost+candidate.cost>budget+1e-9||!withinTypeLimit(candidate,selected.map(k=>candidates[k]),typeLimits))continue;
     let gain=0;for(const j of candidate.cover)if(!covered[j])gain+=weights[j];
     const score=gain/candidate.cost;if(score>bestScore+1e-10){bestScore=score;best=i;bestGain=gain;}
    }
@@ -141,12 +138,12 @@ export async function optimizeDeployment({city,query,settings={...DEFAULT_SETTIN
   let found=null;
   for(const radius of [80,180,350]){for(let a=0;a<12;a++){
    const angle=a*Math.PI/6,x=p.position[0]+radius*Math.cos(angle),z=p.position[2]+radius*Math.sin(angle),ground=query.groundAt(x,z),surface=query.surfaceAt(x,z);
-   if(exclusion.blocked([x,0,z]))continue;
-   if(ground===null||surface===null)continue;const position=[x,surface+2,z],direction=angles(position,p.position);
+   if(x<sampling.bounds.west||x>=sampling.bounds.east||z<sampling.bounds.south||z>=sampling.bounds.north||exclusion.blocked([x,0,z]))continue;
+   if(!Number.isFinite(ground)||!Number.isFinite(surface))continue;const mount=settings.installationHeightM??2,position=[x,surface+mount,z],direction=angles(position,p.position);
    const device=createDevice('radar-03d',`repair-${repairSites+1}`,position);device.parameters.pitch=Math.max(-60,Math.min(0,direction.elevation-30));device.parameters.frequencyGHz=16+(repairSites%4)*0.5;
    const context=query.trace(position,p.position);if(!context.known||context.blocked)continue;
    if(conditions.every(condition=>{const result=evaluate(device,{...target,position:p.position,...condition.target},condition.environment,context);return result.status==='within-model'&&result.marginDb>=settings.marginReserveDb;})){
-    found={device,site:{id:`repair-site-${repairSites+1}`,position,buildingId:null,name:'残余盲点邻近补点',installationProxy:1+(surface-ground)/100,installation:'实际网格表面上方 2 m，补点施工条件未实测'},cost:settings.costs.radar+(1+(surface-ground)/100)*0.2};break;
+    found={device,site:{id:`repair-site-${repairSites+1}`,position,buildingId:query.surfaceHitAt?.(x,z)?.buildingId??null,supportY:surface,mountHeightM:mount,aboveGroundM:position[1]-ground,name:'残余盲点邻近补点',installationProxy:1+(surface-ground+mount-2)/100,installation:`实际网格表面上方 ${mount} m，补点施工条件未实测`},cost:settings.costs.radar+(1+(surface-ground+mount-2)/100)*0.2};break;
    }
   }if(found)break;}
   if(found){await evaluateCandidate(found);candidates.push(found);repairSites++;progress({stage:'repair',completed:repairSites,total:Math.min(64,remainingSites),samples:n});await yieldTask();}

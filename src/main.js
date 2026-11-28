@@ -857,6 +857,7 @@ try {
       {id:'plans',label:'方案对比'},
       {id:'blindspots',label:'盲区分析'},
       {id:'emc',label:'电磁兼容'},
+      {id:'rules',label:'通用布设规则'},
     ],
     onSelect:id=>activateDeploymentModule(id),
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),

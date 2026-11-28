@@ -1,0 +1,1623 @@
+{
+  "schema": "cross-map-deployment-rules/1",
+  "createdAt": "2026-11-27T05:11:38.488Z",
+  "engineFingerprint": "7452c637491540ddf7b7aaa546ac733fd8a14a3e680b0c29b22a05151436c729",
+  "calculationFingerprint": "16d3c1d4962e01b9029c59f226c2304034a373369513f9684220776ecfe0bd3c",
+  "sourceRevisions": [
+    {
+      "hash": "90caf1453d3c48a454ccd45463365f7cfda519ef4e4e642db82c8569c40c8117",
+      "calculationHash": "16d3c1d4962e01b9029c59f226c2304034a373369513f9684220776ecfe0bd3c"
+    },
+    {
+      "hash": "7452c637491540ddf7b7aaa546ac733fd8a14a3e680b0c29b22a05151436c729",
+      "calculationHash": "16d3c1d4962e01b9029c59f226c2304034a373369513f9684220776ecfe0bd3c"
+    }
+  ],
+  "optimizationRuns": 252,
+  "independentMaps": 9,
+  "configurationCountPerMap": 28,
+  "planCount": 756,
+  "validationPolicy": {
+    "designVersion": "1.0",
+    "frozenBeforeHoldoutInspection": true,
+    "discoveryMaps": [
+      "recon",
+      "beijing",
+      "wuxi",
+      "daxing",
+      "nuclear",
+      "railway"
+    ],
+    "holdoutMaps": [
+      "shenzhen",
+      "hangzhou",
+      "changjiang"
+    ],
+    "primaryComparison": "同一地图、固定均衡型方案、OFAT 配置减标准基线；独立验证网格覆盖率变化（百分点）",
+    "secondaryComparisons": [
+      "各轮实际推荐方案",
+      "成本与设备构成",
+      "每方案四工况及三动态威胁",
+      "相同点位/目标/几何的链路反事实"
+    ],
+    "minimumMapsPerAcceptedRule": 3,
+    "ruleGate": "全部有效地图同向，无观测反例；同时在三张预留地图上逐张通过。条件未触发的地图不冒充支持证据。",
+    "statistics": {
+      "unit": "独立地图，不将采样点/候选设备/威胁帧当作独立地图样本",
+      "confidenceIntervals": "按地图整块重采样 2000 次，固定种子 20261127；百分位区间",
+      "correlation": "Spearman 秩相关；参数关联先在地图内去均值；形态关联仅用每图一项基线结果",
+      "multiplicity": "探索性相关的 p 值执行 Benjamini-Hochberg 校正；不据此单独宣称因果或生产级阈值"
+    },
+    "rejectedUnlessVerified": [
+      "统一建筑净距 X 与高差 Y 的补盲阈值",
+      "雷达高度每降低 Z 米、盲区半径固定增加 W 米",
+      "声学节点制高点在所有地图上均最优",
+      "仿真覆盖率等于实测检出或拦截概率",
+      "仅用提高设备数/预算便能保证覆盖单调改善"
+    ]
+  },
+  "acceptedRules": [
+    {
+      "id": "R01",
+      "status": "accepted",
+      "condition": "待侦查目标无线电静默",
+      "conclusion": "无线电节点对该目标的有效探测按零计，必须另用不依赖目标发射的感知链路覆盖，再核验其实际盲区",
+      "trigger": {
+        "field": "target.emitting",
+        "operator": "equals",
+        "value": false
+      },
+      "statement": "当待侦查目标无线电静默时，无线电节点对该目标的有效探测按零计，必须另用不依赖目标发射的感知链路覆盖，再核验其实际盲区",
+      "mechanism": "无源无线电设备以飞控或图传发射为观测对象；静默不是靠增加接收半径就能补偿的链路损耗",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2490,
+          "baseCovered": 1002,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-recon.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2192,
+          "baseCovered": 1968,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-beijing.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2396,
+          "baseCovered": 980,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-wuxi.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2322,
+          "baseCovered": 886,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-shenzhen.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2238,
+          "baseCovered": 1876,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-daxing.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2190,
+          "baseCovered": 1885,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-hangzhou.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1956,
+          "baseCovered": 1924,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-nuclear.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2520,
+          "baseCovered": 2238,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-changjiang.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2266,
+          "baseCovered": 1415,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-railway.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "同地图同位置的控制变量链路复算；统计单位仍为地图。",
+        "数值结论仅对所列参数变化与当前传播模型成立；厂家未给出的传播量尚需标定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R02",
+      "status": "accepted",
+      "condition": "目标雷达截面积从0.01降至0.001平方米且其他条件相同",
+      "conclusion": "雷达链路需额外预留10 dB裕量，并按小目标重算覆盖，不沿用大目标的覆盖结论",
+      "trigger": {
+        "field": "target.rcs",
+        "operator": "paired-change",
+        "from": 0.01,
+        "to": 0.001,
+        "unit": "m2",
+        "holdOtherFactorsConstant": true
+      },
+      "statement": "当目标雷达截面积从0.01降至0.001平方米且其他条件相同时，雷达链路需额外预留10 dB裕量，并按小目标重算覆盖，不沿用大目标的覆盖结论",
+      "mechanism": "现有能量方程中接收信噪比与RCS成正比，十倍RCS下降对应10 dB信噪比下降",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1245,
+          "baseCovered": 398,
+          "variantCovered": 398,
+          "meanMarginDeltaDb": -10.000000000000005,
+          "source": "artifacts/cross-map-study/probes-recon.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1096,
+          "baseCovered": 812,
+          "variantCovered": 812,
+          "meanMarginDeltaDb": -10.000000000000005,
+          "source": "artifacts/cross-map-study/probes-beijing.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1198,
+          "baseCovered": 374,
+          "variantCovered": 374,
+          "meanMarginDeltaDb": -10.000000000000002,
+          "source": "artifacts/cross-map-study/probes-wuxi.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1161,
+          "baseCovered": 351,
+          "variantCovered": 351,
+          "meanMarginDeltaDb": -10.000000000000004,
+          "source": "artifacts/cross-map-study/probes-shenzhen.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1119,
+          "baseCovered": 753,
+          "variantCovered": 753,
+          "meanMarginDeltaDb": -9.999999999999998,
+          "source": "artifacts/cross-map-study/probes-daxing.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1095,
+          "baseCovered": 755,
+          "variantCovered": 755,
+          "meanMarginDeltaDb": -10.000000000000002,
+          "source": "artifacts/cross-map-study/probes-hangzhou.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 978,
+          "baseCovered": 803,
+          "variantCovered": 803,
+          "meanMarginDeltaDb": -9.999999999999993,
+          "source": "artifacts/cross-map-study/probes-nuclear.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1260,
+          "baseCovered": 906,
+          "variantCovered": 906,
+          "meanMarginDeltaDb": -9.999999999999995,
+          "source": "artifacts/cross-map-study/probes-changjiang.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1133,
+          "baseCovered": 567,
+          "variantCovered": 567,
+          "meanMarginDeltaDb": -9.999999999999998,
+          "source": "artifacts/cross-map-study/probes-railway.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "同地图同位置的控制变量链路复算；统计单位仍为地图。",
+        "数值结论仅对所列参数变化与当前传播模型成立；厂家未给出的传播量尚需标定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R03",
+      "status": "accepted",
+      "condition": "电磁底噪从基线抬升15 dB且其他条件相同",
+      "conclusion": "按减少15 dB后的雷达及无线电链路裕量重新验收；原有3 dB预留量不能替代该干扰校核",
+      "trigger": {
+        "field": "environment.emNoiseDb",
+        "operator": "paired-change",
+        "from": 0,
+        "to": 15,
+        "unit": "dB",
+        "holdOtherFactorsConstant": true
+      },
+      "statement": "当电磁底噪从基线抬升15 dB且其他条件相同时，按减少15 dB后的雷达及无线电链路裕量重新验收；原有3 dB预留量不能替代该干扰校核",
+      "mechanism": "底噪附加损耗直接进入现有雷达与无线电链路预算；仿真对同一位置和几何作成对复算",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3735,
+          "baseCovered": 1400,
+          "variantCovered": 793,
+          "meanMarginDeltaDb": -15.000000000000004,
+          "source": "artifacts/cross-map-study/probes-recon.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3288,
+          "baseCovered": 2780,
+          "variantCovered": 1503,
+          "meanMarginDeltaDb": -15.000000000000004,
+          "source": "artifacts/cross-map-study/probes-beijing.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3594,
+          "baseCovered": 1354,
+          "variantCovered": 801,
+          "meanMarginDeltaDb": -14.999999999999996,
+          "source": "artifacts/cross-map-study/probes-wuxi.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3483,
+          "baseCovered": 1237,
+          "variantCovered": 698,
+          "meanMarginDeltaDb": -15.000000000000004,
+          "source": "artifacts/cross-map-study/probes-shenzhen.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3357,
+          "baseCovered": 2629,
+          "variantCovered": 1458,
+          "meanMarginDeltaDb": -15,
+          "source": "artifacts/cross-map-study/probes-daxing.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3285,
+          "baseCovered": 2640,
+          "variantCovered": 1452,
+          "meanMarginDeltaDb": -15,
+          "source": "artifacts/cross-map-study/probes-hangzhou.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 2934,
+          "baseCovered": 2727,
+          "variantCovered": 1459,
+          "meanMarginDeltaDb": -14.999999999999995,
+          "source": "artifacts/cross-map-study/probes-nuclear.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3780,
+          "baseCovered": 3144,
+          "variantCovered": 1717,
+          "meanMarginDeltaDb": -15,
+          "source": "artifacts/cross-map-study/probes-changjiang.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 3399,
+          "baseCovered": 1982,
+          "variantCovered": 1111,
+          "meanMarginDeltaDb": -15,
+          "source": "artifacts/cross-map-study/probes-railway.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "同地图同位置的控制变量链路复算；统计单位仍为地图。",
+        "数值结论仅对所列参数变化与当前传播模型成立；厂家未给出的传播量尚需标定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R04",
+      "status": "accepted",
+      "condition": "交通背景声由35升至70 dB SPL",
+      "conclusion": "声学节点必须按叠加背景声后的实际裕量核验，只承担仍可检出的局部补盲，不把500米标称上限当作噪声环境中的有效半径",
+      "trigger": {
+        "field": "environment.trafficDb",
+        "operator": "paired-change",
+        "from": 35,
+        "to": 70,
+        "unit": "dB SPL"
+      },
+      "statement": "当交通背景声由35升至70 dB SPL时，声学节点必须按叠加背景声后的实际裕量核验，只承担仍可检出的局部补盲，不把500米标称上限当作噪声环境中的有效半径",
+      "mechanism": "声级按功率叠加而非算术平均；交通、施工、人群、风雨及参考噪声共同决定声学信噪比",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1245,
+          "baseCovered": 22,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.587555953861795,
+          "source": "artifacts/cross-map-study/probes-recon.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1096,
+          "baseCovered": 28,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.587555953861802,
+          "source": "artifacts/cross-map-study/probes-beijing.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1198,
+          "baseCovered": 22,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.58755595386181,
+          "source": "artifacts/cross-map-study/probes-wuxi.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1161,
+          "baseCovered": 9,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.587555953861795,
+          "source": "artifacts/cross-map-study/probes-shenzhen.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1119,
+          "baseCovered": 34,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.5875559538618,
+          "source": "artifacts/cross-map-study/probes-daxing.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1095,
+          "baseCovered": 49,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.5875559538618,
+          "source": "artifacts/cross-map-study/probes-hangzhou.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 978,
+          "baseCovered": 30,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.587555953861795,
+          "source": "artifacts/cross-map-study/probes-nuclear.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1260,
+          "baseCovered": 43,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.5875559538618,
+          "source": "artifacts/cross-map-study/probes-changjiang.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1133,
+          "baseCovered": 27,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": -31.5875559538618,
+          "source": "artifacts/cross-map-study/probes-railway.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "同地图同位置的控制变量链路复算；统计单位仍为地图。",
+        "数值结论仅对所列参数变化与当前传播模型成立；厂家未给出的传播量尚需标定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R05",
+      "status": "accepted",
+      "condition": "目标信号为4.9 GHz而拟采用X1C既有离散频点配置",
+      "conclusion": "该配置不得计为有效覆盖；应改选包含该频段的接收型号，并再次校核链路裕量与建筑遮挡",
+      "trigger": {
+        "all": [
+          {
+            "field": "target.frequencyGHz",
+            "operator": "equals",
+            "value": 4.9
+          },
+          {
+            "field": "device.presetId",
+            "operator": "equals",
+            "value": "radio-x1c"
+          }
+        ]
+      },
+      "statement": "当目标信号为4.9 GHz而拟采用X1C既有离散频点配置时，该配置不得计为有效覆盖；应改选包含该频段的接收型号，并再次校核链路裕量与建筑遮挡",
+      "mechanism": "原始设备参数给出的X1C接收点为0.9/1.2/2.4/5.2/5.8 GHz；本模型接收半带宽20 MHz为建模假设",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1245,
+          "baseCovered": 501,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-recon.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1096,
+          "baseCovered": 984,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-beijing.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1198,
+          "baseCovered": 489,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-wuxi.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1161,
+          "baseCovered": 443,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-shenzhen.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1119,
+          "baseCovered": 938,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-daxing.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1095,
+          "baseCovered": 942,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-hangzhou.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 978,
+          "baseCovered": 962,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-nuclear.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1260,
+          "baseCovered": 1119,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-changjiang.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "pairedLinks": 1133,
+          "baseCovered": 707,
+          "variantCovered": 0,
+          "meanMarginDeltaDb": null,
+          "source": "artifacts/cross-map-study/probes-railway.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "同地图同位置的控制变量链路复算；统计单位仍为地图。",
+        "数值结论仅对所列参数变化与当前传播模型成立；厂家未给出的传播量尚需标定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R06",
+      "status": "accepted",
+      "condition": "单个无线电节点同时面对42个具备有效链路的目标",
+      "conclusion": "按并发容量分别对TDOA-X1B、OA-X1Bmini、X1C核算至少7、12、27个单帧超额目标；应增加独立承载或其他感知链路并重跑网络级推演",
+      "trigger": {
+        "field": "node.visibleConcurrentTargets",
+        "operator": "equals",
+        "value": 42,
+        "requires": "valid RF link for each target"
+      },
+      "statement": "当单个无线电节点同时面对42个具备有效链路的目标时，按并发容量分别对TDOA-X1B、OA-X1Bmini、X1C核算至少7、12、27个单帧超额目标；应增加独立承载或其他感知链路并重跑网络级推演",
+      "mechanism": "原始资料的＞35、＞30、＞15按35、30、15作保守实现；单节点容量与名义探测距离为两个不同约束",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-045531-dgx7k"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-045531-0a5tb"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-045530-89hdg"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-045832-i0a1b"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-050037-zitx1"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-050226-7xeyu"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-050340-1gjdd"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-050351-bdew3"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "capacityByPreset": {
+            "radio-tdoa": 35,
+            "radio-mini": 30,
+            "radio-x1c": 15
+          },
+          "overflowPerFrame": {
+            "radio-tdoa": 7,
+            "radio-mini": 12,
+            "radio-x1c": 27
+          },
+          "source": "artifacts/cross-map-study/capacity-validation.json",
+          "optimizationRunId": "run-20261127-050531-dqjul"
+        }
+      ],
+      "limitations": [
+        "单节点42个同位置目标压力复核，不是现实蜂群轨迹。",
+        "多节点融合可能已由其他节点覆盖，单节点超额不等于全网同数漏探；以主试验真实动态结果为准。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R07",
+      "status": "accepted",
+      "condition": "建筑被明确列入禁部署清单",
+      "conclusion": "将设备落点排除作为硬约束，并在候选生成、补点、移位及最终坐标验收中保持该约束；该建筑仍参与遮挡计算和周边空域覆盖评估",
+      "trigger": {
+        "field": "settings.buildingExclusions.buildingIds",
+        "operator": "nonempty"
+      },
+      "statement": "当建筑被明确列入禁部署清单时，将设备落点排除作为硬约束，并在候选生成、补点、移位及最终坐标验收中保持该约束；该建筑仍参与遮挡计算和周边空域覆盖评估",
+      "mechanism": "连通单元约束贯穿求解及最终验收；禁落设备不意味着从地理模型删除建筑",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 4,
+          "source": "artifacts/cross-map-study/runs/recon/X01.json.gz",
+          "optimizationRunId": "run-20261127-050134-c4fgc"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 77,
+          "source": "artifacts/cross-map-study/runs/beijing/X01.json.gz",
+          "optimizationRunId": "run-20261127-045808-eb1dc"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 1,
+          "source": "artifacts/cross-map-study/runs/wuxi/X01.json.gz",
+          "optimizationRunId": "run-20261127-045957-1i25w"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 26,
+          "source": "artifacts/cross-map-study/runs/shenzhen/X01.json.gz",
+          "optimizationRunId": "run-20261127-051056-xti08"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 25,
+          "source": "artifacts/cross-map-study/runs/daxing/X01.json.gz",
+          "optimizationRunId": "run-20261127-050325-zq8ao"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 8,
+          "source": "artifacts/cross-map-study/runs/hangzhou/X01.json.gz",
+          "optimizationRunId": "run-20261127-050503-1tuni"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 1,
+          "source": "artifacts/cross-map-study/runs/nuclear/X01.json.gz",
+          "optimizationRunId": "run-20261127-050515-der4i"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 1,
+          "source": "artifacts/cross-map-study/runs/changjiang/X01.json.gz",
+          "optimizationRunId": "run-20261127-050542-hr0jh"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "plans": 3,
+          "blockedBuildingCount": 1,
+          "source": "artifacts/cross-map-study/runs/railway/X01.json.gz",
+          "optimizationRunId": "run-20261127-050941-756gn"
+        }
+      ],
+      "limitations": [
+        "核心建筑禁部署仅为统一研究约束，不是对实际场地许可或法定红线的认定。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R08",
+      "status": "accepted",
+      "condition": "总设备数量、分类数量或相对预算设定上限",
+      "conclusion": "把这些上限作为硬约束；按最终实际数量、成本和独立验证覆盖率验收，不将数量上限当作必须凑足的配置量",
+      "trigger": {
+        "fields": [
+          "settings.maxDevices",
+          "settings.typeLimits",
+          "settings.budget"
+        ],
+        "operator": "configured upper bounds"
+      },
+      "statement": "当总设备数量、分类数量或相对预算设定上限时，把这些上限作为硬约束；按最终实际数量、成本和独立验证覆盖率验收，不将数量上限当作必须凑足的配置量",
+      "mechanism": "贪心选择、反向删除、冗余补选及电磁移位后逐项复核；存在未覆盖区域时保留失败或不足结论",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/recon/",
+          "optimizationRunId": "run-20261127-050011-pjzmy"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/beijing/",
+          "optimizationRunId": "run-20261127-045725-rx4lj"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/wuxi/",
+          "optimizationRunId": "run-20261127-045857-pxdv4"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/shenzhen/",
+          "optimizationRunId": "run-20261127-050228-3w2k1"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/daxing/",
+          "optimizationRunId": "run-20261127-050240-ovdli"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/hangzhou/",
+          "optimizationRunId": "run-20261127-050424-mx1ns"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/nuclear/",
+          "optimizationRunId": "run-20261127-050449-ieqm2"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/changjiang/",
+          "optimizationRunId": "run-20261127-050510-w87x9"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "validatedPlans": 84,
+          "source": "artifacts/cross-map-study/runs/railway/",
+          "optimizationRunId": "run-20261127-050841-rh4mo"
+        }
+      ],
+      "limitations": [
+        "相对成本不等于人民币报价。",
+        "本研究为有限候选集上的确定性贪心与后处理，不宣称全局最优或提高预算必然单调改善。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "model-consistency-and-map-check",
+      "blindExternalValidation": false
+    },
+    {
+      "id": "R09",
+      "status": "accepted",
+      "condition": "同时进入45毫米每小时降雨、0.5公里能见度、0.05勒克斯照度、70 dB交通声、15 dB电磁底噪及小弱目标的C01组合条件",
+      "conclusion": "不得把增加设备、预算或架设高度视为恢复基线覆盖的充分条件；应重新选择感知组合、识别失效链路并以最弱工况独立验收",
+      "trigger": {
+        "configuration": "C01",
+        "referenceConfiguration": "B00",
+        "environment": {
+          "rainMmH": 45,
+          "visibilityKm": 0.5,
+          "illuminanceLux": 0.05,
+          "trafficDb": 70,
+          "emNoiseDb": 15
+        },
+        "target": {
+          "rcs": 0.001,
+          "size": 0.2,
+          "sourceDb": 85
+        },
+        "resourceChanges": {
+          "maxDevices": [
+            24,
+            32
+          ],
+          "budget": [
+            360,
+            500
+          ],
+          "installationHeightM": [
+            2,
+            8
+          ]
+        }
+      },
+      "statement": "当同时进入45毫米每小时降雨、0.5公里能见度、0.05勒克斯照度、70 dB交通声、15 dB电磁底噪及小弱目标的C01组合条件时，不得把增加设备、预算或架设高度视为恢复基线覆盖的充分条件；应重新选择感知组合、识别失效链路并以最弱工况独立验收",
+      "mechanism": "本轮即使把设备上限24放宽到32、相对预算360增至500、支架2米增至8米，九图均衡型最弱工况覆盖仍均低于各自基线；单纯增加资源无法替代环境与目标适配",
+      "validatedMapCount": 9,
+      "supportingMaps": [
+        "recon",
+        "beijing",
+        "wuxi",
+        "shenzhen",
+        "daxing",
+        "hangzhou",
+        "nuclear",
+        "changjiang",
+        "railway"
+      ],
+      "counterexampleMaps": [],
+      "holdoutPassed": [
+        "shenzhen",
+        "hangzhou",
+        "changjiang"
+      ],
+      "perMapEvidence": [
+        {
+          "mapId": "recon",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.7158469945355191,
+          "stressWorstCoverage": 0.5737704918032787,
+          "deltaPP": -14.207650273224049,
+          "baseActualDevices": 13,
+          "stressActualDevices": 19,
+          "baseRunId": "run-20261127-045531-dgx7k",
+          "optimizationRunId": "run-20261127-050150-252ik",
+          "source": "artifacts/cross-map-study/runs/recon/C01.json.gz"
+        },
+        {
+          "mapId": "beijing",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.9581151832460733,
+          "stressWorstCoverage": 0.7015706806282722,
+          "deltaPP": -25.654450261780106,
+          "baseActualDevices": 9,
+          "stressActualDevices": 14,
+          "baseRunId": "run-20261127-045531-0a5tb",
+          "optimizationRunId": "run-20261127-045813-h3j97",
+          "source": "artifacts/cross-map-study/runs/beijing/C01.json.gz"
+        },
+        {
+          "mapId": "wuxi",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.7637362637362637,
+          "stressWorstCoverage": 0.5659340659340659,
+          "deltaPP": -19.780219780219777,
+          "baseActualDevices": 13,
+          "stressActualDevices": 20,
+          "baseRunId": "run-20261127-045530-89hdg",
+          "optimizationRunId": "run-20261127-050008-s52yn",
+          "source": "artifacts/cross-map-study/runs/wuxi/C01.json.gz"
+        },
+        {
+          "mapId": "shenzhen",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.7932960893854749,
+          "stressWorstCoverage": 0.6703910614525139,
+          "deltaPP": -12.290502793296099,
+          "baseActualDevices": 18,
+          "stressActualDevices": 21,
+          "baseRunId": "run-20261127-045832-i0a1b",
+          "optimizationRunId": "run-20261127-051110-gyx4c",
+          "source": "artifacts/cross-map-study/runs/shenzhen/C01.json.gz"
+        },
+        {
+          "mapId": "daxing",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.9414893617021277,
+          "stressWorstCoverage": 0.7074468085106383,
+          "deltaPP": -23.404255319148938,
+          "baseActualDevices": 6,
+          "stressActualDevices": 14,
+          "baseRunId": "run-20261127-050037-zitx1",
+          "optimizationRunId": "run-20261127-050333-nrf6t",
+          "source": "artifacts/cross-map-study/runs/daxing/C01.json.gz"
+        },
+        {
+          "mapId": "hangzhou",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.8795811518324608,
+          "stressWorstCoverage": 0.6963350785340314,
+          "deltaPP": -18.324607329842934,
+          "baseActualDevices": 7,
+          "stressActualDevices": 17,
+          "baseRunId": "run-20261127-050226-7xeyu",
+          "optimizationRunId": "run-20261127-050511-xvvm6",
+          "source": "artifacts/cross-map-study/runs/hangzhou/C01.json.gz"
+        },
+        {
+          "mapId": "nuclear",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.953125,
+          "stressWorstCoverage": 0.8125,
+          "deltaPP": -14.0625,
+          "baseActualDevices": 5,
+          "stressActualDevices": 14,
+          "baseRunId": "run-20261127-050340-1gjdd",
+          "optimizationRunId": "run-20261127-050519-4fypc",
+          "source": "artifacts/cross-map-study/runs/nuclear/C01.json.gz"
+        },
+        {
+          "mapId": "changjiang",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.9583333333333334,
+          "stressWorstCoverage": 0.7760416666666666,
+          "deltaPP": -18.229166666666675,
+          "baseActualDevices": 5,
+          "stressActualDevices": 14,
+          "baseRunId": "run-20261127-050351-bdew3",
+          "optimizationRunId": "run-20261127-050546-ns6ch",
+          "source": "artifacts/cross-map-study/runs/changjiang/C01.json.gz"
+        },
+        {
+          "mapId": "railway",
+          "eligible": true,
+          "pass": true,
+          "baseWorstCoverage": 0.9301075268817204,
+          "stressWorstCoverage": 0.6989247311827957,
+          "deltaPP": -23.118279569892465,
+          "baseActualDevices": 13,
+          "stressActualDevices": 18,
+          "baseRunId": "run-20261127-050531-dqjul",
+          "optimizationRunId": "run-20261127-050953-rhpfw",
+          "source": "artifacts/cross-map-study/runs/railway/C01.json.gz"
+        }
+      ],
+      "limitations": [
+        "这是完整组合条件下的净结果，不分配为雨、噪声、目标或高度任一单因素的独立因果效应。",
+        "本轮平均下降及区间可作该参数组的风险参考，不能当作其他城市或其他参数的固定下降比例。",
+        "本条是完整组合对照结果的探索性归纳，经九图逐图复核；不冒称盲态外部预测验证。"
+      ],
+      "scope": "本次九张地图、现有感知物理代理与既定参数范围内的跨图模型验证；不等同现场工程认证",
+      "evidenceClass": "exploratory-cross-map-comparison",
+      "blindExternalValidation": false
+    }
+  ],
+  "notGeneralizedRules": [],
+  "rejectedHypotheses": [
+    {
+      "hypothesis": "两栋建筑净距小于X且高度差大于Y即可确定低楼屋顶补盲",
+      "status": "不发布统一X/Y阈值",
+      "reason": "现有城市形态统计为质心间距，不能替代外墙净距；没有对建筑净距、高差及补盲动作实施受控干预。不同传感器和俯仰角也不应共用一个拍定阈值。"
+    },
+    {
+      "hypothesis": "雷达架设高度每降低Z米，低空盲区半径固定增加W米",
+      "status": "不发布统一Z-W斜率",
+      "reason": "本轮有0.5/2/8米架设对照，但输出为真实离散空域覆盖，未测连续盲区半径；遮挡、俯仰与脉冲近距盲区共同作用，不能将覆盖百分点换成半径。",
+      "evidence": [
+        {
+          "mapId": "recon",
+          "presetId": "radar-03d",
+          "lowCovered": 277,
+          "highCovered": 430,
+          "pairedLinks": 1245
+        },
+        {
+          "mapId": "recon",
+          "presetId": "acoustic-cry",
+          "lowCovered": 14,
+          "highCovered": 30,
+          "pairedLinks": 1245
+        },
+        {
+          "mapId": "beijing",
+          "presetId": "radar-03d",
+          "lowCovered": 706,
+          "highCovered": 865,
+          "pairedLinks": 1096
+        },
+        {
+          "mapId": "beijing",
+          "presetId": "acoustic-cry",
+          "lowCovered": 27,
+          "highCovered": 31,
+          "pairedLinks": 1096
+        },
+        {
+          "mapId": "wuxi",
+          "presetId": "radar-03d",
+          "lowCovered": 317,
+          "highCovered": 420,
+          "pairedLinks": 1198
+        },
+        {
+          "mapId": "wuxi",
+          "presetId": "acoustic-cry",
+          "lowCovered": 15,
+          "highCovered": 22,
+          "pairedLinks": 1198
+        },
+        {
+          "mapId": "shenzhen",
+          "presetId": "radar-03d",
+          "lowCovered": 230,
+          "highCovered": 418,
+          "pairedLinks": 1161
+        },
+        {
+          "mapId": "shenzhen",
+          "presetId": "acoustic-cry",
+          "lowCovered": 16,
+          "highCovered": 27,
+          "pairedLinks": 1161
+        },
+        {
+          "mapId": "daxing",
+          "presetId": "radar-03d",
+          "lowCovered": 729,
+          "highCovered": 779,
+          "pairedLinks": 1119
+        },
+        {
+          "mapId": "daxing",
+          "presetId": "acoustic-cry",
+          "lowCovered": 40,
+          "highCovered": 39,
+          "pairedLinks": 1119
+        },
+        {
+          "mapId": "hangzhou",
+          "presetId": "radar-03d",
+          "lowCovered": 713,
+          "highCovered": 805,
+          "pairedLinks": 1095
+        },
+        {
+          "mapId": "hangzhou",
+          "presetId": "acoustic-cry",
+          "lowCovered": 46,
+          "highCovered": 50,
+          "pairedLinks": 1095
+        },
+        {
+          "mapId": "nuclear",
+          "presetId": "radar-03d",
+          "lowCovered": 792,
+          "highCovered": 818,
+          "pairedLinks": 978
+        },
+        {
+          "mapId": "nuclear",
+          "presetId": "acoustic-cry",
+          "lowCovered": 30,
+          "highCovered": 29,
+          "pairedLinks": 978
+        },
+        {
+          "mapId": "changjiang",
+          "presetId": "radar-03d",
+          "lowCovered": 875,
+          "highCovered": 999,
+          "pairedLinks": 1260
+        },
+        {
+          "mapId": "changjiang",
+          "presetId": "acoustic-cry",
+          "lowCovered": 40,
+          "highCovered": 39,
+          "pairedLinks": 1260
+        },
+        {
+          "mapId": "railway",
+          "presetId": "radar-03d",
+          "lowCovered": 419,
+          "highCovered": 631,
+          "pairedLinks": 1133
+        },
+        {
+          "mapId": "railway",
+          "presetId": "acoustic-cry",
+          "lowCovered": 26,
+          "highCovered": 39,
+          "pairedLinks": 1133
+        }
+      ]
+    },
+    {
+      "hypothesis": "声学节点一律优先制高点即可获得最优覆盖",
+      "status": "不能列为无条件通用规则",
+      "reason": "高低候选覆盖分组仍混有平面位置、指向和周边建筑因素；不能把相关关系解释为高度本身的净效应，也不能声称已有完整声波建筑反射求解。",
+      "evidence": [
+        {
+          "mapId": "beijing",
+          "type": "acoustic",
+          "highMeanSamples": 8.454545454545455,
+          "lowMeanSamples": 6,
+          "highN": 11,
+          "lowN": 10
+        },
+        {
+          "mapId": "changjiang",
+          "type": "acoustic",
+          "highMeanSamples": 13.333333333333334,
+          "lowMeanSamples": 12.75,
+          "highN": 9,
+          "lowN": 8
+        },
+        {
+          "mapId": "daxing",
+          "type": "acoustic",
+          "highMeanSamples": 5.571428571428571,
+          "lowMeanSamples": 4,
+          "highN": 7,
+          "lowN": 6
+        },
+        {
+          "mapId": "hangzhou",
+          "type": "acoustic",
+          "highMeanSamples": 6.333333333333333,
+          "lowMeanSamples": 4.875,
+          "highN": 9,
+          "lowN": 8
+        },
+        {
+          "mapId": "nuclear",
+          "type": "acoustic",
+          "highMeanSamples": 12.666666666666666,
+          "lowMeanSamples": 12.375,
+          "highN": 9,
+          "lowN": 8
+        },
+        {
+          "mapId": "railway",
+          "type": "acoustic",
+          "highMeanSamples": 1.2,
+          "lowMeanSamples": 2.3333333333333335,
+          "highN": 10,
+          "lowN": 9
+        },
+        {
+          "mapId": "recon",
+          "type": "acoustic",
+          "highMeanSamples": 2.4,
+          "lowMeanSamples": 1.6666666666666667,
+          "highN": 10,
+          "lowN": 9
+        },
+        {
+          "mapId": "shenzhen",
+          "type": "acoustic",
+          "highMeanSamples": 0.2727272727272727,
+          "lowMeanSamples": 3,
+          "highN": 11,
+          "lowN": 10
+        },
+        {
+          "mapId": "wuxi",
+          "type": "acoustic",
+          "highMeanSamples": 1.3636363636363635,
+          "lowMeanSamples": 5.25,
+          "highN": 11,
+          "lowN": 8
+        }
+      ]
+    }
+  ],
+  "sourceManifest": "artifacts/cross-map-study/manifest.json",
+  "rawRecords": "artifacts/cross-map-study/runs/",
+  "sourceDocuments": [
+    {
+      "path": "创意二文件/07--创意科目二：反无装备优化部署与仿真推演（公开发布版）(1).pdf",
+      "sha256": "4613ae72bc4885ee7911ed4b43d3a6e09f6362304c11d492df4b79ecbbce7867",
+      "bytes": 235148
+    },
+    {
+      "path": "创意二文件/创意二数据集/创意科目二-数据说明.doc",
+      "sha256": "63e1620ec6896a4480c5c0681a8215319620566cb1bf9ea0d4643db2400dc28a",
+      "bytes": 158720
+    },
+    {
+      "path": "创意二文件/创意二数据集/装备参数.doc",
+      "sha256": "12e731c84d9c24c0bb0af2acc889ee6d09c06d91cd934a4e05e39ea755c69cdc",
+      "bytes": 256000
+    }
+  ]
+}
