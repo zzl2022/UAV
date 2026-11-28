@@ -11,7 +11,7 @@ try{
   await mkdir('artifacts/equipment-library',{recursive:true});
   const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  const ready=()=>page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:180000});
+  const ready=()=>page.waitForFunction(()=>document.documentElement.dataset.ready==='true'&&window.task3Diagnostics,null,{timeout:180000});
   const inventory=page.locator('#equipment-inventory'),save=page.locator('#equipment-profile-save');
   const equipmentMenu=page.locator('#ac8-equipment-menu'),content=equipmentMenu.locator('.ac8-hud-content');
   const museum=page.locator('#museum-label');
@@ -20,9 +20,28 @@ try{
   const info=page.locator('[data-info="equipmentConfig"]');
   const entries=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('uav.equipment-library.v1')??'[]'));
   const selectedRadar=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('uav.equipment-selection.v1')).radar);
+  const task3Equipment=page.locator('#task3-equipment');
+  const modeledIds=()=>task3Equipment.locator('.task3-equip').evaluateAll(items=>items.map(item=>item.dataset.presetId));
+  const rowFor=id=>page.locator(`#equipment-inventory-list li[data-preset-id="${id}"]`);
+  const radarRow=rowFor('radar-03d');
+
+  async function closeMenu(name){
+    const isOpen=()=>page.evaluate(name=>Boolean(window[`__ac8${name}Menu`]?.isOpen()),name);
+    for(let step=0;step<2&&await isOpen();step++)await page.keyboard.press('Escape');
+    await page.waitForFunction(name=>!window[`__ac8${name}Menu`]?.isOpen(),name);
+  }
+
+  async function clickLauncher(id){
+    await page.waitForFunction(id=>{
+      const launcher=document.getElementById(id),rect=launcher.getBoundingClientRect();
+      return rect.left>=0&&rect.right<=innerWidth&&getComputedStyle(launcher).pointerEvents!=='none';
+    },id);
+    await page.locator(`#${id}`).click();
+  }
 
   async function enter(id){
-    if(!await page.evaluate(()=>window.__ac8EquipmentMenu?.isOpen()))await page.locator('#toggle-sensors').click();
+    await closeMenu('Deployment');
+    if(!await page.evaluate(()=>window.__ac8EquipmentMenu?.isOpen()))await clickLauncher('toggle-sensors');
     if(await page.evaluate(()=>window.__ac8EquipmentMenu?.isDetail())){
       await page.keyboard.press('Escape');
       await page.waitForFunction(()=>!window.__ac8EquipmentMenu?.isDetail());
@@ -33,6 +52,29 @@ try{
     const panel=id==='inventory'?inventory:page.locator('#equipment-profile-form');
     await panel.waitFor({state:'visible'});
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('#ac8-equipment-menu .ac8-hud-content')).transform==='none');
+  }
+
+  async function planningGenerate(){
+    await closeMenu('Equipment');
+    await clickLauncher('toggle-deployment');
+    await page.locator('#ac8-deployment-menu .ac8-hud-tabs button[data-page="input"]').click();
+    await page.locator('#task3-scope-width').fill('600');
+    await page.locator('#task3-scope-depth').fill('600');
+    await page.locator('#task3-spacing').fill('300');
+    await page.locator('#task3-max-devices').fill('8');
+    await page.locator('#task3-panel [data-sub="generate"]').click();
+    await page.locator('#task3-plan-types [data-plan-type="economy"]').uncheck();
+    await page.locator('#task3-plan-types [data-plan-type="enhanced"]').uncheck();
+  }
+
+  async function runPlan(){
+    const previous=await page.evaluate(()=>window.task3Diagnostics.requestId);
+    await page.locator('#task3-run-side').click();
+    await page.waitForFunction(previous=>{
+      const result=window.task3Diagnostics;
+      return result.requestId>previous&&!result.busy&&(result.reportRequestId===result.requestId||result.lastError);
+    },previous,{timeout:180000});
+    return page.evaluate(()=>window.task3Diagnostics);
   }
 
   const observeInfo=()=>page.evaluate(()=>{
@@ -53,9 +95,20 @@ try{
   assert.ok(coreRect.x>inventoryRect.x+inventoryRect.width+20&&coreRect.x+coreRect.width<=1500);
   assert.equal(await inventory.isVisible(),true);
   assert.equal(await page.locator('#equipment-profile-form').isHidden(),true);
-  assert.equal(await summary.textContent(),'已加入 0 项装备');
-  assert.match(await page.locator('#equipment-inventory-empty').textContent(),/装备库为空.*加入装备库/);
-  assert.match(await info.textContent(),/已选.+装备库为空/);
+  const initialEntries=await entries(),initialModeled=await modeledIds();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('uav.equipment-library.seeded.v2')),'1');
+  assert.equal(new Set(initialEntries.map(item=>item.type)).size,6);
+  assert.equal(await rows.count(),6);
+  assert.equal(initialModeled.length,4);
+  assert.equal(await summary.textContent(),'已选 4 项装备（推演使用）');
+  assert.equal(await inventory.getByText('暂无推演模型',{exact:true}).count(),2);
+  assert.match(await info.textContent(),/^已选 /);
+  assert.doesNotMatch(await info.textContent(),/装备库|5G-A|静电/);
+  await planningGenerate();
+  const initialPlan=await runPlan();
+  assert.equal(initialPlan.lastError,null);
+  assert.deepEqual(initialPlan.lastEquipmentSnapshot.selectedPresetIds,initialModeled);
+  assert.equal(initialPlan.staleResult,false);
 
   await enter('radar');
   assert.equal(await inventory.isHidden(),true);
@@ -64,35 +117,43 @@ try{
   await page.locator('.equipment-model-trigger[data-type="radar"]').click();
   await page.locator('#equipment-model-menu [data-preset-id="radar-03d"]').click();
   assert.notEqual(defaultId,'radar-03d','冒烟需覆盖切回不同的默认型号');
+  assert.deepEqual(await modeledIds(),initialModeled,'切换编辑型号不应改变实际推演的装备');
+  assert.equal(await page.evaluate(()=>window.task3Diagnostics.staleResult),false);
   const radarName=await page.locator('#equipment-model-name').textContent();
   const initial=Number(await currentRange.inputValue());
   const adjusted=initial-7;
   await currentRange.fill('0');
   await save.click();
   assert.match(await page.locator('#equipment-profile-message').textContent(),/距离|量程/);
-  assert.deepEqual(await entries(),[]);
+  assert.deepEqual(await entries(),initialEntries);
   await currentRange.fill(String(adjusted));
   assert.equal(await save.textContent(),'加入装备库');
   await save.click();
   assert.equal(await page.locator('#equipment-profile-message').textContent(),`已加入装备库：雷达 · ${radarName}`);
   assert.equal(await page.locator('#equipment-save-state').textContent(),'已保存');
   const saved=await entries();
-  assert.equal(saved.length,1);
-  assert.deepEqual(Object.keys(saved[0]).sort(),['addedAt','name','presetId','type']);
-  assert.equal(saved[0].presetId,'radar-03d');
+  assert.equal(saved.length,initialEntries.length+1);
+  const added=saved.find(item=>item.presetId==='radar-03d');
+  assert.deepEqual(Object.keys(added).sort(),['addedAt','name','presetId','type']);
+  assert.equal(added.name,radarName);
   assert.equal(await selectedRadar(),'radar-03d');
-  assert.match(await page.evaluate(()=>window.libraryInfoEvents.at(-1)),/装备库 1 项/);
-  assert.ok((await info.textContent()).includes(`装备库 1 项（雷达 ${radarName}）`));
+  const immediateInfo=await page.evaluate(()=>window.libraryInfoEvents.at(-1));
+  assert.ok(immediateInfo.startsWith('已选 ')&&immediateInfo.includes(radarName));
+  assert.doesNotMatch(await info.textContent(),/装备库/);
+  assert.deepEqual(await modeledIds(),[...initialModeled,'radar-03d']);
+  assert.equal(await page.evaluate(()=>window.task3Diagnostics.staleResult),true);
+  assert.match(await page.locator('#task3-result-freshness').textContent(),/非最新参数结果/);
   await enter('inventory');
-  assert.equal(await summary.textContent(),'已加入 1 项装备');
-  assert.equal(await rows.count(),1);
-  assert.ok((await rows.first().textContent()).includes(String(adjusted)));
-  assert.equal(await rows.first().getByRole('button',{name:`移除 ${radarName}`}).isVisible(),true);
+  assert.equal(await summary.textContent(),'已选 5 项装备（推演使用）');
+  assert.equal(await rows.count(),7);
+  assert.ok((await radarRow.textContent()).includes(String(adjusted)));
+  assert.match(await radarRow.textContent(),/移除后不参与推演/);
+  assert.equal(await radarRow.getByRole('button',{name:`移除 ${radarName}`}).isVisible(),true);
   await page.screenshot({path:'artifacts/equipment-library/desktop-1500x1000.png'});
 
   await page.reload({timeout:120000});await ready();await observeInfo();
   await enter('inventory');
-  assert.equal(await summary.textContent(),'已加入 1 项装备');
+  assert.equal(await summary.textContent(),'已选 5 项装备（推演使用）');
   assert.deepEqual(await entries(),saved);
   await enter('radar');
   assert.equal(await page.locator('#equipment-model-name').textContent(),radarName);
@@ -100,32 +161,61 @@ try{
   await currentRange.fill(String(adjusted-4));
   await save.click();
   const updated=await entries();
-  assert.equal(updated.length,1);
-  assert.ok(updated[0].addedAt>saved[0].addedAt);
+  assert.equal(updated.length,saved.length);
+  assert.ok(updated.find(item=>item.presetId==='radar-03d').addedAt>added.addedAt);
+  await planningGenerate();
+  const updatedPlan=await runPlan();
+  assert.equal(updatedPlan.lastError,null);
+  assert.deepEqual(updatedPlan.lastEquipmentSnapshot.selectedPresetIds,[...initialModeled,'radar-03d']);
+  assert.equal(updatedPlan.lastEquipmentSnapshot.profiles.find(item=>item.presetId==='radar-03d').parameters.maxRange,adjusted-4);
 
   await page.setViewportSize({width:390,height:844});
   await enter('inventory');
   const mobileContent=await content.boundingBox();
   assert.ok(mobileContent.x>=12&&mobileContent.x+mobileContent.width<=378);
   assert.ok(await inventory.evaluate(element=>element.scrollWidth<=element.clientWidth));
-  const remove=rows.first().getByRole('button',{name:`移除 ${radarName}`});
+  const remove=radarRow.getByRole('button',{name:`移除 ${radarName}`});
   await remove.scrollIntoViewIfNeeded();
   const rect=await remove.boundingBox();
   assert.ok(rect.x>=0&&rect.y>=0&&rect.x+rect.width<=390&&rect.y+rect.height<=844);
   await page.screenshot({path:'artifacts/equipment-library/mobile-390x844.png'});
   await remove.click();
-  assert.equal(await summary.textContent(),'已加入 0 项装备');
+  assert.equal(await summary.textContent(),'已选 4 项装备（推演使用）');
   assert.match(await page.locator('#equipment-inventory-status').textContent(),/已从装备清单移除/);
-  assert.match(await page.evaluate(()=>window.libraryInfoEvents.at(-1)),/装备库为空/);
-  assert.deepEqual(await entries(),[]);
+  assert.ok(!(await page.evaluate(()=>window.libraryInfoEvents.at(-1))).includes(radarName));
+  assert.deepEqual(await entries(),initialEntries);
+  assert.deepEqual(await modeledIds(),initialModeled);
+  assert.equal(await page.evaluate(()=>window.task3Diagnostics.staleResult),true);
   assert.equal(await selectedRadar(),defaultId);
   const retained=await page.evaluate(()=>JSON.parse(localStorage.getItem('uav.equipment-catalog.v1')).profiles.find(item=>item.presetId==='radar-03d'));
   assert.equal(retained.parameters.maxRange,adjusted-4);
+  await page.setViewportSize({width:1500,height:1000});
+  await planningGenerate();
+  const planAfterRemoval=await runPlan();
+  assert.equal(planAfterRemoval.lastError,null);
+  assert.deepEqual(planAfterRemoval.lastEquipmentSnapshot.selectedPresetIds,initialModeled);
+  assert.equal(planAfterRemoval.lastEquipmentSnapshot.profiles.some(item=>item.presetId==='radar-03d'),false);
+  await page.setViewportSize({width:390,height:844});
   await enter('radar');
   assert.equal(await inventory.isHidden(),true);
   assert.equal(await page.locator('#equipment-profile-form').isVisible(),true);
+  await enter('inventory');
+  const defaultRadar=rowFor(defaultId);
+  await defaultRadar.getByRole('button',{name:/移除/}).click();
+  assert.ok(!(await info.textContent()).includes('雷达'));
+  assert.deepEqual(await modeledIds(),initialModeled.filter(id=>id!==defaultId));
+  while(await rows.count())await rows.first().getByRole('button',{name:/移除/}).click();
+  assert.deepEqual(await entries(),[]);
+  assert.equal(await summary.textContent(),'已选 0 项装备（推演使用）');
+  assert.match(await page.locator('#equipment-inventory-empty').textContent(),/装备库为空.*加入装备库/);
+  assert.equal(await info.textContent(),'未配置装备');
   await page.reload({timeout:120000});await ready();await enter('inventory');
-  assert.equal(await summary.textContent(),'已加入 0 项装备');
+  assert.equal(await summary.textContent(),'已选 0 项装备（推演使用）');
+  assert.deepEqual(await entries(),[]);
+  assert.match(await task3Equipment.textContent(),/没有可用于优化推演的装备/);
+  await page.setViewportSize({width:1500,height:1000});
+  await planningGenerate();
+  assert.match((await runPlan()).lastError,/没有可用于优化推演的装备/);
 
   // Populate the list with references to the real catalog profiles to exercise mobile scrolling.
   const expectedCount=await page.evaluate(()=>{
@@ -135,6 +225,7 @@ try{
     localStorage.setItem('uav.equipment-library.v1',JSON.stringify(references));
     return references.length;
   });
+  await page.setViewportSize({width:390,height:844});
   await page.reload({timeout:120000});await ready();await enter('inventory');
   assert.equal(await rows.count(),expectedCount);
   const list=page.locator('#equipment-inventory-list');
@@ -148,7 +239,7 @@ try{
   await lastRemove.click();
   assert.equal(await rows.count(),expectedCount-1);
   assert.deepEqual(errors,[]);
-  console.log('装备清单浏览器冒烟通过，已覆盖空状态、校验、加入、去重、刷新、小屏滚动和移除、选择回退与参数保留。');
+  console.log('装备清单浏览器冒烟通过，已覆盖迁移、任务三实际请求与过期提示、空状态、去重、小屏布局、移除及参数保留。');
 }finally{
   await browser.close();
 }

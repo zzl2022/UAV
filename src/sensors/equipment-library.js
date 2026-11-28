@@ -1,7 +1,8 @@
-import {catalogFields,getProfileValue} from './equipment-catalog.js';
-import {CATALOG_TYPES} from './equipment-models.js';
+import {CATALOG_SCHEMA,catalogFields,getProfileValue} from './equipment-catalog.js';
+import {CATALOG_TYPES,catalogModel} from './equipment-models.js';
 
 export const EQUIPMENT_LIBRARY_KEY='uav.equipment-library.v1';
+export const EQUIPMENT_LIBRARY_SEEDED_KEY='uav.equipment-library.seeded.v2';
 const LIMIT=50;
 const SUMMARY_FIELDS={
   radar:['parameters.maxRange','physics.peakPowerW'],
@@ -41,6 +42,22 @@ export function createEquipmentLibrary(storage){
     entries:()=>[...entries.values()].map(entry=>({...entry})),
     has:presetId=>entries.has(presetId),
     checkCapacity,
+    seed(profiles){
+      try{
+        if(!storage||storage.getItem(EQUIPMENT_LIBRARY_SEEDED_KEY)==='1')return;
+        const next=new Map(entries);
+        const types=new Set([...entries.values()].map(entry=>entry.type));
+        const addedAt=new Date().toISOString();
+        for(const {presetId,type,name} of profiles){
+          if(next.size===LIMIT)break;
+          if(types.has(type)||next.has(presetId))continue;
+          next.set(presetId,{presetId,type,name,addedAt});
+          types.add(type);
+        }
+        if(next.size!==entries.size)write(next);
+        storage.setItem(EQUIPMENT_LIBRARY_SEEDED_KEY,'1');
+      }catch{throw Error('装备库初始化失败，请检查浏览器存储空间。');}
+    },
     add({presetId,type,name}){
       checkCapacity(presetId);
       const next=new Map(entries);
@@ -56,6 +73,27 @@ export function createEquipmentLibrary(storage){
       return {...entry};
     },
   };
+}
+
+export function equipmentLibrarySnapshot(entries,findProfile){
+  const selected=new Map();
+  for(const {presetId,type,addedAt} of entries){
+    const profile=findProfile(presetId);
+    if(!profile||profile.type!==type)continue;
+    const model=catalogModel(presetId);
+    if(model.catalogOnly)continue;
+    const basePresetId=model.basePresetId??presetId;
+    const updatedAt=Date.parse(addedAt);
+    // 推演每个预设只接收一份参数，同源型号采用库中最后更新的一项。
+    if((selected.get(basePresetId)?.updatedAt??-Infinity)>updatedAt)continue;
+    selected.set(basePresetId,{profile,updatedAt});
+  }
+  const profiles=[],selectedEquipment=[];
+  for(const [presetId,{profile}] of selected){
+    selectedEquipment.push({presetId,profileId:profile.presetId,type:profile.type,name:profile.name});
+    profiles.push(presetId===profile.presetId?profile:{...profile,presetId,name:catalogModel(presetId).name});
+  }
+  return {schema:CATALOG_SCHEMA,profiles,selectedEquipment,selectedPresetIds:[...selected.keys()]};
 }
 
 export function equipmentLibrarySummary(profile){

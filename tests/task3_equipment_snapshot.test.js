@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createDevice} from '../src/sensors/presets.js';
 import {angles} from '../src/sensors/engine.js';
 import {defaultProfile} from '../src/sensors/equipment-catalog.js';
+import {equipmentLibrarySnapshot} from '../src/sensors/equipment-library.js';
 import {generateCandidatesWithEquipment,runTask3Pipeline,resolveTask3EquipmentSelection} from '../src/task3/pipeline.js';
 import {EQUIPMENT_CHANNELS_GHZ} from '../src/task3/constants.js';
 
@@ -37,4 +38,32 @@ test('优化推演直接采用装备建模已选型号并过滤无仿真模型�
  assert.deepEqual(resolveTask3EquipmentSelection({selectedPresetIds:selected}),['radio-mini','radar-03d']);
  assert.throws(()=>resolveTask3EquipmentSelection({profiles:[]}),/尚未提供已选型号/);
  assert.throws(()=>resolveTask3EquipmentSelection({selectedPresetIds:['fivega-zte-a9650-s49']}),/没有可用于优化推演的装备/);
+ assert.throws(()=>resolveTask3EquipmentSelection(equipmentLibrarySnapshot([],()=>null)),/没有可用于优化推演的装备/);
+});
+
+test('同预设装备选用最近更新的库条目，自定义参数注入真实任务三候选',()=>{
+ const base=defaultProfile('radar-03d'),custom=structuredClone(base),radio=defaultProfile('radio-mini');
+ custom.presetId='custom:radar-03d:task3-test';custom.name='自定义样例雷达';
+ custom.parameters.maxRange=7123;custom.physics.peakPowerW=3333;
+ const catalogOnly=defaultProfile('fivega-zte-a9650-s49');
+ const profiles=new Map([base,custom,radio,catalogOnly].map(profile=>[profile.presetId,profile]));
+ const items=[
+  {...base,addedAt:'2026-01-01T00:00:00Z'},
+  {...custom,addedAt:'2026-01-03T00:00:00Z'},
+  {...base,addedAt:'2026-01-02T00:00:00Z'},
+  {...radio,addedAt:'2026-01-01T00:00:00Z'},
+  {...catalogOnly,addedAt:'2026-01-01T00:00:00Z'},
+  {presetId:'custom:radar-03d:missing',type:'radar',addedAt:'2026-01-04T00:00:00Z'},
+ ];
+ const snapshot=equipmentLibrarySnapshot(items,id=>profiles.get(id));
+ assert.deepEqual(resolveTask3EquipmentSelection(snapshot),['radar-03d','radio-mini']);
+ assert.deepEqual(snapshot.selectedEquipment[0],{presetId:base.presetId,profileId:custom.presetId,type:base.type,name:custom.name});
+ assert.equal(snapshot.profiles[0].name,base.name);
+ assert.equal(profiles.get(base.presetId).parameters.maxRange,base.parameters.maxRange);
+ const sampling={bounds:{west:-75,east:75,south:-75,north:75,core:[100,50,100]}};
+ const {candidates}=generateCandidatesWithEquipment(city,query,settings,sampling,snapshot.selectedPresetIds,snapshot);
+ const device=candidates.find(item=>item.device.presetId===base.presetId).device;
+ assert.equal(device.parameters.maxRange,7123);
+ assert.equal(device.physics.peakPowerW,3333);
+ assert.deepEqual(equipmentLibrarySnapshot(items.filter(item=>item.type!=='radar'),id=>profiles.get(id)).selectedPresetIds,['radio-mini']);
 });

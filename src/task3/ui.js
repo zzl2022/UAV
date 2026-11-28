@@ -85,7 +85,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   status:th$('threat-voice-status'),getTarget:()=>({detected:threatDetected,telemetry:lastThreatTelemetry})});
  const contentBox=panel.querySelector('.task3-content');
  const subnav=panel.querySelector('.task3-subnav');
- const equipPane=document.createElement('div');equipPane.className='task3-pane task3-pane-top';equipPane.innerHTML=`<section class="task3-selected-equipment"><h3>装备建模已选型号</h3><div id="task3-equipment"></div><p class="hint">型号随装备建模选择自动更新；优化计算直接采用对应已保存参数，无需在此重复选择。</p></section>`;
+ const equipPane=document.createElement('div');equipPane.className='task3-pane task3-pane-top';equipPane.innerHTML=`<section class="task3-selected-equipment"><h3>已选推演装备</h3><div id="task3-equipment"></div><p class="hint">装备清单更新后会同步到此处。生成方案时使用已保存的参数。</p></section>`;
  const scopePane=document.createElement('div');scopePane.className='task3-pane';scopePane.innerHTML=`<div class="task3-inputs">
   <label>东西宽度 / m<input id="task3-scope-width" type="number" min="1" step="100" value="2400"></label>
   <label>南北深度 / m<input id="task3-scope-depth" type="number" min="1" step="100" value="2400"></label>
@@ -162,9 +162,12 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  subnav.addEventListener('click',event=>{const b=event.target.closest('[data-sub]');if(!b)return;activeSub=b.dataset.sub;applyTab();});
  const setStatus=(text,tone='')=>{const status=$('task3-status-side');status.textContent=text;status.dataset.tone=tone;};
  function renderEquipmentSelection(equipmentSnapshot=sensors.getEquipmentSnapshot()){
-  const presetIds=resolveTask3EquipmentSelection(equipmentSnapshot);
-  $('task3-equipment').replaceChildren(...presetIds.map(id=>{const preset=PRESETS.find(p=>p.id===id),row=document.createElement('div');row.className='task3-equip';row.dataset.presetId=id;row.textContent=`${TYPES[preset.type]} · ${preset.name}`;return row;}));
-  return presetIds;
+  const equipment=$('task3-equipment');
+  let presetIds;
+  try{presetIds=resolveTask3EquipmentSelection(equipmentSnapshot);}
+  catch(error){equipment.textContent=error.message;return;}
+  const names=new Map((equipmentSnapshot.selectedEquipment??[]).map(({presetId,name})=>[presetId,name]));
+  equipment.replaceChildren(...presetIds.map(id=>{const preset=PRESETS.find(p=>p.id===id),row=document.createElement('div');row.className='task3-equip';row.dataset.presetId=id;row.textContent=`${TYPES[preset.type]} · ${names.get(id)??preset.name}`;return row;}));
  }
  let report=null,run=null,originalRun=null,worker=null,busy=false,plan=null,blindMeshes={},deviceMeshes=[],deviceDisplay=createDeviceDisplayMap(),mobileSnapshots=new Map(),mobileRequestId=0,mobilePending=false,mobileReportRequestId=null,activePipelineRequest=null,lastRequestSnapshot=null,threatConfigs=structuredClone(DEFAULT_THREAT_CONFIGS);
  let task3SceneKey='recon',constraintsInvalid=false,explanationExporting=false;
@@ -688,7 +691,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    const normalizedThreatConfigs=customSite?DEFAULT_THREAT_CONFIGS:resolveThreatConfigs();
    if(!customSite)threatConfigs=structuredClone(normalizedThreatConfigs);
    const settings=resolveTask3Settings({buildingExclusions:buildingSelector.snapshot(),scope:custom?'custom':'core',scopeWidthM,scopeDepthM,spacing,heights:[30,60,100],siteSpacing:500,maxSites:192,maxDevices:Number($('task3-max-devices').value),budget:Number($('task3-budget').value),costs,threatConfigs:normalizedThreatConfigs,coreRadius:700,coreWeight:3,marginReserveDb:3});
-   const equipmentSnapshot=sensors.getEquipmentSnapshot(),presetIds=renderEquipmentSelection(equipmentSnapshot);
+   const equipmentSnapshot=sensors.getEquipmentSnapshot(),presetIds=resolveTask3EquipmentSelection(equipmentSnapshot);
    snapshot=createTask3RequestSnapshot({settings,weights,presetIds,equipmentSnapshot,scenarioSnapshot:sensors.getScenarioSnapshot(),planTypes});
   }catch(error){
    if(/网格间距/.test(error.message)){spacingInput.setAttribute('aria-invalid','true');if(updateReason.includes('手动'))spacingInput.focus();}
@@ -758,7 +761,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   finally{explanationExporting=false;updateExplanationButton();}
  };
  const markInputsChanged=()=>{scheduler.markStale();controlsEnabled();updateDiagnostics();};
- sensors.subscribeEquipmentChanges(()=>{renderEquipmentSelection();markInputsChanged();});
+ sensors.subscribeEquipmentChanges(snapshot=>{renderEquipmentSelection(snapshot);markInputsChanged();});
  sensors.subscribeScenarioChanges(markInputsChanged);
  const pipelineInputSelector='#task3-scope-width,#task3-scope-depth,#task3-spacing,#task3-budget,#task3-max-devices,#task3-weights input,#task3-costs input,#task3-plan-types input,#task3-threat-count,#task3-threat-azimuths,#task3-threat-agl,#task3-threat-speed';
  panel.addEventListener('input',event=>{if(event.target.matches(pipelineInputSelector))markInputsChanged();});

@@ -641,17 +641,15 @@ try {
     return `${area} · ${coreCoordinateText()}`;
   }
   function equipmentConfigText(){
-    const snapshot=sensors?.getEquipmentSnapshot?.()??window.task3Diagnostics?.lastEquipmentSnapshot??window.__task3Report?.equipmentSnapshot??null;
-    const ids=snapshot?.selectedPresetIds??[];
-    const profiles=snapshot?.profiles??[],byType=new Map(),order=['雷达','无线电','光电','声学','5G-A','静电'],rank=name=>{const index=order.indexOf(name);return index<0?order.length:index;};
-    for(const id of ids){
-      const profile=profiles.find(item=>item.presetId===id),type=CATALOG_TYPES[profile?.type]??'未知',names=byType.get(type)??[];
-      names.push(profile?.name??id);byType.set(type,names);
+    const selected=sensors?.getEquipmentSnapshot().selectedEquipment??[];
+    const byType=new Map();
+    for(const {type,name} of selected){
+      const names=byType.get(type)??[];
+      names.push(name);byType.set(type,names);
     }
-    const selection=[...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('、')}`).join('｜');
-    const library=sensors?.getEquipmentLibrary()??[];
-    const inventory=library.length?`装备库 ${library.length} 项（${library.map(({type,name})=>`${CATALOG_TYPES[type]} ${name}`).join('、')}）`:'装备库为空';
-    return `${selection?`已选 ${selection}`:'未配置装备'} · ${inventory}`;
+    const order=['radar','radio','optical','acoustic','fivega','electrostatic'];
+    const selection=order.filter(type=>byType.has(type)).map(type=>`${CATALOG_TYPES[type]} ${byType.get(type).join('、')}`);
+    return selection.length?`已选 ${selection.join('｜')}`:'未配置装备';
   }
   function deploymentInputText(){
     if(!el('task3-scope-width'))return '等待推演输入';

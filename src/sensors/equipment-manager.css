@@ -226,6 +226,12 @@
 }
 .equipment-inventory-type { color: #7fe8ff; font-size: 11px; }
 .equipment-inventory-parameters { color: #adcad7; font-size: 12px; }
+.equipment-inventory-actions {
+  justify-items: end;
+  text-align: right;
+  color: #adcad7;
+  font-size: 11px;
+}
 #equipment-inventory-list button {
   min-width: 54px;
   min-height: 36px;

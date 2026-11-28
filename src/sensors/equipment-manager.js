@@ -1,6 +1,6 @@
 import {CATALOG_MODELS,CATALOG_TYPES,catalogModel} from './equipment-models.js';
 import {CATALOG_SCHEMA,catalogFields,defaultProfile,getProfileValue,setProfileValue,profileGroups,createCatalogStore,createCustomProfile,validateCatalogFile} from './equipment-catalog.js';
-import {createEquipmentLibrary,equipmentLibrarySummary} from './equipment-library.js';
+import {createEquipmentLibrary,equipmentLibrarySnapshot,equipmentLibrarySummary} from './equipment-library.js';
 import './equipment-manager.css';
 
 const order=Object.keys(CATALOG_TYPES);
@@ -21,15 +21,10 @@ export function mountEquipmentManager(panel,{app,demo,onSelectionChange}={}){
  const remembered={...defaultIds};
  const selectionKey='uav.equipment-selection.v1';
  try{const selected=JSON.parse(storage?.getItem(selectionKey)??'{}');for(const kind of order)if(drafts.get(selected[kind])?.type===kind)remembered[kind]=selected[kind];}catch{}
+ let initializationError='';
+ try{library.seed(Object.values(remembered).map(store.get));}catch(error){initializationError=error.message;}
  const persistSelection=()=>{try{storage?.setItem(selectionKey,JSON.stringify(remembered));}catch{tell('型号选择无法保存，请检查浏览器存储空间');}};
- const selectionListeners=new Set(),getSnapshot=()=>{
-  const snapshot=store.getSnapshot(),selectedPresetIds=[];
-  for(const id of Object.values(remembered)){
-   const model=catalogModel(id),baseId=model.basePresetId??id;selectedPresetIds.push(baseId);
-   const saved=store.get(id);if(model.basePresetId&&saved){const index=snapshot.profiles.findIndex(p=>p.presetId===baseId);snapshot.profiles[index]={...saved,presetId:baseId,name:catalogModel(baseId).name};}
-  }
-  return {...snapshot,selectedPresetIds};
- };
+ const selectionListeners=new Set(),getSnapshot=()=>equipmentLibrarySnapshot(library.entries(),store.get);
  const publishSelection=()=>{const snapshot=getSnapshot();for(const listener of [...selectionListeners])listener(structuredClone(snapshot));};
  let type='radar',presetId=remembered.radar,groupName=null,menuType=null,menuTrigger=null;
  const root=document.createElement('div');root.id='equipment-manager';
@@ -62,11 +57,12 @@ function choose(nextType,id=remembered[nextType]){
  const selectionChanged=remembered[nextType]!==id;closeMenu();demo?.stop();const inDemo=groupName==='设备仿真';
  root.classList.remove('show-equipment-inventory');$('equipment-inventory').hidden=true;
  type=nextType;presetId=id;remembered[type]=id;persistSelection();groupName=inDemo?'设备仿真':null;tell('');render();
- if(selectionChanged)publishSelection();onSelectionChange?.({type:nextType,presetId:id,selectionChanged});
+ onSelectionChange?.({type:nextType,presetId:id,selectionChanged});
 }
  function renderInventory(){
   const entries=library.entries(),list=$('equipment-inventory-list');
-  $('equipment-inventory-count').textContent=`已加入 ${entries.length} 项装备`;
+  const selected=new Set(getSnapshot().selectedEquipment.map(entry=>entry.profileId));
+  $('equipment-inventory-count').textContent=`已选 ${selected.size} 项装备（推演使用）`;
   $('equipment-inventory-empty').hidden=entries.length>0;
   list.hidden=!entries.length;
   list.replaceChildren(...entries.map(entry=>{
@@ -77,12 +73,22 @@ function choose(nextType,id=remembered[nextType]){
    const title=document.createElement('strong');title.textContent=name;
    const summary=document.createElement('span');summary.className='equipment-inventory-parameters';summary.textContent=equipmentLibrarySummary(saved);
    text.append(category,title,summary);
+   if(saved&&!selected.has(entry.presetId)){
+    const availability=document.createElement('small');
+    availability.className='equipment-inventory-parameters';
+    availability.textContent=catalogModel(entry.presetId).catalogOnly?'暂无推演模型':'同一预设采用最近更新的型号';
+    text.append(availability);
+   }
+   const actions=document.createElement('div');actions.className='equipment-inventory-actions';
    const remove=document.createElement('button');remove.type='button';remove.textContent='移除';remove.setAttribute('aria-label',`移除 ${name}`);
    remove.onclick=()=>removeFromLibrary(entry.presetId,name);
-   row.append(text,remove);return row;
+   const hint=document.createElement('small');hint.textContent='移除后不参与推演';
+   actions.append(remove,hint);
+   row.append(text,actions);return row;
   }));
  }
  function libraryChanged(){
+  publishSelection();
   renderInventory();
   app?.dispatchEvent(new CustomEvent('equipment-library-change'));
  }
@@ -94,7 +100,7 @@ function choose(nextType,id=remembered[nextType]){
    if(remembered[entry.type]===id){
     remembered[entry.type]=defaultIds[entry.type];
     if(type===entry.type)presetId=remembered[type];
-    persistSelection();publishSelection();
+    persistSelection();
    }
    status();
    libraryChanged();
@@ -105,7 +111,7 @@ function choose(nextType,id=remembered[nextType]){
  function showInventory(){
   closeMenu();demo?.stop();groupName=null;
   root.classList.add('show-equipment-inventory');$('equipment-inventory').hidden=false;
-  $('equipment-inventory-status').textContent='';
+  $('equipment-inventory-status').textContent=initializationError;
   renderInventory();
  }
  function openMenu(nextType,trigger){
@@ -198,7 +204,7 @@ $('equipment-profile-save').onclick=()=>{
   store.save(profile());profileSaved=true;
   const saved=store.get(presetId);
   library.add(saved);
-  remembered[type]=presetId;persistSelection();publishSelection();
+  remembered[type]=presetId;persistSelection();
   tell(`已加入装备库：${CATALOG_TYPES[type]} · ${saved.name}`);
   libraryChanged();status();
  }catch(error){
@@ -208,6 +214,7 @@ $('equipment-profile-save').onclick=()=>{
    renderFields();$(`profile-${error.field.replace('.','-')}`)?.focus();
   }
   tell(profileSaved?`参数已保存。${error.message}`:error.message);
+  if(profileSaved&&library.has(presetId))libraryChanged();
   status();
   const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();
  }
@@ -227,7 +234,7 @@ $('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile
   try{const data=store.export(profile()),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`${presetId}-参数.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);tell('已导出');}catch(error){tell(error.message);}
  };
 demo?.setOpenSettings(()=>{groupName='设备仿真';renderFields();status();});
-render();if(store.readError)tell('已恢复有效参数，部分不兼容型号使用默认值');
-return {refresh:()=>{closeMenu();render();},closeMenu,getSnapshot,showInventory,getLibraryEntries:library.entries,
- subscribe(listener){const unsubscribe=store.subscribe(()=>listener(getSnapshot()));selectionListeners.add(listener);return()=>{unsubscribe();selectionListeners.delete(listener);};}};
+render();if(initializationError)tell(initializationError);else if(store.readError)tell('已恢复有效参数，部分不兼容型号使用默认值');
+return {refresh:()=>{closeMenu();render();},closeMenu,getSnapshot,showInventory,
+ subscribe(listener){selectionListeners.add(listener);return()=>selectionListeners.delete(listener);}};
 }

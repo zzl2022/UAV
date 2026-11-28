@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createEquipmentLibrary,EQUIPMENT_LIBRARY_KEY,equipmentLibrarySummary} from '../src/sensors/equipment-library.js';
+import {createEquipmentLibrary,EQUIPMENT_LIBRARY_KEY,EQUIPMENT_LIBRARY_SEEDED_KEY,equipmentLibrarySummary} from '../src/sensors/equipment-library.js';
 import {defaultProfile} from '../src/sensors/equipment-catalog.js';
 
 test('装备库持久化引用，满 50 项时允许更新已有条目',()=>{
@@ -19,6 +19,29 @@ test('装备库持久化引用，满 50 项时允许更新已有条目',()=>{
   reopened.remove(profile(4).presetId);
   reopened.add(profile(50));
   assert.ok(!reopened.has(profile(4).presetId)&&reopened.has(profile(50).presetId));
+});
+
+test('升级只补齐装备库缺少的类别，刷新不会恢复已移除的型号',()=>{
+  const disk=new Map(),writes=[];
+  const storage={getItem:key=>disk.get(key),setItem:(key,value)=>{writes.push(key);disk.set(key,value);}};
+  const library=createEquipmentLibrary(storage);
+  const existing=defaultProfile('radar-03d');
+  const remembered=[defaultProfile('radar-02c'),defaultProfile('radio-mini'),defaultProfile('optical-nvt')];
+  library.add(existing);
+  const saved=library.entries()[0];
+  library.seed(remembered);
+  assert.deepEqual(library.entries()[0],saved);
+  assert.deepEqual(library.entries().map(item=>item.presetId),['radar-03d','radio-mini','optical-nvt']);
+  assert.equal(disk.get(EQUIPMENT_LIBRARY_SEEDED_KEY),'1');
+  library.remove('radio-mini');
+  const reopened=createEquipmentLibrary(storage),previousWrites=writes.length;
+  reopened.seed(remembered);
+  assert.deepEqual(reopened.entries().map(item=>item.presetId),['radar-03d','optical-nvt']);
+  assert.equal(writes.length,previousWrites);
+  for(const item of reopened.entries())reopened.remove(item.presetId);
+  const empty=createEquipmentLibrary(storage);
+  empty.seed(remembered);
+  assert.deepEqual(empty.entries(),[]);
 });
 
 test('参数摘要沿用目录字段、限定词和缺失状态',()=>{
