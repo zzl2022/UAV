@@ -57,6 +57,7 @@ async function exposeRoofPoints(){
         return {
           draft:draftCoreHighlight.userData.buildingCount,
           saved:coreHighlight.userData.buildingCount,
+          neighborMeshes:neighborHighlight.children.length,
           draftColor:draftCoreHighlight.children[0]?.material.color.getHex(),
           savedColor:coreHighlight.children[0]?.material.color.getHex(),
         };
@@ -82,6 +83,17 @@ try{
   const name=page.locator('#custom-core-name'),count=page.locator('#custom-core-count'),focus=page.locator('#core-focus');
   const targets=options=>page.evaluate(options=>window.coreTest.targets(options),options??{});
   const details=async()=> (await page.request.get(new URL(`/data/custom-sites/${slug}/${slug}-gba-meta.json`,base).href)).json();
+  const assertSaved=async count=>{
+    const observed=await page.evaluate(()=>({
+      count:window.cityDiagnostics.coreCount,
+      neighbors:window.cityDiagnostics.coreNeighbors,
+      highlight:window.coreTest.highlight(),
+    }));
+    assert.equal(observed.count,count);
+    assert.equal(observed.highlight.saved,count);
+    assert.equal(observed.neighbors,0);
+    assert.equal(observed.highlight.neighborMeshes,0);
+  };
   const enter=async()=>{
     await edit.click();await panel.waitFor({state:'visible'});
     await page.waitForFunction(()=>window.__ac8SceneMenu.isMinimized());
@@ -135,34 +147,45 @@ try{
   await page.mouse.click(one.x,one.y);
   assert.match(await count.textContent(),/已选 1 栋/);
   const draft=await page.evaluate(()=>window.coreTest.highlight());
+  assert.equal(draft.draft,1);
   assert.equal(draft.draftColor,0x69eaff);
   assert.equal(draft.saved,0);
+  assert.equal(draft.neighborMeshes,0);
   assert.equal((await details()).coreBuildings.length,0);
   await save('单栋核心');
   await focus.waitFor({state:'visible'});
   assert.equal(await page.evaluate(()=>window.coreTest.highlight().savedColor),0xffd166);
   assert.equal((await details()).coreBuilding.id,one.id);
+  await assertSaved(1);
   await reloadSite();
   assert.equal(await edit.textContent(),'修改核心建筑');
-  assert.equal(await page.evaluate(()=>window.cityDiagnostics.coreCount),1);
+  await assertSaved(1);
 
   await enter();
   const extra=await targets({limit:2,exclude:[one.id]});
   assert.equal(extra.length,2);
   for(const point of extra)await page.mouse.click(point.x,point.y);
   assert.match(await count.textContent(),/已选 3 栋/);
+  const threeDraft=await page.evaluate(()=>window.coreTest.highlight());
+  assert.equal(threeDraft.draft,3);
+  assert.equal(threeDraft.neighborMeshes,0);
   await page.screenshot({path:'artifacts/custom-sites/core-draft-desktop.png'});
   await save('三栋联合核心');
-  assert.equal(await page.evaluate(()=>window.cityDiagnostics.coreCount),3);
-  assert.ok(await page.evaluate(()=>window.cityDiagnostics.coreNeighbors<=60));
+  await assertSaved(3);
   assert.equal(await page.locator('#core-label').textContent(),'⌖ 三栋联合核心');
   assert.equal((await details()).coreBuilding,null);
   assert.deepEqual((await details()).coreBuildings.map(b=>b.id),[one.id,...extra.map(p=>p.id)]);
   await focus.click();await page.waitForTimeout(1100);
   assert.equal(await page.evaluate(()=>window.coreTest.allSavedInView()),true);
   await page.locator('#core-label').waitFor({state:'visible'});
+  await page.screenshot({path:'artifacts/custom-sites/core-saved-desktop.png'});
   await reloadSite();
-  assert.equal(await page.evaluate(()=>window.cityDiagnostics.coreCount),3);
+  await assertSaved(3);
+  await select.selectOption('recon');
+  await page.waitForFunction(()=>window.cityDiagnostics?.modelMode==='recon'&&!document.querySelector('#model-select').disabled,null,{timeout:90000});
+  await select.selectOption(slug);
+  await page.waitForFunction(id=>window.cityDiagnostics?.modelMode===id&&!document.querySelector('#model-select').disabled,slug,{timeout:90000});
+  await assertSaved(3);
 
   await enter();
   const [toggle]=await targets({limit:1,include:extra.map(point=>point.id)});
@@ -187,6 +210,7 @@ try{
   const cleared=await details();
   assert.deepEqual(cleared.coreBuildings,[]);
   assert.equal(cleared.coreName,null);
+  await assertSaved(0);
   await reloadSite();
   assert.equal(await edit.textContent(),'选择核心建筑');
   assert.equal(await focus.isHidden(),true);

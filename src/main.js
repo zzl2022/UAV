@@ -455,7 +455,8 @@ try {
     const meta=siteMeta[next],custom=SITES[next]?.custom,cores=siteCoreBuildings(meta),first=cores[0];
     const name=meta?.coreName??first?.name??'核心建筑';
     setCoreHighlight(custom?cores:first,name);
-    setNeighborHighlight(custom?siteParts[next]?.buildingsData?.buildings:[],custom?cores:[]);
+    // 内置站点沿用原有邻域层，自定义模型只渲染选中的建筑。
+    setNeighborHighlight([],custom?[]:cores);
     const button=el('core-focus');
     if(currentCoreBounds){button.hidden=false;button.disabled=false;button.textContent=`⌖ ${custom?name:first?.shortName||name}`;button.title=`定位${name}`;}
     else{button.hidden=true;button.disabled=true;}
