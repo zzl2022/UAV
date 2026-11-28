@@ -14,9 +14,31 @@ export function enuToEcefMatrix(center){
  return [east[0],east[1],east[2],0,north[0],north[1],north[2],0,up[0],up[1],up[2],0,x,y,z,1];
 }
 
+export function siteCoreBuildings(meta){
+ if(Array.isArray(meta?.coreBuildings))return meta.coreBuildings;
+ return meta?.coreBuilding?[meta.coreBuilding]:[];
+}
+
+export function coreFootprintBounds(cores){
+ let west=Infinity,east=-Infinity,south=Infinity,north=-Infinity,bottom=Infinity,top=-Infinity;
+ for(const building of cores){
+  const ring=building.rings?.[0];
+  if(!ring?.length)continue;
+  const base=ring[0][1];
+  bottom=Math.min(bottom,base);top=Math.max(top,base+Math.max(0,Number(building.height)||0));
+  for(const [x,,z] of ring){
+   west=Math.min(west,x);east=Math.max(east,x);south=Math.min(south,z);north=Math.max(north,z);
+  }
+ }
+ if(!Number.isFinite(west))return null;
+ return {west,east,south,north,x:(west+east)/2,z:(south+north)/2,bottom,top,
+  size:Math.max(east-west,north-south,30)};
+}
+
 export function siteAnalysisMetadata(meta,site){
+ const coreBuildings=siteCoreBuildings(meta),coreName=meta?.coreName??coreBuildings[0]?.name??null;
  if(meta?.custom){
-  return {...meta,name:site?.label??meta.name,sourceFeatures:meta.buildingCount};
+  return {...meta,name:site?.label??meta.name,sourceFeatures:meta.buildingCount,coreBuildings,coreName};
  }
  const center=meta?.center??[0,0];
  return {
@@ -29,6 +51,7 @@ export function siteAnalysisMetadata(meta,site){
   maxHeight:meta?.maxHeight??0,
   sources:{site:meta?.rawSha256??meta?.name??site?.base??'site'},
   coreBuilding:meta?.coreBuilding??null,
+  coreBuildings,coreName,
   terrain:{min:0,max:0,resolution:null,bounds:meta?.localBounds??null},
  };
 }
@@ -36,9 +59,10 @@ export function siteAnalysisMetadata(meta,site){
 export async function loadSiteCity(site,baseURL){
  const base=new URL(`${site.base}.json`,baseURL);
  const metaURL=new URL(`${site.base}-meta.json`,baseURL);
+ const options=site.custom?{cache:'no-store'}:undefined;
  const [meta,data]=await Promise.all([
-  fetch(metaURL).then(response=>{if(!response.ok)throw Error(`站点元数据加载失败：HTTP ${response.status}`);return response.json();}),
-  fetch(base).then(response=>{if(!response.ok)throw Error(`站点建筑数据加载失败：HTTP ${response.status}`);return response.json();}),
+  fetch(metaURL,options).then(response=>{if(!response.ok)throw Error(`站点元数据加载失败：HTTP ${response.status}`);return response.json();}),
+  fetch(base,options).then(response=>{if(!response.ok)throw Error(`站点建筑数据加载失败：HTTP ${response.status}`);return response.json();}),
  ]);
  if(meta.custom||meta.meshType==='json'){
   if(!Array.isArray(data.buildings)||!data.buildings.length||data.buildings.length!==meta.buildingCount){

@@ -30,6 +30,8 @@ try{
   const select=page.locator('#model-select');
   const remove=page.getByRole('button',{name:'删除当前自定义模型'});
   assert.equal(await remove.isHidden(),true);
+  const chooseCore=page.locator('#select-core-buildings');
+  assert.equal(await chooseCore.isDisabled(),true);
   const open=async()=>{
     await page.locator('#add-custom-site').click();
     await panel.waitFor({state:'visible'});
@@ -53,6 +55,9 @@ try{
     assert.equal(await select.locator('option:checked').evaluate(option=>option.parentElement.id),'model-select');
     assert.equal(await select.locator('optgroup').count(),0);
     assert.equal(await remove.isVisible(),true);
+    assert.equal(await chooseCore.isEnabled(),true);
+    assert.equal(await page.locator('#core-focus').isHidden(),true);
+    assert.equal(await page.evaluate(()=>window.cityDiagnostics.coreCount),0);
     const model=await page.evaluate(id=>window.cityDiagnostics.models[id],slug);
     assert.ok(model.loaded&&model.buildingCount>15000);
     assert.equal(model.maxHeight,136);

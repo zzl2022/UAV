@@ -1,5 +1,17 @@
 import * as THREE from 'three';
 
+export function buildingAtFace(ranges,faceIndex){
+  if(!Number.isInteger(faceIndex))return null;
+  let lower=0,upper=ranges.length-1;
+  while(lower<=upper){
+    const middle=(lower+upper)>>1,range=ranges[middle];
+    if(faceIndex<range.start)upper=middle-1;
+    else if(faceIndex>=range.end)lower=middle+1;
+    else return range.building;
+  }
+  return null;
+}
+
 export function buildCityGeometry(buildings) {
   const positions = [], colors = [], indices = [], ranges = [];
   for (const building of buildings) {

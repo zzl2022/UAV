@@ -125,7 +125,7 @@ async function inspect(files){
   return {roles,errors};
 }
 
-async function request(path='',options={}){
+export async function requestCustomSites(path='',options={}){
   try{
     const response=await fetch(API+path,options);
     const data=await response.json().catch(()=>null);
@@ -208,7 +208,7 @@ export function mountCustomSites({menu,select,register,unregister,switchTo,curre
   async function refresh(){
     const revision=++listRevision;
     try{
-      const result=await request();
+      const result=await requestCustomSites();
       if(revision!==listRevision)return;
       const sites=result.sites??[];
       const slugs=new Set(sites.map(site=>site.slug));
@@ -233,7 +233,7 @@ export function mountCustomSites({menu,select,register,unregister,switchTo,curre
       select.disabled=true;
       announce(`正在删除自定义模型 ${name}…`);
       try{
-        await request(`/${slug}`,{method:'DELETE'});
+        await requestCustomSites(`/${slug}`,{method:'DELETE'});
       }catch(error){
         select.disabled=false;
         if(wasActive&&!await switchTo(slug))throw Error(`${error.message}。请在下拉框中重新选择原模型。`);
@@ -290,7 +290,7 @@ export function mountCustomSites({menu,select,register,unregister,switchTo,curre
   panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();cancel.click();}});
 
   async function discard(upload){
-    try{await request(`/uploads/${upload}`,{method:'DELETE'});}
+    try{await requestCustomSites(`/uploads/${upload}`,{method:'DELETE'});}
     catch{await refresh();}
   }
   form.onsubmit=async event=>{
@@ -304,18 +304,18 @@ export function mountCustomSites({menu,select,register,unregister,switchTo,curre
     submit.disabled=true;progress.hidden=false;progress.value=0;
     showMessage('正在创建上传会话…');
     try{
-      const {uploadId}=await request('/uploads',{method:'POST',signal});active.upload=uploadId;
+      const {uploadId}=await requestCustomSites('/uploads',{method:'POST',signal});active.upload=uploadId;
       const entries=[...files];let uploaded=0;
       for(const [path,file] of entries){
         showMessage(`正在上传 ${uploaded+1}/${entries.length}：${path}`);
         const encoded=path.split('/').map(encodeURIComponent).join('/');
-        await request(`/uploads/${uploadId}/${encoded}`,{method:'PUT',signal,body:file});
+        await requestCustomSites(`/uploads/${uploadId}/${encoded}`,{method:'PUT',signal,body:file});
         progress.value=25*++uploaded/entries.length;
       }
-      const {jobId}=await request(`/uploads/${uploadId}/build`,{method:'POST',signal,
+      const {jobId}=await requestCustomSites(`/uploads/${uploadId}/build`,{method:'POST',signal,
         headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.value})});
       while(!signal.aborted){
-        const state=await request(`/builds/${jobId}`,{signal});
+        const state=await requestCustomSites(`/builds/${jobId}`,{signal});
         if(state.status==='failed')throw Error(state.error||'模型生成失败，请检查源文件。');
         if(state.status==='done'){
           active.applying=true;cancel.disabled=true;

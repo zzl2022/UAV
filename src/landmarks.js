@@ -1,13 +1,17 @@
 import * as THREE from 'three';
+import {coreFootprintBounds,siteCoreBuildings} from './site-analysis.js';
 export function museumLandmark(city){
+ if(city.metadata?.custom){
+  const cores=siteCoreBuildings(city.metadata),bounds=coreFootprintBounds(cores);
+  if(bounds)return {name:city.metadata.coreName??cores[0].name,buildingIds:cores.map(core=>core.id),
+   position:[bounds.x,bounds.top,bounds.z],source:'自定义区域核心建筑'};
+  const position=city.metadata.analysisAnchor;
+  return position?.length===3?{name:'区域中心',buildingIds:[],position,source:'最接近 DEM 中心的有效地形采样点'}:null;
+ }
  const core=city.metadata?.coreBuilding;
  if(core?.rings?.[0]?.length){
   const points=core.rings[0],xs=points.map(p=>p[0]),zs=points.map(p=>p[2]);
   return {name:core.name??core.shortName??'核心建筑',buildingIds:core.id?[core.id]:[],position:[(Math.min(...xs)+Math.max(...xs))/2,points[0][1]+(Number(core.height)||0),(Math.min(...zs)+Math.max(...zs))/2],source:'站点 coreBuilding 元数据'};
- }
- if(city.metadata?.custom){
-  const position=city.metadata.analysisAnchor;
-  return position?.length===3?{name:'区域中心',buildingIds:[],position,source:'最接近 DEM 中心的有效地形采样点'}:null;
  }
  const buildings=city.buildings.filter(b=>b.name==='河南博物院');
  if(!buildings.length)return null;

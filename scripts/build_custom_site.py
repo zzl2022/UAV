@@ -312,25 +312,12 @@ def file_digest(path):
     return digest.hexdigest()
 
 
-def analysis_reference(buildings, terrain, local_center):
+def analysis_anchor(terrain, local_center):
     x, _, z = local_center
-    west, east, south, north = terrain['bounds']
-    radius = min(east - west, north - south) * 0.2
-    candidates = []
-    for building in buildings:
-        xs, zs = zip(*[(p[0], p[2]) for p in building['rings'][0]])
-        bx, bz = (min(xs) + max(xs)) / 2, (min(zs) + max(zs)) / 2
-        distance = math.hypot(bx - x, bz - z)
-        if distance <= radius:
-            candidates.append((-building['height'], distance, building['id'], building, [bx, bz]))
-    if candidates:
-        _, _, _, building, center = min(candidates)
-        return {**building, 'center': center, 'shortName': building['name'],
-                'selection': 'auto-nearest-tallest'}, None
     points = terrain['positions']
     vertex = min(set(terrain['indices']),
                  key=lambda i: ((points[3*i] - x)**2 + (points[3*i+2] - z)**2, i))
-    return None, points[vertex * 3:vertex * 3 + 3]
+    return points[vertex * 3:vertex * 3 + 3]
 
 
 def build_site(root, slug, name, out, progress):
@@ -370,7 +357,7 @@ def build_site(root, slug, name, out, progress):
             terrain = build_terrain(raster, bbox, local)
             progress('采样高程并生成建筑', 40)
             buildings, rejected, field, sources = read_buildings(shp, dbf, prj, cpg, raster, local)
-            core, anchor = analysis_reference(buildings, terrain, local(*center, 0))
+            anchor = analysis_anchor(terrain, local(*center, 0))
             limitations = ['采用 DEM 原始垂直基准，未换算高程基准。',
                            '建筑以足迹顶点的最高高程为屋顶基面，基础延伸至最低高程。',
                            '地形网格每边最多 512 个采样点，缺失采样值处保留空洞。',
@@ -384,7 +371,8 @@ def build_site(root, slug, name, out, progress):
                     'meshType': 'json', 'custom': True, 'buildingValidation': rejected,
                     'sources': {p.relative_to(root).as_posix(): file_digest(p) for p in layers if p is not None},
                     'createdAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-                    'limitations': limitations, 'coreBuilding': core, 'analysisAnchor': anchor,
+                    'limitations': limitations, 'coreBuilding': None, 'coreBuildings': [],
+                    'coreName': None, 'analysisAnchor': anchor,
                     'terrain': {key: value for key, value in terrain.items() if key not in {'positions', 'indices', 'uvs'}}}
             progress('处理影像底图', 70)
             if image:

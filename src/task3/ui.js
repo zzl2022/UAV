@@ -806,8 +806,8 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   }catch(error){if(run===exportingRun)setStatus(`无法生成部署方案 PDF：${error.message}`,'error');}
   finally{pdfExporting=false;updatePdfVisibility();}
  };
- function setScene(site){
-  const key=site?.base??'recon';if(key===task3SceneKey)return;task3SceneKey=key;
+ function setScene(site,{coreChanged=false}={}){
+  const key=site?.base??'recon';if(key===task3SceneKey&&!coreChanged)return;task3SceneKey=key;
   if(site?.custom&&activeSub==='threat')activeSub='scope';
   generatePane.querySelector('.hint').textContent=site?.custom?'自定义区域支持覆盖评估、方案对比和电磁兼容分析。':'选择一套或多套方案后生成；未勾选的方案不会进入方案对比、威胁验证和 PDF 导出。';
   resetCustomEditing();customDefaultSingles=new Map();
@@ -821,7 +821,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   for(const count of panel.querySelectorAll('#task3-blind-legend [data-count]'))count.textContent='';
   const scopeStatus=$('task3-scope-status');
   scopeStatus.textContent='生成方案后显示当前场景范围。';scopeStatus.dataset.tone='';
-  $('task3-progress-side').value=0;setStatus(site?'场景已切换，请重新推演。':'待命');applyTab();controlsEnabled();updateDiagnostics();
+  $('task3-progress-side').value=0;setStatus(coreChanged?'核心建筑已更新，请重新推演。':site?'场景已切换，请重新推演。':'待命');applyTab();controlsEnabled();updateDiagnostics();
  }
  rebuildThreatGround();applyTab();renderThreatConfig();renderEquipmentSelection();controlsEnabled();updateDiagnostics();
  function setMapSwitching(value){

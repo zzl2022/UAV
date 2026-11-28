@@ -109,6 +109,11 @@ def make_handler(service, sites=None):
                     self.reply(201, sites.create())
                 elif method == 'DELETE' and path.startswith('/api/sites/') and path.count('/') == 3:
                     self.reply(200, sites.delete(path.rsplit('/', 1)[-1]))
+                elif method == 'PATCH' and path.endswith('/core') and path.count('/') == 4:
+                    data = self.read_json()
+                    if not isinstance(data, dict):
+                        raise SiteError('请提供核心建筑名称和建筑编号')
+                    self.reply(200, sites.update_core(path.split('/')[3], data.get('name'), data.get('buildingIds')))
                 else:
                     parts = path.split('/', 5)
                     if len(parts) < 5 or not ID.fullmatch(parts[4]):
@@ -269,6 +274,10 @@ def make_handler(service, sites=None):
 
         def do_DELETE(self):
             if not self.custom_sites('DELETE', urlsplit(self.path).path):
+                self.reply(404, {'error': '接口不存在'})
+
+        def do_PATCH(self):
+            if not self.custom_sites('PATCH', urlsplit(self.path).path):
                 self.reply(404, {'error': '接口不存在'})
 
     return Handler

@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from threading import Event, Lock, RLock, Thread
 import time
 import unicodedata
@@ -28,6 +28,7 @@ EXTENSIONS = {'.shp', '.dbf', '.prj', '.cpg', '.tif', '.tiff', '.json', '.glb', 
 ID = re.compile(r'[0-9a-f]{32}')
 SLUG = re.compile(r'custom-[0-9a-f]{32}')
 DELETED_PREFIX = '.deleted-'
+CORE_BACKUP_PREFIX = '.core-previous-'
 ASSET_SUFFIXES = ('-gba.json', '-gba-meta.json', '-terrain.json', '-imagery.jpg', '-imagery.json')
 LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +64,18 @@ def linked(path):
 
 def json_file(path):
     return json.loads(path.read_text(encoding='utf-8'))
+
+
+def move_model_directory(source, target):
+    # Windows 的索引器或文件读取器可能短暂占用目录。
+    for attempt in range(6):
+        try:
+            source.rename(target)
+            return
+        except PermissionError as exc:
+            if attempt == 5 or getattr(exc, 'winerror', None) not in (5, 32, 33):
+                raise
+            time.sleep(.1 * (attempt + 1))
 
 
 @dataclass
@@ -106,6 +119,7 @@ class SiteService:
         self.builds = {}
         self.queue = Queue()
         self._recover_deletions()
+        self._recover_core_edits()
         self._prune()
         self.worker = Thread(target=self._work, name='custom-sites', daemon=True)
         self.worker.start()
@@ -268,20 +282,20 @@ class SiteService:
             pending = self.folder / f'{DELETED_PREFIX}{slug}'
             if pending.exists() or linked(pending):
                 raise SiteError('该模型有未完成的删除记录，请稍后重试', 409)
-            directory.rename(pending)
+            move_model_directory(directory, pending)
             try:
                 self._write_index(retained)
             except Exception:
-                pending.rename(directory)
+                move_model_directory(pending, directory)
                 raise
-            self._remove_deleted(pending)
+            self._remove_pending(pending)
         return {'ok': True, 'slug': slug}
 
-    def _remove_deleted(self, pending):
+    def _remove_pending(self, pending):
         try:
             shutil.rmtree(pending)
         except OSError:
-            LOGGER.exception('清理已删除的自定义模型失败：%s', pending.name)
+            LOGGER.exception('清理自定义模型暂存失败：%s', pending.name)
 
     def _recover_deletions(self):
         candidates = [path for path in self.folder.glob(f'{DELETED_PREFIX}custom-*')
@@ -294,9 +308,118 @@ class SiteService:
             slug = pending.name.removeprefix(DELETED_PREFIX)
             original = self.folder / slug
             if slug not in indexed:
-                self._remove_deleted(pending)
+                self._remove_pending(pending)
             elif not original.exists() and not linked(original):
-                pending.rename(original)
+                move_model_directory(pending, original)
+
+    def update_core(self, slug, name, building_ids):
+        if not SLUG.fullmatch(slug):
+            raise SiteError('只能修改自定义模型的核心建筑')
+        if (not isinstance(name, str) or not 1 <= len(name.strip()) <= 24
+                or any(unicodedata.category(ch) in {'Cc', 'Cf', 'Cs'} for ch in name)):
+            raise SiteError('核心建筑名称需为 1–24 个字符，且不能包含控制字符')
+        if (not isinstance(building_ids, list) or len(building_ids) > 50
+                or any(not isinstance(bid, str) or not bid for bid in building_ids)):
+            raise SiteError('请选择 0–50 栋建筑，并提供有效的建筑编号')
+        if len(set(building_ids)) != len(building_ids):
+            raise SiteError('核心建筑编号不能重复')
+        with self.lock:
+            entries = self.list_sites()
+            entry = next((entry for entry in entries if entry['slug'] == slug), None)
+            if entry is None:
+                raise SiteError('自定义模型不存在', 404)
+            directory = self._site_directory(slug)
+            meta_file = directory / f'{slug}-gba-meta.json'
+            city_file = directory / f'{slug}-gba.json'
+            if linked(meta_file) or linked(city_file):
+                raise SiteError('自定义模型包含无效文件链接')
+            meta, city = json_file(meta_file), json_file(city_file)
+            buildings = {building['id']: building for building in city['buildings']}
+            if any(bid not in buildings for bid in building_ids):
+                raise SiteError('选择中有建筑不属于当前自定义模型')
+            cores = []
+            for bid in building_ids:
+                building = buildings[bid]
+                ring = building['rings'][0]
+                xs, zs = [point[0] for point in ring], [point[2] for point in ring]
+                cores.append({'id': bid, 'name': name.strip(), 'height': building['height'],
+                              'rings': building['rings'], 'center': [(min(xs) + max(xs)) / 2,
+                                                                     (min(zs) + max(zs)) / 2]})
+            if not meta.get('analysisAnchor'):
+                # 早期用自动核心的新建模型可能没有保存区域分析锚点。
+                terrain_file = directory / f'{slug}-terrain.json'
+                if linked(terrain_file):
+                    raise SiteError('自定义模型包含无效文件链接')
+                terrain = json_file(terrain_file)
+                west, east, south, north = meta['localBounds']
+                x, z = (west + east) / 2, (south + north) / 2
+                coords = terrain['positions']
+                index = min(terrain['indices'], key=lambda i: ((coords[3*i]-x)**2+(coords[3*i+2]-z)**2, i))
+                meta['analysisAnchor'] = coords[index*3:index*3+3]
+            revision = uuid4().hex
+            core_name = name.strip() if cores else None
+            meta.update(coreName=core_name, coreBuildings=cores, coreBuilding=cores[0] if len(cores) == 1 else None,
+                        coreRevision=revision)
+            city['metadata'] = meta
+            entry.update(coreName=core_name, coreRevision=revision)
+            self._replace_core_files(slug, directory, city, meta, entries)
+            return {'metadata': meta}
+
+    def _replace_core_files(self, slug, directory, city, meta, entries):
+        backup = self.folder / f'{CORE_BACKUP_PREFIX}{slug}'
+        if backup.exists() or linked(backup):
+            raise SiteError('该模型有未完成的核心编辑记录，请稍后重试', 409)
+        with TemporaryDirectory(prefix='.core-edit-', dir=self.folder) as temp:
+            replacement = Path(temp) / slug
+            replacement.mkdir(mode=directory.stat().st_mode & 0o777)
+            for suffix in ('-terrain.json', '-imagery.json', '-imagery.jpg'):
+                source = directory / f'{slug}{suffix}'
+                if linked(source):
+                    raise SiteError('自定义模型包含无效文件链接')
+                if source.is_file():
+                    shutil.copy2(source, replacement / source.name)
+            for suffix, value in (('-gba.json', city), ('-gba-meta.json', meta)):
+                (replacement / f'{slug}{suffix}').write_text(
+                    json.dumps(value, ensure_ascii=False, separators=(',', ':'), allow_nan=False), encoding='utf-8')
+            move_model_directory(directory, backup)
+            try:
+                move_model_directory(replacement, directory)
+                self._write_index(entries)
+            except Exception:
+                if directory.exists():
+                    move_model_directory(directory, replacement)
+                move_model_directory(backup, directory)
+                raise
+            self._remove_pending(backup)
+
+    def _recover_core_edits(self):
+        candidates = [path for path in self.folder.glob(f'{CORE_BACKUP_PREFIX}custom-*')
+                      if SLUG.fullmatch(path.name.removeprefix(CORE_BACKUP_PREFIX))
+                      and not linked(path) and path.is_dir()]
+        if not candidates:
+            return
+        indexed = {entry['slug']: entry for entry in self.list_sites()}
+        for backup in candidates:
+            slug = backup.name.removeprefix(CORE_BACKUP_PREFIX)
+            entry = indexed.get(slug)
+            directory = self.folder / slug
+            if not entry:
+                self._remove_pending(backup)
+                continue
+            if linked(directory):
+                continue
+            if not directory.exists():
+                move_model_directory(backup, directory)
+                continue
+            meta = directory / f'{slug}-gba-meta.json'
+            if linked(meta):
+                continue
+            if entry.get('coreRevision') == json_file(meta).get('coreRevision'):
+                self._remove_pending(backup)
+            else:
+                with TemporaryDirectory(prefix='.core-edit-', dir=self.folder) as temp:
+                    move_model_directory(directory, Path(temp) / slug)
+                    move_model_directory(backup, directory)
 
     def asset(self, slug, filename):
         if not (SLUG.fullmatch(slug) and filename in {slug + suffix for suffix in ASSET_SUFFIXES}):
@@ -381,11 +504,11 @@ class SiteService:
         meta = json_file(source / f'{slug}-gba-meta.json')
         base = f'./data/custom-sites/{slug}/{slug}'
         entry = {key: meta[key] for key in ('name', 'createdAt', 'buildingCount', 'maxHeight', 'center')}
-        entry.update(slug=slug, base=f'{base}-gba', imagery=f'{base}-imagery.jpg'
+        entry.update(slug=slug, base=f'{base}-gba', coreName=meta.get('coreName'), imagery=f'{base}-imagery.jpg'
                      if (source / f'{slug}-imagery.jpg').is_file() else None)
         entries = [*self.list_sites(), entry]
         destination = self.folder / slug
-        source.rename(destination)
+        move_model_directory(source, destination)
         try:
             self._write_index(entries)
         except Exception:

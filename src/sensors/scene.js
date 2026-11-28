@@ -1,6 +1,7 @@
 import {facadeIndex} from './reflections.js';
 import * as THREE from 'three';
 import {terrainSampler} from './terrain-query.js';
+import {buildingAtFace} from '../model.js';
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 
 export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
@@ -19,11 +20,7 @@ export function createSceneQuery(model,{fastGround=true,reflections=false}={}){
  function surfaceAt(x,z){
   raycaster.set(new THREE.Vector3(x,20000,z),new THREE.Vector3(0,-1,0));raycaster.near=0;raycaster.far=40000;raycaster.firstHitOnly=true;return raycaster.intersectObjects([model.buildings,model.ground])[0]?.point.y??null;
  }
- function featureAt(faceIndex){
-  let lo=0,hi=model.ranges.length-1;
-  while(lo<=hi){const m=(lo+hi)>>1,r=model.ranges[m];if(faceIndex<r.start)hi=m-1;else if(faceIndex>=r.end)lo=m+1;else return r.building;}
-  return null;
- }
+ const featureAt=faceIndex=>buildingAtFace(model.ranges,faceIndex);
  const reflectedPaths=reflections?facadeIndex(model.ranges.map(r=>r.building)):null;
  function getDataBounds(){
   const rectangle=geometry=>{const b=geometry.boundingBox;return b&&[b.min.x,b.max.x,b.min.z,b.max.z].every(Number.isFinite)?{west:b.min.x,east:b.max.x,south:b.min.z,north:b.max.z}:null;};

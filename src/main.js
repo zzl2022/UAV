@@ -7,13 +7,14 @@ import './style.css';
 import {mountLandmarks} from './landmarks.js';
 import {mountSensorUI} from './sensors/ui.js';
 import {createWorkspace} from './workspace.js';
-import {loadSiteCity,siteAnalysisMetadata} from './site-analysis.js';
+import {coreFootprintBounds,loadSiteCity,siteAnalysisMetadata,siteCoreBuildings} from './site-analysis.js';
 import './workspace.css';
 import './ac8-theme.css';
 import {mountIntro} from './intro.js';
 import {createAc8Hud} from './ac8-hud.js';
 import {mountSceneMenu} from './scene-menu.js';
 import {mountCustomSites} from './custom-sites.js';
+import {mountCustomSiteCore} from './custom-site-core.js';
 import {mountHudMenu} from './hud-menu.js';
 import {mountProjectChat} from './project-chat.js';
 import {flightTelemetry} from './planning/telemetry.js';
@@ -79,7 +80,8 @@ app.innerHTML=`<header id="platform-topbar">
     <option value="shenzhen">复杂城市——深圳国际交流中心(APEC举办地)</option>
     <option value="wuxi">复杂城市——无锡市市民中心</option>
     <option value="hangzhou">机场区域——杭州萧山机场</option>
-  </select><button id="delete-custom-site" type="button" aria-label="删除当前自定义模型" hidden>×</button></div></section>
+  </select><button id="delete-custom-site" type="button" aria-label="删除当前自定义模型" hidden>×</button></div>
+  <button id="select-core-buildings" type="button" disabled>选择核心建筑</button></section>
   <section id="layers-section"><h2>场景图层</h2>
   <label><input type="checkbox" id="buildings" checked>建筑</label>
   <label><input type="checkbox" id="terrain" checked>地形</label>
@@ -133,7 +135,8 @@ sidebarExpand.onclick=()=>setSidebarCollapsed(false);
 const deploymentButton=el('toggle-deployment');
 let renderer,model,city,terrain,controls,task3;
 let scene,camera,imageryTexture,imageryMaterial,grid;
-let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,currentCore=null,coreLabel;
+let mode='recon',siteGroups={},siteMeta={},siteParts={},coreHighlight,neighborHighlight,coreLabel;
+let currentCoreBounds=null,coreEditor=null;
 mountProjectChat(app,()=>({scene:mode,...task3?.getPlanChatContext()}));
 const BUILTIN_SITES={
   shenzhen:{
@@ -166,6 +169,7 @@ try {
   viewport.appendChild(renderer.domElement);
   scene=new THREE.Scene();scene.background=null;
   coreHighlight=new THREE.Group();coreHighlight.name='Core_Building_Highlight';scene.add(coreHighlight);
+  const draftCoreHighlight=new THREE.Group();draftCoreHighlight.name='Draft_Core_Highlight';scene.add(draftCoreHighlight);
   neighborHighlight=new THREE.Group();neighborHighlight.name='Core_Neighbor_Highlight';scene.add(neighborHighlight);
   coreLabel=document.createElement('button');coreLabel.id='core-label';coreLabel.className='map-landmark';coreLabel.hidden=true;viewport.append(coreLabel);coreLabel.onclick=()=>focusCore();
   camera=new THREE.PerspectiveCamera(42,1,1,100000);
@@ -268,7 +272,7 @@ try {
   function updateDiagnostics(){
     if(!city||!terrain||!model)return;
     const sites=Object.fromEntries(Object.entries(SITES).map(([id,site])=>[id,{loaded:!!siteGroups[id]?.children.length,buildingCount:siteMeta[id]?.buildingCount??site.buildingCount??null,maxHeight:siteMeta[id]?.maxHeight??site.maxHeight??null}]));
-    window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:reconCityMetadata.sourceFeatures},...sites}};
+    window.cityDiagnostics={features:city.metadata.sourceFeatures,parts:city.buildings.length,terrainVertices:terrain.positions.length/3,buildingTriangles:model.buildings.geometry.attributes.position.count/3,imagery:!!imageryTexture,modelMode:mode,coreCount:coreHighlight.userData.buildingCount??0,coreNeighbors:neighborHighlight.userData.buildingCount??0,models:{recon:{loaded:true,featureCount:reconCityMetadata.sourceFeatures},...sites}};
   }
   function addGround(group,meta,texture,bounds,terrainData){
     const geometry=terrainData?buildTerrainGeometry(terrainData):siteGroundGeometry(bounds,meta.baseElevation??0);
@@ -363,52 +367,48 @@ try {
       meta,
     };
   }
-  function disposeCoreHighlight(){
-    for(const child of [...coreHighlight.children]){child.geometry?.dispose();child.material?.dispose();coreHighlight.remove(child);}
-  }
-  function disposeNeighborHighlight(){
+  function clearBuildingHighlights(group){
     const materials=new Set();
-    for(const child of [...neighborHighlight.children]){child.geometry?.dispose();if(child.material)materials.add(child.material);neighborHighlight.remove(child);}
+    for(const child of [...group.children]){child.geometry?.dispose();if(child.material)materials.add(child.material);group.remove(child);}
     for(const material of materials)material.dispose();
-    neighborHighlight.visible=false;neighborHighlight.userData.buildingCount=0;
+    group.visible=false;group.userData.buildingCount=0;
   }
-  function setNeighborHighlight(buildings,core){
-    disposeNeighborHighlight();
-    if(!core?.center||!Array.isArray(buildings)||!buildings.length)return;
-    const [cx,cz]=core.center,candidates=[];
+  function setNeighborHighlight(buildings,cores){
+    clearBuildingHighlights(neighborHighlight);
+    if(!cores.length||!buildings?.length)return;
+    const references=cores.map(core=>coreFootprintBounds([core])).filter(Boolean);
+    const coreIds=new Set(cores.map(core=>core.id)),candidates=new Map();
     for(const building of buildings){
-      if(building.id===core.id)continue;
-      const ring=building.rings?.[0];
-      if(!ring?.length)continue;
-      const xs=ring.map(point=>point[0]),zs=ring.map(point=>point[2]);
-      const bx=(Math.min(...xs)+Math.max(...xs))/2,bz=(Math.min(...zs)+Math.max(...zs))/2;
-      const distance=Math.hypot(bx-cx,bz-cz);
-      if(distance<=250)candidates.push({building,distance});
+      if(coreIds.has(building.id))continue;
+      const center=coreFootprintBounds([building]);
+      if(!center)continue;
+      const distance=Math.min(...references.map(core=>Math.hypot(center.x-core.x,center.z-core.z)));
+      if(distance<=250&&distance<(candidates.get(building.id)?.distance??Infinity))candidates.set(building.id,{building,distance});
     }
-    candidates.sort((a,b)=>a.distance-b.distance);
-    if(!candidates.length)return;
+    const neighbors=[...candidates.values()].sort((a,b)=>a.distance-b.distance).slice(0,60);
+    if(!neighbors.length)return;
     const roofMaterial=new THREE.LineBasicMaterial({color:0xffd166,depthTest:false,transparent:true,opacity:0.9});
     const baseMaterial=new THREE.LineBasicMaterial({color:0xffb347,depthTest:false,transparent:true,opacity:0.3});
-    for(const {building} of candidates.slice(0,60)){
+    for(const {building} of neighbors){
+      const baseY=building.rings[0][0][1];
       const height=Math.max(0.5,Number(building.height)||0);
       for(const ring of building.rings){
         const closed=ring.length>1&&ring[0][0]===ring[ring.length-1][0]&&ring[0][2]===ring[ring.length-1][2];
         const points=closed?ring.slice(0,-1):ring;
-        const roof=points.map(point=>new THREE.Vector3(point[0],height+0.35,point[2]));
-        const base=points.map(point=>new THREE.Vector3(point[0],0.3,point[2]));
+        const roof=points.map(point=>new THREE.Vector3(point[0],baseY+height+0.35,point[2]));
+        const base=points.map(point=>new THREE.Vector3(point[0],baseY+0.3,point[2]));
         neighborHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roof),roofMaterial));
         neighborHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),baseMaterial));
       }
-      const cap=roofCap(building.rings,height+0.2,0xffc857,0.24);if(cap)neighborHighlight.add(cap);
+      const cap=roofCap(building.rings,baseY+height+0.2,0xffc857,0.24);if(cap)neighborHighlight.add(cap);
     }
-    neighborHighlight.userData.buildingCount=Math.min(candidates.length,60);
+    neighborHighlight.userData.buildingCount=neighbors.length;
     neighborHighlight.visible=true;
   }
-  function coreCenter(core){
-    const ring=core?.rings?.[0]||[];
-    if(!ring.length)return null;
-    const xs=ring.map(point=>point[0]),zs=ring.map(point=>point[2]);
-    return {x:(Math.min(...xs)+Math.max(...xs))/2,z:(Math.min(...zs)+Math.max(...zs))/2,size:Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...zs)-Math.min(...zs),30)};
+  function coreCenter(cores){
+    const bounds=coreFootprintBounds(cores);
+    if(bounds&&cores.length===1)bounds.top=bounds.bottom+coreDisplayHeight(cores[0]);
+    return bounds;
   }
   function roofCap(rings,y,color,opacity){
     if(!rings?.[0]?.length)return null;
@@ -420,48 +420,63 @@ try {
   function coreDisplayHeight(core){
     return core.id==='synthetic-venue-footprint'?0:Math.max(0,Number(core.height)||0);
   }
-  function setCoreHighlight(core){
-    currentCore=core||null;
-    disposeCoreHighlight();
-    if(!core||!core.rings?.length){coreHighlight.visible=false;coreLabel.hidden=true;return;}
-    const baseY=core.rings[0][0][1],height=coreDisplayHeight(core);
-    const roofMaterial=new THREE.LineBasicMaterial({color:0xffd166,depthTest:false,transparent:true,opacity:0.95});
-    const glowMaterial=height?new THREE.LineBasicMaterial({color:0xfff3b0,depthTest:false,transparent:true,opacity:0.35}):null;
-    for(const ring of core.rings){
-      const roof=ring.map(([x,,z])=>new THREE.Vector3(x,baseY+height,z));
-      coreHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roof),roofMaterial));
-      if(glowMaterial){
-        const base=ring.map(([x,,z])=>new THREE.Vector3(x,baseY,z));
-        coreHighlight.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),glowMaterial));
+  function drawCoreHighlights(group,cores,color,glowColor){
+    clearBuildingHighlights(group);
+    if(!cores.length)return;
+    const roofMaterial=new THREE.LineBasicMaterial({color,depthTest:false,transparent:true,opacity:0.95});
+    const glowMaterial=glowColor&&cores.some(core=>coreDisplayHeight(core)>0)
+      ?new THREE.LineBasicMaterial({color:glowColor,depthTest:false,transparent:true,opacity:0.35}):null;
+    for(const core of cores){
+      const baseY=core.rings[0][0][1],height=coreDisplayHeight(core);
+      for(const ring of core.rings){
+        const roof=ring.map(([x,,z])=>new THREE.Vector3(x,baseY+height,z));
+        group.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roof),roofMaterial));
+        if(glowMaterial&&height){
+          const base=ring.map(([x,,z])=>new THREE.Vector3(x,baseY,z));
+          group.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(base),glowMaterial));
+        }
       }
+      const cap=roofCap(core.rings,baseY+height,color,0.32);if(cap)group.add(cap);
     }
-    const cap=roofCap(core.rings,baseY+height,0xffd166,0.32);if(cap)coreHighlight.add(cap);
-    coreHighlight.visible=true;
-    coreLabel.textContent=`⌖ ${core.name||'核心建筑'}${height?'':'（示意范围）'}`;
-    coreLabel.title=`定位${core.name||'核心建筑'}`;
+    group.userData.buildingCount=cores.length;
+    group.visible=true;
+  }
+  function setCoreHighlight(core,name){
+    const cores=(Array.isArray(core)?core:core?[core]:[]).filter(building=>building.rings?.[0]?.length);
+    currentCoreBounds=coreCenter(cores);
+    drawCoreHighlights(coreHighlight,cores,0xffd166,0xfff3b0);
+    if(!currentCoreBounds){coreLabel.hidden=true;return;}
+    coreLabel.textContent=`⌖ ${name}${cores.length===1&&!coreDisplayHeight(cores[0])?'（示意范围）':''}`;
+    coreLabel.title=`定位${name}`;
     coreLabel.hidden=false;
   }
   function setCoreForMode(next){
-    const core=SITES[next]?siteMeta[next]?.coreBuilding:null;
-    setCoreHighlight(core);
-    setNeighborHighlight([],core);
+    const meta=siteMeta[next],custom=SITES[next]?.custom,cores=siteCoreBuildings(meta),first=cores[0];
+    const name=meta?.coreName??first?.name??'核心建筑';
+    setCoreHighlight(custom?cores:first,name);
+    setNeighborHighlight(custom?siteParts[next]?.buildingsData?.buildings:[],custom?cores:[]);
     const button=el('core-focus');
-    if(core){button.hidden=false;button.disabled=false;button.textContent=`⌖ ${core.shortName||core.name||'核心建筑'}`;button.title=`定位${core.name||'核心建筑'}`;}
+    if(currentCoreBounds){button.hidden=false;button.disabled=false;button.textContent=`⌖ ${custom?name:first?.shortName||name}`;button.title=`定位${name}`;}
     else{button.hidden=true;button.disabled=true;}
   }
   function focusCore(){
-    if(!currentCore)return;
-    const center=coreCenter(currentCore);
+    const center=currentCoreBounds;
     if(!center)return;
-    const target=new THREE.Vector3(center.x,currentCore.rings[0][0][1]+coreDisplayHeight(currentCore)/2,center.z);
+    const target=new THREE.Vector3(center.x,(center.bottom+center.top)/2,center.z);
+    if(SITES[mode]?.custom){
+      const radius=Math.hypot(center.east-center.west,center.top-center.bottom,center.north-center.south)*0.5;
+      const halfAngle=Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*Math.min(1,camera.aspect));
+      const distance=Math.max(120,1.35*radius/Math.sin(halfAngle));
+      tweenCamera(target.clone().add(new THREE.Vector3(.7,.85,.9).normalize().multiplyScalar(distance)),target,850);
+      return;
+    }
     const span=Math.max(center.size*1.8,120);
     tweenCamera(target.clone().add(new THREE.Vector3(span*.7,span*.85,span*.9)),target,850);
   }
   function updateCoreLabel(){
-    if(!currentCore||mode==='recon'||!coreHighlight.visible){coreLabel.hidden=true;return;}
-    const center=coreCenter(currentCore);
-    if(!center){coreLabel.hidden=true;return;}
-    const point=new THREE.Vector3(center.x,currentCore.rings[0][0][1]+coreDisplayHeight(currentCore)+18,center.z);
+    const center=currentCoreBounds;
+    if(!center||!coreHighlight.visible){coreLabel.hidden=true;return;}
+    const point=new THREE.Vector3(center.x,center.top+18,center.z);
     camera.updateMatrixWorld();point.project(camera);
     const visible=point.z>=-1&&point.z<=1&&Math.abs(point.x)<0.95&&Math.abs(point.y)<0.92;
     coreLabel.hidden=!visible;
@@ -480,7 +495,8 @@ try {
         if(old!==model.ground.material&&old!==imageryMaterial&&old!==reconPlainMaterial)old.dispose();
       }
     }else{
-      coreHighlight.visible=showBuildings&&!!currentCore;
+      coreHighlight.visible=showBuildings&&!!currentCoreBounds;
+      neighborHighlight.visible=showBuildings&&neighborHighlight.userData.buildingCount>0;
       const parts=siteParts[mode];
       if(parts){
         parts.buildings.visible=showBuildings;
@@ -503,10 +519,16 @@ try {
     const museum=el('museum-focus');if(museum)museum.hidden=next!=='recon';
     landmarks?.setActive?.(next==='recon');
     setCoreForMode(next);
+    coreEditor?.refresh();
     applyModeLayers();
     task3?.setScene?.(activeSiteDescriptor());
   }
-  function activeSiteDescriptor(){if(mode==='recon')return null;return {base:SITES[mode].base,label:SITES[mode].label,custom:!!SITES[mode].custom,coreName:siteMeta[mode]?.coreBuilding?.name??SITES[mode].short};}
+  function activeSiteDescriptor(){
+    if(mode==='recon')return null;
+    const site=SITES[mode],meta=siteMeta[mode];
+    const coreName=meta?.coreName??siteCoreBuildings(meta)[0]?.name??(site.custom?null:site.short);
+    return {base:site.base,label:site.label,custom:!!site.custom,coreName};
+  }
   async function getTask3BuildingContext(signal){
     const sceneId=mode;
     if(sceneId==='recon')return {sceneKey:'recon',city,model};
@@ -527,9 +549,11 @@ try {
   }
   async function setMode(next){
     if(!(next==='recon'||SITES[next]))return false;
+    if(coreEditor?.busy)return false;
     if(next===mode){frameObject(activeGroup());return true;}
     const select=el('model-select');
     if(select.disabled)return false;
+    coreEditor?.close();
     select.value=next;select.disabled=true;
     const hud=window.__ac8Hud;
     const cityWindow=document.querySelector('#city-window');
@@ -587,6 +611,9 @@ try {
     let position=null;
     if(mode==='recon'){
       position=landmarks?.landmark?.position??null;
+    }else if(SITES[mode]?.custom&&currentCoreBounds){
+      const {x,z,top}=currentCoreBounds;
+      position=[x,top,z];
     }else{
       const core=siteMeta[mode]?.coreBuilding;
       if(core?.center)position=[core.center[0],Number(core.height)||0,core.center[1]];
@@ -672,7 +699,7 @@ try {
     blindAnalysis:blindAnalysisText(),
     emc:emcText(),
   });
-  mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
+  const sceneMenu=mountSceneMenu({app,launchers,panel:app.querySelector('#city-panel'),workspace,camera,renderer,getInfo:sceneSummary});
   mountCustomSites({menu:el('ac8-scene-menu'),select:el('model-select'),switchTo:setMode,currentSite:()=>mode,announce:status,register(site){
     const base=`./data/custom-sites/${site.slug}/${site.slug}`;
     SITES[site.slug]={custom:true,label:site.name,short:site.name,base:`${base}-gba`,
@@ -723,7 +750,7 @@ try {
     return Math.max(.1,Math.min(.34,(rect.right+56-window.innerWidth/2)/window.innerWidth));
   }
   window.addEventListener('resize',()=>{if(equipmentShift>0)applyEquipmentShift(equipmentShift);});
-  mountHudMenu({
+  const equipmentMenu=mountHudMenu({
     app,launchers,kind:'equipment',launcher:app.querySelector('#toggle-sensors'),
     panel:app.querySelector('#equipment-panel'),contentClass:'is-equipment',
     entries:[
@@ -882,6 +909,38 @@ try {
     onSelect:id=>activateDeploymentModule(id),
     onDetailExit:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
     onClose:()=>app.dispatchEvent(new CustomEvent('view-change',{detail:'scene'})),
+  });
+  let corePickingMenus=[];
+  coreEditor=mountCustomSiteCore({
+    app,canvas:renderer.domElement,camera,announce:status,
+    getActiveSite:()=>SITES[mode]?.custom&&siteParts[mode]?{slug:mode,meta:siteMeta[mode],parts:siteParts[mode]}:null,
+    setPicking(active){
+      if(active&&mapPicking)return false;
+      mapPicking=active;
+      if(active){
+        cameraAnimation?.cancel();
+        corePickingMenus=[sceneMenu,equipmentMenu,deploymentMenu].filter(menu=>menu?.isOpen()&&!menu.isMinimized?.());
+        for(const menu of corePickingMenus)menu.minimize();
+      }else{
+        for(const menu of corePickingMenus)menu.restore();
+        corePickingMenus=[];
+      }
+      return true;
+    },
+    renderDraft:cores=>drawCoreHighlights(draftCoreHighlight,cores,0x69eaff),
+    onSaved(slug,metadata){
+      siteMeta[slug]=metadata;
+      const analysis=siteAnalysisMetadata(metadata,SITES[slug]);
+      siteParts[slug].buildingsData.metadata=analysis;
+      Object.assign(siteParts[slug].group.userData,analysis);
+      if(slug===mode){
+        city.metadata=analysis;
+        setCoreForMode(slug);
+        applyModeLayers();
+        task3?.setScene(activeSiteDescriptor(),{coreChanged:true});
+      }
+      updateDiagnostics();
+    },
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
     task3=mountTask3UI({
