@@ -145,6 +145,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   setStatus(wasMobile?'已取消移动补盲。':report?'已取消推演，保留上一轮成功结果（非最新参数结果）。':'已取消。');controlsEnabled();updateDiagnostics();
  };
  function applyTab(){
+  deviceHover.closePin();
   if(activeTab!=='input'||activeSub!=='weights')stopBuildingSelection();
   const tab=TABS[activeTab];subnav.replaceChildren();
   for(const [key,name] of tab.subs){if(key==='threat'&&getSite?.()?.custom)continue;const b=document.createElement('button');b.type='button';b.className='task3-subnav-btn';b.dataset.sub=key;b.setAttribute('aria-selected',String(key===activeSub));b.textContent=name;subnav.append(b);}
@@ -221,7 +222,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  function enterCustomEditor(){
   stopBuildingSelection();
   if(threatKey()!=='single')return;
-  resetCustomEditing();window.__ac8DeploymentMenu?.close?.();
+  deviceHover.closePin();resetCustomEditing();window.__ac8DeploymentMenu?.close?.();
   const mainToggle=$('ac8-main-menu-toggle');if(mainToggle?.getAttribute('aria-expanded')!=='false')mainToggle?.click();
   customEdit.active=true;customEdit.scene=task3SceneKey;customEdit.planId=plan?.id??null;mapActive=true;updateLayerVisibility();
   renderer.domElement.style.cursor='crosshair';setCustomStatus(report&&plan?'请在当前地图单击至少两个不同位置，完成后后台计算自定义帧。':'可以编辑路点；完成计算前请先生成部署方案。');drawCustomEdit();
@@ -320,18 +321,28 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    {label:'适用工作频段',value:formatWorkingBand(device)},{label:`覆盖贡献 · ${condition?.name??'当前工况'}`,value:coverage},{label:'该设备 EMC 状态',value:formatDeviceEmc(report.emc?.[plan.id],deviceId)},
   ]};
  }
- const deviceHover=createDeviceHover({canvas:renderer.domElement,camera,container:renderer.domElement.parentElement,getTargets:()=>deviceMeshes,getDetails:deviceHoverDetails,isEnabled:()=>!panel.hidden&&!busy&&layer.visible});
+ const playbackBar=app.querySelector('#ac8-simulation-bar');
+ const deviceHover=createDeviceHover({
+  canvas:renderer.domElement,camera,controls,getTargets:()=>deviceMeshes,getDetails:deviceHoverDetails,
+  isEnabled:()=>!panel.hidden&&!busy&&layer.visible,
+  pinActions:{
+   canPin:()=>!customEdit.active&&!buildingSelector.diagnostics().active,
+   getBottom:()=>playbackBar&&getComputedStyle(playbackBar).pointerEvents!=='none'?playbackBar.getBoundingClientRect().top-8:undefined,
+   locate:target=>focus(target.userData.actualPosition,450),
+   onChange:updateDiagnostics,
+  },
+ });
  function focus(position,span=700){const point=position?.isVector3?position.toArray():position;if(!Array.isArray(point)||point.length!==3)return;controls.target.fromArray(point);camera.position.fromArray(point).add(new THREE.Vector3(span*.55,span*.9,span*.75));controls.update();}
  function updateLayerVisibility(){
   layer.visible=!!report&&!!plan&&mapActive&&!mapSwitching&&!constraintsInvalid;
-  if(!layer.visible)deviceHover.hide();
+  if(!layer.visible){deviceHover.hide();deviceHover.closePin();}
  }
  function clearDetectedDevices(){
   detectedDeviceIds=new Set();
   for(const mesh of deviceMeshes){const halo=mesh.userData.halo;if(!halo)continue;halo.visible=false;halo.material.opacity=0;halo.scale.setScalar(1);}
  }
  function rebuildThreatGround(){threatGroundAt=null;try{threatGroundAt=getGroundAt?.()??null;}catch{}}
- function destroyLayer(){deviceHover.hide();resetCustomEditing();clearDetectedDevices();lastThreatTelemetry=null;for(const child of [...layer.children]){child.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});layer.remove(child);}blindMeshes={};deviceMeshes=[];targetMeshes=[];threatDrones.clear();threatDetectLines=null;threatRouteLines=[];updateLayerVisibility();}
+ function destroyLayer(){deviceHover.hide();deviceHover.closePin();resetCustomEditing();clearDetectedDevices();lastThreatTelemetry=null;for(const child of [...layer.children]){child.traverse(o=>{o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();});layer.remove(child);}blindMeshes={};deviceMeshes=[];targetMeshes=[];threatDrones.clear();threatDetectLines=null;threatRouteLines=[];updateLayerVisibility();}
  function drawCommon(){
   destroyLayer();if(!report||!plan)return;
   const b=report.sampling.bounds,core=[];for(let i=0;i<=80;i++){const a=i/80*Math.PI*2;core.push([b.core[0]+Math.cos(a)*report.settings.coreRadius,b.core[1]+8,b.core[2]+Math.sin(a)*report.settings.coreRadius]);}
@@ -577,7 +588,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   $('task3-building-select').disabled=mapSwitching||!!buildingLoad;
   $('task3-building-clear').disabled=mapSwitching||!selection.count;
   window.task3Diagnostics={
-   buildingSelection:selection,constraintsInvalid,selectedDeviceIds:[...selectedDevices],cameraPosition:camera.position.toArray(),
+   buildingSelection:selection,constraintsInvalid,selectedDeviceIds:[...selectedDevices],cameraPosition:camera.position.toArray(),pinnedDeviceId:deviceHover.pinnedDeviceId,
    ready:!!report,busy,mobilePending,version:TASK3_VERSION,plans:report?.plans.map(p=>({id:p.id,devices:p.devices.length,cost:p.cost})),recommendedId:report?.recommendedId,planId:plan?.id,blindStats:report&&plan?report.blindspots[plan.id]?.[conditionIndex()]?.stats:null,mobileRepair:report?.mobileRepair??null,emcVerdict:report&&plan?report.emc[plan.id].verdict:null,emcCounts:report&&plan?{...report.emc[plan.id].counts}:null,condition:$('task3-condition').value,threatScenario:threatKey(),threatPlaying,threatFrameIndex,threatFrameTime,threatSpeed,threatDuration:threatForPlan()?.frames?.at(-1)?.time??0,threatRouteCount:threatRouteLines.length,threatDetectionSegments:(threatDetectLines?.geometry.attributes.position.count??0)/2,detectedDeviceIds:[...detectedDeviceIds].sort(),sceneKey:task3SceneKey,threatGroundAvailable:typeof threatGroundAt==='function',threatTelemetry:lastThreatTelemetry?{...lastThreatTelemetry,position:[...lastThreatTelemetry.position]}:null,threatTargets:targetMeshes.map(mesh=>({id:mesh.userData.targetId,position:mesh.position.toArray(),quaternion:mesh.quaternion.toArray()})),activeTab,activeSub,
    requestId:requestState.requestId,reportRequestId:report?.requestId??null,layerVisible:layer.visible,mapActive,updateReason:requestState.updateReason,staleResult:requestState.staleResult,lastError:requestState.lastError,lastSuccessfulRequestId:requestState.lastSuccessfulRequestId,autoUpdatePending:requestState.pending,pendingUpdateReasons:requestState.pendingUpdateReasons,lastEquipmentSnapshot:lastRequestSnapshot?.equipmentSnapshot??report?.equipmentSnapshot??null,inputSummary:lastRequestSnapshot?{settings:lastRequestSnapshot.settings,weights:lastRequestSnapshot.weights,presetIds:lastRequestSnapshot.presetIds,planTypes:lastRequestSnapshot.planTypes,environment:lastRequestSnapshot.environment,target:lastRequestSnapshot.target}:null,
    customEditor:{active:customEdit.active,pending:!!customPending,requestId:customPending?.id??null,scene:customEdit.scene,planId:customEdit.planId,waypointCount:customEdit.waypoints.length,waypoints:customEdit.waypoints.map(point=>[...point]),lineCount:customEditLayer.children.filter(child=>child.userData.customConnection).length,appliedCustom:!!report?.threatsByPlan?.[plan?.id]?.single?.custom,defaultAvailable:customDefaultSingles.has(plan?.id),markers:customEditLayer.children.filter(child=>child.userData.customWaypoint).map(mesh=>{const p=mesh.position.clone().project(camera);return {index:mesh.userData.index,x:(p.x+1)/2*view.clientWidth,y:(1-p.y)/2*view.clientHeight,position:mesh.position.toArray(),visible:customEditLayer.visible&&p.z>=-1&&p.z<=1&&Math.abs(p.x)<=1&&Math.abs(p.y)<=1};})},
@@ -597,6 +608,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   button.hidden=!visible;button.disabled=!enabled;button.tabIndex=enabled?0:-1;
  }
  function controlsEnabled(){
+  if(busy)deviceHover.closePin();
   $('task3-run-side').disabled=busy||mapSwitching;$('task3-cancel-side').disabled=!busy;for(const id of ['task3-plan','task3-condition'])$(id).disabled=busy||!report;
   $('task3-custom-route').disabled=busy||constraintsInvalid||!!getSite?.()?.custom;$('task3-mobile-repair').disabled=busy||!report||constraintsInvalid;updatePdfVisibility();updateExplanationButton();
  }
@@ -709,6 +721,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   $('task3-mobile-repair').checked=false;
   updateLayerVisibility();controlsEnabled();updateDiagnostics();setStatus('建筑禁部署选择已更新，请点击“生成方案”应用新约束。','warning');
  },onModeChange:active=>{
+  if(active)deviceHover.closePin();
   $('task3-building-select').setAttribute('aria-pressed',String(active));
   $('task3-building-select').textContent=active?'退出建筑选择':'建筑权重 · 选择建筑';
   app.classList.toggle('task3-building-selecting',active);onMapPickMode?.(active);updateDiagnostics();
@@ -770,7 +783,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   task3WindowVisible=visible;
   if(!visible){resetCustomEditing();stopBuildingSelection();}
   updateLayerVisibility();
-  deviceHover.hide();
+  deviceHover.hide();deviceHover.closePin();
  }
  button.onclick=()=>{workspace.activateView('task3');setTask3Visibility(true);};
  app.addEventListener('view-change',event=>setTask3Visibility(event.detail==='task3'));

@@ -55,3 +55,37 @@ test('task3 device hover: pointermove 单帧节流，移开和销毁清理卡片
  assert.ok([...container.listeners.values()].every(list=>list.length===0),'销毁后不得残留地图视口监听');
  hover.destroy();
 });
+
+test('task3 device info: 固定和切换共享详情，拖动和卡片交互不触发地图点选',()=>{
+ const canvas=new FakeCanvas(),container=new FakeElement('div'),viewport=new FakeElement('window');
+ container.clientWidth=800;container.clientHeight=600;container.getBoundingClientRect=()=>canvas.rect;
+ const camera=makeCamera(),a=makeMarker('a',[-2,0,0]),b=makeMarker('b',[2,0,0]);
+ const pinChanges=[],located=[];let hit=canvas;
+ const hover=createDeviceHover({
+  canvas,camera,container,documentRef:{createElement:tag=>new FakeElement(tag),defaultView:viewport,elementFromPoint:()=>hit},
+  requestFrame:()=>1,cancelFrame:()=>{},getTargets:()=>[a,b],getDetails:({deviceId})=>({title:deviceId,rows:[{label:'型号',value:'标记型号'}]}),
+  pinActions:{locate:marker=>located.push(marker),onChange:()=>pinChanges.push(hover.pinnedDeviceId)},
+ });
+ const pin=container.children.find(child=>child.id==='task3-device-info');
+ const position=marker=>{const ndc=marker.position.clone().project(camera);return {clientX:(ndc.x+1)*400,clientY:(1-ndc.y)*300};};
+ const press=point=>({pointerId:1,button:0,isPrimary:true,...point,stopImmediatePropagation:()=>assert.fail('松手必须可继续传播')});
+ const click=point=>{canvas.emit('pointerdown',press(point));viewport.emit('pointerup',press(point));};
+ click(position(a));
+ assert.equal(hover.pinnedDeviceId,'a');assert.equal(pin.hidden,false);
+ assert.equal(pin.children[0].children[0].textContent,'a');
+ assert.equal(pin.children[1].children[0].children[1].textContent,'标记型号');
+ container.emit('pointerleave');container.emit('wheel');
+ assert.equal(hover.pinnedDeviceId,'a');
+ const point=position(b);
+ canvas.emit('pointerdown',press(point));viewport.emit('pointermove',press({...point,clientX:point.clientX+15}));viewport.emit('pointerup',press(point));
+ assert.equal(hover.pinnedDeviceId,'a');
+ click(point);assert.equal(hover.pinnedDeviceId,'b');
+ pin.children[2].children[0].onclick();assert.deepEqual(located,[b]);
+ hit=pin;click({clientX:0,clientY:0});assert.equal(hover.pinnedDeviceId,'b');
+ hit=canvas;click({clientX:0,clientY:0});assert.equal(hover.pinnedDeviceId,null);
+ click(position(a));
+ viewport.emit('keydown',{key:'Escape',preventDefault(){}});
+ assert.equal(pin.hidden,true);assert.deepEqual(pinChanges,['a','b',null,'a',null]);
+ hover.destroy();
+ assert.ok([...viewport.listeners.values()].every(list=>list.length===0));
+});
