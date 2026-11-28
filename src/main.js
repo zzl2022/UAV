@@ -605,7 +605,7 @@ try {
     const dt=lastHudStamp?Math.min(.1,(stamp-lastHudStamp)/1000):0;lastHudStamp=stamp;
     controls.update();landmarks.update();updateCoreLabel();task3?.update?.(stamp);
     window.__ac8Hud?.update?.(dt);
-    if(!sensors?.render())renderer.render(scene,camera);
+    if(!task3?.renderDeviceDemo()&&!sensors?.render())renderer.render(scene,camera);
     window.__ac8Hud?.render?.();
   });
   disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeUI(mode);updateStatus();
@@ -957,7 +957,7 @@ try {
   });
   import('./task3/ui.js').then(({mountTask3UI})=>{
     task3=mountTask3UI({
-      app,city,model,scene,camera,controls,renderer,sensors,workspace,getSite:activeSiteDescriptor,
+      app,city,model,scene,camera,controls,renderer,sensors,workspace,toast,getSite:activeSiteDescriptor,
       getActiveModel:()=>mode==='recon'?model:siteParts[mode],
       getGroundAt:()=>{
         const ground=mode==='recon'?model.ground:siteParts[mode]?.ground;

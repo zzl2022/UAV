@@ -60,10 +60,20 @@ export function createDeviceHover({canvas,camera,controls,container=canvas?.pare
   pinCard.style.maxHeight=`${Math.max(0,Math.min(430,Math.floor(safeHeight/2)-36))}px`;
   const size={width:pinCard.offsetWidth,height:pinCard.offsetHeight};
   const visible=projected.z>=-1&&projected.z<=1&&Math.abs(projected.x)<=1&&Math.abs(projected.y)<=1;
-  const position=visible?constrainDeviceHoverPosition(
-   {x:rect.left-bounds.left+(projected.x+1)*rect.width/2,y:rect.top-bounds.top+(1-projected.y)*rect.height/2},
-   size,{width,height:safeHeight},{offset:28,margin:10},
-  ):{x:Math.max(10,width-size.width-10),y:10};
+  const marker={x:rect.left-bounds.left+(projected.x+1)*rect.width/2,y:rect.top-bounds.top+(1-projected.y)*rect.height/2};
+  const position=visible?constrainDeviceHoverPosition(marker,size,{width,height:safeHeight},{offset:28,margin:10}):{x:Math.max(10,width-size.width-10),y:10};
+  const obstacle=pinActions.getObstacle?.();
+  if(obstacle&&position.x+size.width>obstacle.left-bounds.left-8&&position.x<obstacle.right-bounds.left+8&&
+   position.y+size.height>obstacle.top-bounds.top-8&&position.y<obstacle.bottom-bounds.top+8){
+   const withinLeft=obstacle.left-bounds.left-8-size.width,below=obstacle.bottom-bounds.top+8;
+   const left=Math.min(position.x,withinLeft);
+   const coversMarker=visible&&marker.x>=left-12&&marker.x<=left+size.width+12&&marker.y>=position.y-12&&marker.y<=position.y+size.height+12;
+   if(withinLeft>=10&&(!coversMarker||safeHeight-below<110))position.x=left;
+   else{
+    pinCard.style.maxHeight=`${Math.max(0,Math.min(size.height,safeHeight-below-10))}px`;
+    position.y=clamp(position.y,below,Math.max(below,safeHeight-pinCard.offsetHeight-10));
+   }
+  }
   pinCard.style.left=`${Math.round(position.x)}px`;pinCard.style.top=`${Math.round(position.y)}px`;
  }
  function selectPin(target){
@@ -140,7 +150,7 @@ export function createDeviceHover({canvas,camera,controls,container=canvas?.pare
  const onPointerDown=()=>hide();
  container.addEventListener('pointermove',onPointerMove);container.addEventListener('pointerleave',hide);container.addEventListener('pointercancel',hide);container.addEventListener('pointerdown',onPointerDown);container.addEventListener('wheel',hide,{passive:true});
  return {
-  element:card,hide,closePin,
+  element:card,hide,closePin,layoutPin:placePin,
   get activeDeviceId(){return activeDeviceId;},
   get pinnedDeviceId(){return pinned?.userData.deviceId??null;},
   destroy(){

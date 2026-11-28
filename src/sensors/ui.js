@@ -327,7 +327,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
   renderer.domElement.style.cursor=markerAt(event.clientX,event.clientY)?'grab':'';
  },true);
  renderer.domElement.addEventListener('pointerup',event=>{
-  if(drag){event.stopImmediatePropagation();endDrag();renderForm();compute();workspace.restoreWindow('equipment');followSelected();return;}
+  if(drag){endDrag();renderForm();compute();workspace.restoreWindow('equipment');followSelected();return;}
   if(!pickMode||panel.hidden||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>5)return;
   const hit=surfaceAt(event.clientX,event.clientY);if(!hit){message('未选中模型表面，请点击建筑或地形。');return;}
   const p=hit.point.toArray();p[1]+=pickMode==='device'?2:50;

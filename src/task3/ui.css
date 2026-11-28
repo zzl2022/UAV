@@ -77,7 +77,7 @@
 .task3-device-hover-list dt{color:#91afbc}
 .task3-device-hover-list dd{margin:0;color:#e2eef3;overflow-wrap:anywhere}
 .task3-device-pin:not([hidden]){
- display:flex;flex-direction:column;width:min(330px,calc(100% - 20px));max-height:min(430px,calc(50% - 36px));
+ display:flex;flex-direction:column;z-index:41;width:min(330px,calc(100% - 20px));max-height:min(430px,calc(50% - 36px));
  margin:0;padding:0;pointer-events:auto;user-select:text;touch-action:pan-y;border-color:#77cddd;
 }
 .task3-device-pin-heading,.task3-device-pin-actions{
@@ -91,6 +91,22 @@
 .task3-device-pin-actions button{min-height:40px;white-space:nowrap}
 @media(max-width:580px){
  .task3-device-pin-heading button,.task3-device-pin-actions button{min-height:44px;min-width:44px}
+}
+#task3-device-demo{
+ position:absolute;z-index:42;right:16px;top:24px;width:min(330px,calc(100% - 32px));max-height:calc(100% - 54px);
+ display:flex;flex-direction:column;margin:0;padding:12px;border:1px solid #77cddd;border-radius:7px;background:#102631f5;
+ box-shadow:0 8px 26px #0008;color:#dcebf2;touch-action:pan-y;overflow:hidden;
+}
+#task3-device-demo[hidden]{display:none}
+#task3-device-demo .demo-kind{flex-shrink:1;text-align:right}
+#task3-device-demo .demo-hover{overflow-y:auto;overscroll-behavior:contain;min-height:26px;margin:5px 0 10px}
+#task3-device-demo .demo-hud-actions{flex-shrink:0}
+.task3-demo-status,.task3-demo-hint{margin:8px 0;font-size:12px;line-height:1.5;color:#b4d2de}
+.task3-demo-values{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:5px 8px;margin:8px 0 0;font-size:11px;color:#b7d4df}
+.task3-demo-values dd{margin:0;text-align:right;overflow-wrap:anywhere;color:#e2eef3}
+@media(max-width:580px){
+ #task3-device-demo{right:10px;top:8px;width:min(290px,calc(100% - 20px));max-height:min(260px,calc(50% - 16px))}
+ #task3-device-demo .demo-hud-actions button{min-height:44px}
 }
 @media(max-width:850px){#task3-panel{width:250px;padding:16px 13px 22px}}
 @media(max-width:580px){#task3-panel{width:224px;max-height:100dvh;padding:12px 10px 18px;font-size:12px}#task3-panel .brand{font-size:13px}#task3-panel .task3-inputs{grid-template-columns:1fr 1fr;gap:7px}}
