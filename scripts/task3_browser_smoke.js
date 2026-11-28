@@ -41,7 +41,7 @@ try{
  assert.equal(await runButton.isVisible(),true,'生成页应提供开始推演按钮');
  assert.equal(await page.locator('#task3-progress-side').isVisible(),true,'生成页应提供推演进度条');
  await runButton.click();
- await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:300000});
+ await page.waitForFunction(()=>window.task3Diagnostics?.ready&&!window.task3Diagnostics?.busy,null,{timeout:600000});
  const diag=await page.evaluate(()=>window.task3Diagnostics);
  assert.match(await page.locator('#task3-status-side').innerText(),/推演完成/,'生成页状态应同步');
  assert.equal(await page.locator('#task3-progress-side').getAttribute('value'),'1','生成页进度应同步');
@@ -102,7 +102,7 @@ try{
  await page.locator('#task3-plan').selectOption(other);
  assert.equal(await page.evaluate(()=>window.task3Diagnostics.planId),other);
  // 导出部署方案 PDF 并验证文件头
- let dl=page.waitForEvent('download');await page.locator('#task3-export-pdf').click();await (await dl).saveAs('artifacts/task3/browser-deployment.pdf');
+ let dl=page.waitForEvent('download',{timeout:180000});await page.locator('#task3-export-pdf').click();await (await dl).saveAs('artifacts/task3/browser-deployment.pdf');
  const pdf=await readFile('artifacts/task3/browser-deployment.pdf');assert.match(pdf.toString('latin1',0,8),/^%PDF-/,'PDF 文件头');
  // 内部数据断言（替代 JSON 导出）
  const exported=await page.evaluate(()=>window.__task3Export());

@@ -4,6 +4,9 @@ import {BLIND_COLORS,BLIND_CATEGORIES,TASK3_VERSION,METRIC_WEIGHTS,THREAT_SCENAR
 import {STAGE_NAMES,resolveTask3EquipmentSelection} from './pipeline.js';
 import {parseTask3Spacing,resolveTask3Settings} from './scope.js';
 import {createTask3RequestSnapshot,createTask3RunScheduler} from './live-optimization.js';
+import {comparisonInputs} from './rule-matches.js';
+import {renderRuleBook,renderEmcReview} from './review-panels.js';
+import {mountFleetPanel} from './fleet-panel.js';
 import {createPlanChatSummary} from './plan-chat-context.js';
 import {resolvePlanChatDevice} from './device-chat-context.js';
 import {createDeviceDisplayMap} from './device-display.js';
@@ -59,6 +62,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   <button type="button" data-tab="input" aria-selected="true">推演输入</button>
   <button type="button" data-tab="plans" aria-selected="false">方案对比</button>
   <button type="button" data-tab="blindspots" aria-selected="false">盲区分析</button>
+  <button type="button" data-tab="rules" aria-selected="false">通用布设规则</button>
   <button type="button" data-tab="emc" aria-selected="false">电磁兼容</button>
  </nav>
  <div class="task3-body">
@@ -68,6 +72,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  <div class="task3-footer">
   <button id="task3-restore-defaults">恢复默认</button>
   <button id="task3-export-pdf" hidden disabled tabindex="-1">导出已生成方案 PDF ↓</button>
+  <button id="task3-export-brief" hidden disabled tabindex="-1">导出精简版方案 PDF ↓</button>
  </div>`;
  workspace.mountSidebarPanel(panel,'task3');
  const $=id=>app.querySelector('#'+id);
@@ -94,11 +99,11 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  const scopePane=document.createElement('div');scopePane.className='task3-pane';scopePane.innerHTML=`<div class="task3-inputs">
   <label>东西宽度 / m<input id="task3-scope-width" type="number" min="1" step="100" value="2400"></label>
   <label>南北深度 / m<input id="task3-scope-depth" type="number" min="1" step="100" value="2400"></label>
-  <label>网格间距 / m<input id="task3-spacing" type="number" min="150" max="1000" step="1" value="500" aria-describedby="task3-spacing-hint"></label>
+  <label>网格间距 / m<input id="task3-spacing" type="number" min="50" max="1000" step="1" value="500" aria-describedby="task3-spacing-hint"></label>
   <label>预算 / 相对单位<input id="task3-budget" type="number" min="100" max="1000" step="50" value="600"></label>
   <label>设备上限<input id="task3-max-devices" type="number" min="4" max="64" step="1" value="64"></label>
  </div>
- <p class="hint" id="task3-spacing-hint">网格间距可输入 150–1000 米。范围以当前地图核心区为中心，采样限于有数据的区域。</p><div id="task3-scope-status" class="hint" role="status">默认范围：东西 2400 m × 南北 2400 m。</div>`;
+ <p class="hint" id="task3-spacing-hint">网格间距可输入 50–1000 米。小于150米时，采样更密，计算时间、内存占用和结果体积通常增加。相同矩形内，50 米约有 150 米的 9 倍水平网格点；覆盖率仍是采样估计。900 × 900 米实测中，150 米与 50 米的中位计算耗时分别约 1.1 秒和 2.2 秒，其他地图和设备数量会影响耗时。范围以当前地图核心区为中心，采样限于有数据的区域。</p><div id="task3-scope-status" class="hint" role="status">默认范围：东西 2400 m × 南北 2400 m。</div>`;
  const weightsPane=document.createElement('div');weightsPane.className='task3-pane';weightsPane.innerHTML=`<div class="task3-inputs" id="task3-weights">
   <label>覆盖完整性<input type="number" data-weight="coverage" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.coverage}"></label>
   <label>盲区面积占比<input type="number" data-weight="blind" min="0" max="1" step="0.05" value="${METRIC_WEIGHTS.blind}"></label>
@@ -140,9 +145,40 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   <div id="task3-blind-legend" class="task3-legend">${Object.entries(BLIND_CATEGORIES).map(([key,name])=>`<label><input type="checkbox" data-category="${key}" checked><i style="background:#${BLIND_COLORS[key].toString(16).padStart(6,'0')}"></i>${name}<b data-count="${key}"></b></label>`).join('')}</div>
   <div id="task3-blind-list"></div>`;
  const emcPane=document.createElement('div');emcPane.className='task3-pane';emcPane.innerHTML='<div id="task3-emc"></div>';
- const TABS={input:{subs:[['scope','参数约束',scopePane],['weights','权重成本',weightsPane],['threat','威胁场景',threatPane],['generate','方案生成',generatePane]],top:equipPane},plans:{subs:[],pane:plansPane},blindspots:{subs:[['blind','盲区分析',blindspotsPane],['mobile','警车部署',mobilePane]]},emc:{subs:[],pane:emcPane}};
+ const rulesPane=document.createElement('div');rulesPane.className='task3-pane';
+ let ruleBook=null,bookRequest=null,previousInputs=null,ruleView=null;
+ function loadRuleBook(){
+  if(ruleBook)return Promise.resolve(ruleBook);
+  return bookRequest??=fetch(new URL('data/cross-map-deployment-rules.json',document.baseURI),{cache:'no-cache'}).then(async response=>{
+   if(!response.ok)throw Error('规则文件读取失败');
+   const book=await response.json();
+   if(book.schema!=='cross-map-deployment-rules/1'||!Array.isArray(book.acceptedRules))throw Error('规则文件格式不兼容');
+   ruleBook=book;return book;
+  }).finally(()=>{bookRequest=null;});
+ }
+ function refreshRules(){
+  if(activeTab!=='rules')return;
+  if(!ruleBook){
+   rulesPane.textContent='正在读取通用规则…';
+   loadRuleBook().then(refreshRules).catch(error=>{rulesPane.textContent=error.message+'。';const retry=document.createElement('button');retry.textContent='重试';retry.onclick=refreshRules;rulesPane.append(retry);});
+   return;
+  }
+  const current=busy||constraintsInvalid||scheduler.getState().staleResult?null:plan;
+  if(ruleView&&ruleView.plan===current&&ruleView.report===report)return;
+  ruleView={plan:current,report};renderRuleBook(rulesPane,ruleBook,current?report:null,current,previousInputs);
+ }
+ const fleet=mountFleetPanel(mobilePane,()=>({
+  summary:plan?.derivation,planId:plan?.id,runId:run?.runId,
+  fresh:!!report&&!busy&&!constraintsInvalid&&!scheduler.getState().staleResult,pending:mobilePending,
+  condition:$('task3-condition').value,
+  name:[getSite?.()?.label??report?.sceneName??'当前地图',plan?.name,report?.conditions.find(c=>c.id===$('task3-condition').value)?.name].filter(Boolean).join(' · '),
+  blindCount:plan?.coverage?.[conditionIndex()]?.filter(n=>n===0).length??0
+ }),()=>{
+  const toggle=$('task3-mobile-repair');if(activeTab==='blindspots'&&activeSub==='mobile'&&!toggle.checked&&!toggle.disabled)toggle.click();
+ });
+ const TABS={rules:{subs:[],pane:rulesPane},input:{subs:[['scope','参数约束',scopePane],['weights','权重成本',weightsPane],['threat','威胁场景',threatPane],['generate','方案生成',generatePane]],top:equipPane},plans:{subs:[],pane:plansPane},blindspots:{subs:[['blind','盲区分析',blindspotsPane],['mobile','警车部署',mobilePane]]},emc:{subs:[],pane:emcPane}};
  let activeTab='input',activeSub='scope',task3WindowVisible=false,mapActive=true,mapSwitching=false;
- contentBox.append(equipPane,scopePane,weightsPane,threatPane,mobilePane,generatePane,plansPane,blindspotsPane,emcPane);
+ contentBox.append(equipPane,scopePane,weightsPane,threatPane,mobilePane,generatePane,plansPane,blindspotsPane,emcPane,rulesPane);
  $('task3-run-side').onclick=()=>{if(!busy&&!mapSwitching)scheduler.start('方案生成');};
  $('task3-cancel-side').onclick=()=>{
   const wasMobile=mobilePending;if(!wasMobile)scheduler.cancel();activePipelineRequest=null;worker?.terminate();worker=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;
@@ -161,7 +197,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   if(tab.top)tab.top.hidden=false;
   if(tab.subs.length){const cur=tab.subs.find(s=>s[0]===activeSub);if(cur?.[2])cur[2].hidden=false;}
   else if(tab.pane)tab.pane.hidden=false;
-  updatePdfVisibility();
+  refreshRules();fleet.refresh();updatePdfVisibility();
   updateLayerVisibility();
   updateDiagnostics();
  }
@@ -630,9 +666,15 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   const e=report.emc[plan.id],box=$('task3-emc');box.replaceChildren();
   const banner=document.createElement('div');banner.className=`task3-emc-banner ${e.verdict}`;banner.textContent=e.text;box.append(banner);
   box.insertAdjacentHTML('beforeend',`<p class="hint">当前方案：${plan.name} · ${plan.devices.length} 台设备</p>`);
+  renderEmcReview(box,e,EMC_KIND,deviceDisplay);
+  const fix=document.createElement('button');fix.type='button';fix.id='task3-repair-warnings';fix.textContent='自动修复提示';box.append(fix);
+  fix.disabled=busy||constraintsInvalid||scheduler.getState().staleResult||!!plan.derivation||!e.counts.warning||!!e.remediation?.warningReview;
+  fix.onclick=()=>{if(!fix.disabled)scheduler.start('修复当前方案提示');};
+  const fixStatus=document.createElement('p');fixStatus.className='hint';fixStatus.id='task3-warning-fix-status';fixStatus.setAttribute('role','status');
+  fixStatus.textContent=plan.derivation?'当前显示警车补盲结果。取消警车部署后可调整固定设备并重新推演。':'';box.append(fixStatus);
   if(e.conflicts.length){const t=document.createElement('table');t.className='task3-table';t.innerHTML='<thead><tr><th>设备对</th><th>类型</th><th>严重度</th><th>距离/m</th><th>建议</th></tr></thead>';const tb=document.createElement('tbody');
-   for(const c of e.conflicts.slice(0,50)){const tr=document.createElement('tr');tr.innerHTML=`<td>${deviceDisplay.nameOf(c.a)} ↔ ${deviceDisplay.nameOf(c.b)}</td><td>${EMC_KIND[c.kind]??c.kind}</td><td>${EMC_SEVERITY[c.severity]??c.severity}</td><td>${formatEmcDistance(c.distanceM)}</td><td>${c.recommendation}</td>`;tb.append(tr);}t.append(tb);box.append(t);
-   if(e.conflicts.length>50)box.insertAdjacentHTML('beforeend',`<p class="hint">仅列前 50 条，共 ${e.conflicts.length} 条，完整清单见导出 JSON。</p>`);}
+   for(const c of e.conflicts){const tr=document.createElement('tr');tr.innerHTML=`<td>${deviceDisplay.nameOf(c.a)} ↔ ${deviceDisplay.nameOf(c.b)}</td><td>${EMC_KIND[c.kind]??c.kind}</td><td>${EMC_SEVERITY[c.severity]??c.severity}</td><td>${formatEmcDistance(c.distanceM)}</td><td>${c.recommendation}</td>`;tb.append(tr);}t.append(tb);box.append(t);
+  }
   box.insertAdjacentHTML('beforeend',`<p class="hint">${e.mobileRepair?`已按原方案 + ${plan.derivation?.addedDeviceCount??0} 台移动设备重算；新增 fail ${e.mobileRepair.newFailCount} 项。`:''} ${e.notes.join('；')||''} 工程代理规则，非频谱合规认证。</p>`);
  }
  function planChatStatus(requestState){
@@ -759,8 +801,12 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  }
  let pdfExporting=false;
  function updatePdfVisibility(){
-  const button=$('task3-export-pdf'),visible=activeTab==='plans'||(activeTab==='input'&&activeSub==='generate'),enabled=visible&&!busy&&!pdfExporting&&!!report&&!constraintsInvalid;
-  button.hidden=!visible;button.disabled=!enabled;button.tabIndex=enabled?0:-1;
+  const visible=activeTab==='plans'||(activeTab==='input'&&activeSub==='generate');
+  const enabled=visible&&!busy&&!pdfExporting&&!!report&&!constraintsInvalid&&!scheduler.getState().staleResult;
+  for(const id of ['task3-export-pdf','task3-export-brief']){const button=$(id);if(!button)continue;button.hidden=!visible;button.disabled=!enabled;button.tabIndex=enabled?0:-1;}
+  refreshRules();fleet.refresh();
+  const fix=$('task3-repair-warnings');
+  if(fix)fix.disabled=busy||constraintsInvalid||scheduler.getState().staleResult||!!plan?.derivation||!report?.emc?.[plan?.id]?.counts.warning||!!plan?.emcRemediation?.warningReview;
  }
  function controlsEnabled(){
   if(busy){deviceDemo.stop();deviceHover.closePin();}
@@ -797,7 +843,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
     const v=data.value;$('task3-progress-side').value=v.total?v.completed/v.total:0;setStatus(`${request.updateReason} · ${STAGE_NAMES[v.stage]??v.stage} ${v.completed}/${v.total}`);
    }else if(data.type==='report'){
     const request=activePipelineRequest;if(!request||data.requestId!==request.id||!scheduler.succeed(request.id))return;
-    activePipelineRequest=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;mobileSnapshots=new Map();report=data.report;run=data.run;constraintsInvalid=false;playbackInvalidated=false;selectedDevices.clear();
+    activePipelineRequest=null;busy=false;mobilePending=false;mobileReportRequestId=null;mobileRequestId++;mobileSnapshots=new Map();if(request.updateReason!=='修复当前方案提示')previousInputs=comparisonInputs(report);report=data.report;run=data.run;constraintsInvalid=false;playbackInvalidated=false;selectedDevices.clear();
     report.requestId=request.id;report.updateReason=request.updateReason;report.equipmentSnapshot=request.snapshot.equipmentSnapshot;run.requestId=request.id;run.updateReason=request.updateReason;run.equipmentSnapshot=request.snapshot.equipmentSnapshot;
     const previousPlanId=plan?.id;originalRun=run;plan=report.plans.find(p=>p.id===previousPlanId)??report.plans.find(p=>p.id===report.recommendedId)??report.plans[0];
     if(!scheduler.getState().staleResult)threatConfigs=structuredClone(report.settings.threatConfigs);
@@ -830,7 +876,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   const size=`东西 ${scope.widthM.toFixed(0)} m × 南北 ${scope.depthM.toFixed(0)} m`;status.dataset.tone=scope.clipped?'warning':'';
   status.textContent=scope.clipped?`地形数据未覆盖全部请求范围，已按有效区域裁切（${size}）；仅计算有数据的区域，不外推覆盖。`:`本次范围：${size}。采样与覆盖未外推无数据区域。`;
  }
- function renderAll(){deviceDisplay=createDeviceDisplayMap(plan.devices);renderScopeStatus();renderPlans();renderEmc();drawCommon();updateDiagnostics();}
+ function renderAll(){refreshRules();fleet.refresh();deviceDisplay=createDeviceDisplayMap(plan.devices);renderScopeStatus();renderPlans();renderEmc();drawCommon();updateDiagnostics();}
  // 飞行模块由 planning/ui.js 独立维护，任务三只负责推演与工况数据。
  function publishSimulation(){}
  function startPipeline({requestId,updateReason}){
@@ -864,9 +910,11 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
    if(/网格间距/.test(error.message)){spacingInput.setAttribute('aria-invalid','true');if(updateReason.includes('手动'))spacingInput.focus();}
    failPipeline(error.message,requestId);return;
   }
+  const warningPlanIds=updateReason==='修复当前方案提示'&&report&&plan?[...new Set([...report.plans.filter(p=>p.emcRemediation?.warningReview).map(p=>p.id),plan.id])]:[];
   lastRequestSnapshot=snapshot;const request={id:requestId,updateReason,snapshot};activePipelineRequest=request;busy=true;$('task3-progress-side').value=0;controlsEnabled();updateDiagnostics();
+  if(updateReason==='修复当前方案提示'&&$('task3-warning-fix-status'))$('task3-warning-fix-status').textContent='正在校核提示并重算覆盖和方案评分…';
   setStatus(`${updateReason}：后台计算中，地图仍可操作。${report?' 当前展示结果为上一轮参数，完成后自动替换。':''}`);
-  try{getWorker().postMessage({type:'pipeline',site:getSite?.()??null,requestId,baseURL:new URL('./',location.href).href,settings:snapshot.settings,weights:snapshot.weights,presetIds:snapshot.presetIds,equipmentSnapshot:snapshot.equipmentSnapshot,environment:snapshot.environment,target:snapshot.target,planTypes:snapshot.planTypes});}
+  try{getWorker().postMessage({type:'pipeline',site:getSite?.()??null,requestId,baseURL:new URL('./',location.href).href,settings:snapshot.settings,weights:snapshot.weights,presetIds:snapshot.presetIds,equipmentSnapshot:snapshot.equipmentSnapshot,environment:snapshot.environment,target:snapshot.target,warningPlanIds,planTypes:snapshot.planTypes});}
   catch(error){failPipeline(error.message,requestId);}
  }
  const scheduler=createTask3RunScheduler({run:startPipeline,hasCurrentResult:()=>!!report});
@@ -961,7 +1009,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  };
  $('task3-plan').onchange=()=>{selectedDevices.clear();restoreMobileRepair();$('task3-mobile-repair').checked=false;setMobileStatus('已切换方案并清理移动补盲，可按当前方案重新启用。');plan=report.plans.find(p=>p.id===$('task3-plan').value);renderAll();publishSimulation();setStatus(`已切换到「${plan.name}」：地图、盲区、EMC、方案详情已同步更新。`);};
  $('task3-condition').onchange=()=>{
-  deviceDemo.stop();deviceHover.hide();deviceHover.closePin();resetCustomEditing();
+  deviceDemo.stop();deviceHover.hide();deviceHover.closePin();resetCustomEditing();fleet.refresh();
   renderPlans();drawBlindCoverage();publishSimulation();updateDiagnostics();
  };
  $('task3-mobile-repair').onchange=()=>{
@@ -972,17 +1020,22 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   getWorker().postMessage({type:'mobile-repair',site:getSite?.()??null,requestId,baseURL:new URL('./',location.href).href,equipmentSnapshot:report.equipmentSnapshot,input:{plan,sampling:report.sampling,equipment:report.equipment,settings:report.settings,environment:report.environment,target:report.target,conditionId:$('task3-condition').value,equipmentSnapshot:report.equipmentSnapshot}});
  };
  for(const cb of app.querySelectorAll('#task3-blind-legend input'))cb.onchange=()=>{for(const [cat,{mesh}] of Object.entries(blindMeshes))mesh.visible=app.querySelector(`input[data-category="${cat}"]`).checked;};
- $('task3-export-pdf').onclick=async()=>{
-  if(!report||!run||busy||pdfExporting||constraintsInvalid)return;
-  const exportingRun=run;
-  pdfExporting=true;updatePdfVisibility();setStatus('正在生成已选方案的完整 PDF…');
+ async function exportReport(brief){
+  if(!report||!run||busy||pdfExporting||constraintsInvalid||scheduler.getState().staleResult)return;
+  const currentReport=report,currentRun=run,currentPlan=plan,conditionId=$('task3-condition').value;
+  const isCurrent=()=>report===currentReport&&run===currentRun&&currentPlan===plan&&conditionId===$('task3-condition').value&&!busy&&!constraintsInvalid&&!scheduler.getState().staleResult;
+  pdfExporting=true;updatePdfVisibility();setStatus(brief?'正在生成精简版 PDF…':'正在生成完整版 PDF…');
   try{
-   const conditionId=report.conditions[conditionIndex()]?.id??'nominal';
-   await exportDeploymentPdf({report,run:exportingRun,planIds:'all',activePlanId:plan?.id,rules:[],conditionId});
-   if(run===exportingRun)setStatus(`已按 ${exportingRun.runId} 生成所选方案的完整 PDF。`);
-  }catch(error){if(run===exportingRun)setStatus(`无法生成部署方案 PDF：${error.message}`,'error');}
-  finally{pdfExporting=false;updatePdfVisibility();}
- };
+   const book=await loadRuleBook();
+   if(!isCurrent())throw Error('当前方案已变化，请重新导出。');
+   const review={book,previousInputs,sceneName:report.sceneName??getSite?.()?.label,daily:fleet.getEstimate()};
+   await exportDeploymentPdf({report,run,activePlanId:plan.id,conditionId,review,brief,isCurrent});
+   setStatus(`已生成${brief?'精简版':'完整版'}方案 PDF。`);
+  }catch(error){setStatus(`无法生成部署方案 PDF：${error.message}`,'error');}
+  finally{pdfExporting=false;controlsEnabled();}
+ }
+ $('task3-export-pdf').onclick=()=>exportReport(false);
+ $('task3-export-brief').onclick=()=>exportReport(true);
  function setScene(site,{coreChanged=false}={}){
   const key=site?.base??'recon';if(key===task3SceneKey&&!coreChanged)return;task3SceneKey=key;
   deviceDemo.clearScene();
@@ -991,7 +1044,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   stopBuildingSelection();buildingError='';buildingSelector.refresh();constraintsInvalid=false;selectedDevices.clear();
   activePipelineRequest=null;lastRequestSnapshot=null;worker?.terminate();worker=null;
   mobileReportRequestId=null;mobileRequestId++;
-  report=null;run=null;originalRun=null;plan=null;deviceDisplay=createDeviceDisplayMap();mobileSnapshots=new Map();mobilePending=false;busy=false;pendingThreatKey=null;threatFrameIndex=0;threatFrameTime=0;scheduler.cancel();
+  previousInputs=null;ruleView=null;report=null;run=null;originalRun=null;plan=null;deviceDisplay=createDeviceDisplayMap();mobileSnapshots=new Map();mobilePending=false;busy=false;pendingThreatKey=null;threatFrameIndex=0;threatFrameTime=0;scheduler.cancel();
   setThreatTracking(false);stopThreatPlayback();destroyLayer();rebuildThreatGround();
   $('task3-mobile-repair').checked=false;setMobileStatus('完成推演后可启用移动补盲。');
   for(const id of ['task3-plans-table','task3-plan','task3-plan-detail','task3-device-list','task3-emc','task3-condition','task3-blind-compare','task3-blind-list'])$(id).replaceChildren();

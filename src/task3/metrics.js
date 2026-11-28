@@ -41,6 +41,7 @@ function validateWeights(weights){
 function groundFor(site,ground){
  if(typeof ground==='function')return ground(site);
  if(Number.isFinite(ground))return ground;
+ if(Number.isFinite(site?.aboveGroundM))return site.position[1]-site.aboveGroundM;
  if(site&&Number.isFinite(site.installationProxy))return site.position[1]-((site.installationProxy-1)*100+2);
  return 0;
 }

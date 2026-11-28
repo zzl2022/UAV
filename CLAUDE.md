@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **前端**：`index.html` → `src/main.js`（入口）。`main.js` 初始化 Three.js 场景，并挂载三个 UI 子系统：
   - `src/sensors/` — 设备建模面板与 JS 物理仿真（雷达/无线电/光电/声学的“假设参数·环境仿真”模式），含体场渲染、热力图、场景遮挡查询（`createSceneQuery.trace`）。
   - `src/planning/` — “部署与飞行”：覆盖优化、飞行推演、遥测、语音报警（`optimizer.js`/`flight.js`/`worker.js`）。
-  - `src/task3/` — “优化推演”：推演输入、方案对比、盲区分布、电磁兼容、飞行演示五个子模块（动态 import 挂载）。
+  - `src/task3/` — “优化推演”：推演输入、方案对比、盲区分布、通用布设规则、电磁兼容、飞行演示；含警车移动补盲与日常部署、50 m 精细网格、完整/精简 PDF（动态 import 挂载）。
   - `src/student-capabilities/` — 装备建模统一入口的 API 客户端，通过 `/api/capabilities` 调 Python。
   - `src/workspace.js` — 基于 `<dialog>` 的浮动窗口管理（拖动/缩放/收起）。
 - **后端**：`backend/server.py` 是仅回环（127.0.0.1:8765）的标准库 HTTP 服务，`backend/capabilities.py` 的 `CapabilityService` 加载 `equipment_models/` 下的两套 Python 模型包，提供 `dataset_only` 模式的资料基础评估。Vite 在开发态把 `/api/capabilities` 代理到 8765（见 `vite.config.js`）。

@@ -731,6 +731,7 @@ body.scene-menu-open #workspace-sidebar .ac8-scene-info {
   opacity: 0 !important;
   transform: translateX(-26px) !important;
   transition-delay: 0s !important;
+  pointer-events: none !important;
 }
 .ac8-info-row {
   display: flex;

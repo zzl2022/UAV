@@ -29,7 +29,7 @@ export function collectDecisionEvidence({plan,pool,candidates,sampling,condition
   const finalSiteAlternatives=candidates.filter(c=>c.site.id===site.id).map(c=>row(c));
   byDevice[device.id]={schema:'task3-device-decision/1.0',basis:'本轮候选覆盖矩阵与真实优化事件；候选值为 EMC 最终复核前预评估',selection,originDeviceId:originId,migration,finalCandidate:candidate?row(candidate):null,finalSiteAlternatives,
    otherSites:pool.filter(c=>c.device.presetId===device.presetId&&c.device.parameters.pitch===device.parameters.pitch&&c.site.id!==site.id).map(c=>({...row(c),distanceM:Math.hypot(c.device.position[0]-device.position[0],c.device.position[2]-device.position[2])})).sort((a,b)=>a.distanceM-b.distanceM||a.deviceId.localeCompare(b.deviceId)).filter((r,i,rows)=>rows.findIndex(other=>other.siteId===r.siteId)===i).slice(0,3),
-   site:{...structuredClone(site),aboveGroundM:Number.isFinite(site.installationProxy)?(site.installationProxy-1)*100+2:null},
+   site:{...structuredClone(site),aboveGroundM:site.aboveGroundM??(Number.isFinite(site.installationProxy)?(site.installationProxy-1)*100+2:null)},
    marginReserveDb:settings.marginReserveDb};
  }
  return byDevice;

@@ -78,8 +78,8 @@ test('task3 live: 每轮输入快照与源对象隔离并递归冻结',()=>{
 });
 
 test('task3 spacing: 可编辑数值原样进入设置，空值、非数值和越界值明确拒绝',()=>{
- for(const value of [150,425,500,1000,'425.5'])assert.equal(parseTask3Spacing(value),Number(value));
+ for(const value of [50,100,149,150,425,500,1000,'425.5'])assert.equal(parseTask3Spacing(value),Number(value));
  const settings=resolveTask3Settings({...TASK3_DEFAULT_SETTINGS,scope:'custom',scopeWidthM:2400,scopeDepthM:2400,spacing:parseTask3Spacing(425)});
  assert.equal(settings.spacing,425);
- for(const value of ['','   ','abc',NaN,Infinity,-Infinity,149,1001,null,undefined])assert.throws(()=>parseTask3Spacing(value),/网格间距必须是 150–1000 米的有限数值/);
+ for(const value of ['','   ','abc',NaN,Infinity,-Infinity,49.9,1001,null,undefined])assert.throws(()=>parseTask3Spacing(value),/网格间距必须是 50–1000 米的有限数值/);
 });
