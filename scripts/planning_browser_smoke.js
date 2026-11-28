@@ -73,8 +73,7 @@ try{
  assertDetectionSpeech(firstSpeech[0]);
  assert.equal(firstSpeech[0].text,`检出无人机，高度 ${Math.round(telemetry.agl)} 米，东经 ${telemetry.longitude.toFixed(4)} 度，北纬 ${telemetry.latitude.toFixed(4)} 度。`);
  await page.locator('#flight-voice').click();assert.equal(await page.locator('#flight-voice').getAttribute('aria-pressed'),'false');
- await page.locator('#flight-voice-preview').click();
- assert.equal((await page.evaluate(()=>window.testSpeech.at(-1))).text,firstSpeech[0].text);
+ assert.equal(await page.locator('#flight-voice-preview').count(),0);
 
  await page.locator('#planning-speed').selectOption('10');
  await page.locator('#planning-play').click();
@@ -112,5 +111,5 @@ try{
  assert.equal(await page.evaluate(()=>window.sensorDiagnostics.deviceCount),initial.deviceCount);
  assert.equal(await page.locator('#equipment-manager').isVisible(),true);
  assert.equal(await page.evaluate(()=>document.querySelector('#app').dataset.activeView),'sensors');
- assert.deepEqual(errors,[]);console.log('部署飞行浏览器冒烟通过，已覆盖真实方案、回放和暂停、遥测与语音试听、导出、后台重算、取消、小屏和装备交接。');
+ assert.deepEqual(errors,[]);console.log('部署飞行浏览器冒烟通过，已覆盖真实方案、回放和暂停、遥测与语音播报、导出、后台重算、取消、小屏和装备交接。');
 }finally{await browser.close();}

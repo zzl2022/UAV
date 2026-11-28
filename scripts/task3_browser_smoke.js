@@ -76,7 +76,8 @@ try{
  assert.notEqual(detectedAt,null,'应有实际检出帧');
  await seek(detectedAt);
  await page.waitForFunction(()=>Number(document.querySelector('#threat-detected').textContent)>0);
- const voice=page.locator('#threat-voice'),preview=page.locator('#threat-voice-preview');
+ const voice=page.locator('#threat-voice');
+ assert.equal(await page.locator('#threat-voice-preview').count(),0);
  assert.equal(await voice.isDisabled(),true);
  assert.equal(await page.locator('#threat-voice-status').textContent(),'当前浏览器没有可用的中文语音');
  assert.equal(await page.evaluate(()=>window.testSpeech.length),0);
@@ -88,8 +89,6 @@ try{
  assert.equal(utterances.length,1);
  assertDetectionSpeech(utterances[0]);
  assert.equal(utterances[0].text,`检出无人机，高度 ${Math.round(telemetry.agl)} 米，东经 ${telemetry.longitude.toFixed(4)} 度，北纬 ${telemetry.latitude.toFixed(4)} 度。`);
- await preview.click();
- assert.equal(await page.evaluate(()=>window.testSpeech.at(-1).text),utterances[0].text);
  const beforeDisable=await page.evaluate(()=>window.testSpeechCancels);
  await voice.click();
  assert.ok(await page.evaluate(count=>window.testSpeechCancels>count,beforeDisable));

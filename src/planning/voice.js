@@ -115,8 +115,10 @@ export function bindDetectionVoice({toggle, preview, status, getTarget}) {
       toggle.disabled = !available;
       toggle.setAttribute('aria-pressed', String(enabled));
       toggle.textContent = enabled ? '关闭语音播报' : '开启语音播报';
-      preview.hidden = !supported;
-      preview.disabled = !available;
+      if (preview) {
+        preview.hidden = !supported;
+        preview.disabled = !available;
+      }
       status.textContent = !available ? noChineseVoice : enabled ? '语音已启用' : '语音关闭';
     },
     onError() {
@@ -129,6 +131,6 @@ export function bindDetectionVoice({toggle, preview, status, getTarget}) {
       voice.update(detected, telemetry);
     }
   };
-  preview.onclick = () => voice.preview(getTarget().telemetry);
+  if (preview) preview.onclick = () => voice.preview(getTarget().telemetry);
   return voice;
 }

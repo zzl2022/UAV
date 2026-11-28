@@ -80,13 +80,13 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
  view.append(customEditPanel);
  const ce$=id=>customEditPanel.querySelector('#'+id);
  const threatHud=document.createElement('section');threatHud.id='threat-hud';threatHud.hidden=true;
- threatHud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[场景]</span><div class="ac8-flight-target"><span id="threat-name">威胁推演</span><strong id="threat-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-value"><span id="threat-count">—</span><small>架</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="threat-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="threat-coordinates">—</div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[检出]</span><div class="ac8-flight-value"><span id="threat-detected">—</span><small>架</small></div></div><div class="ac8-flight-actions"><button id="threat-track" type="button" aria-pressed="false">跟踪目标</button><button id="threat-voice" type="button" aria-pressed="false">开启语音播报</button><button id="threat-voice-preview" type="button" hidden>试听</button></div><div id="threat-voice-status" role="status">语音关闭</div>`;
+ threatHud.innerHTML=`<div class="ac8-flight-block"><span class="ac8-flight-label">[场景]</span><div class="ac8-flight-target"><span id="threat-name">威胁推演</span><strong id="threat-live-state">待命</strong></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[目标]</span><div class="ac8-flight-value"><span id="threat-count">—</span><small>架</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[高度]</span><div class="ac8-flight-value"><span id="threat-agl">—</span><small>m</small></div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[坐标]</span><div id="threat-coordinates">—</div></div><div class="ac8-flight-block"><span class="ac8-flight-label">[检出]</span><div class="ac8-flight-value"><span id="threat-detected">—</span><small>架</small></div></div><div class="ac8-flight-actions"><button id="threat-track" type="button" aria-pressed="false">跟踪目标</button><button id="threat-voice" type="button" aria-pressed="false">开启语音播报</button></div><div id="threat-voice-status" role="status">语音关闭</div>`;
  view.append(threatHud);
  const th$=id=>threatHud.querySelector('#'+id);
  const hudFields={name:th$('threat-name'),state:th$('threat-live-state'),count:th$('threat-count'),
   detected:th$('threat-detected'),agl:th$('threat-agl'),coordinates:th$('threat-coordinates')};
  let threatDetected=false;
- const threatVoice=bindDetectionVoice({toggle:th$('threat-voice'),preview:th$('threat-voice-preview'),
+ const threatVoice=bindDetectionVoice({toggle:th$('threat-voice'),
   status:th$('threat-voice-status'),getTarget:()=>({detected:threatDetected,telemetry:lastThreatTelemetry})});
  const contentBox=panel.querySelector('.task3-content');
  const subnav=panel.querySelector('.task3-subnav');

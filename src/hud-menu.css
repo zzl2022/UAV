@@ -17,6 +17,7 @@ body.hud-menu-enabled #deployment-window { display: none !important; }
   width: min(1320px, calc(100vw - 48px));
   padding: 12px 18px;
   font-size: var(--ac8-sim-font);
+  font-weight: 700;
   border: 1px solid rgba(127, 232, 255, .2);
   background: transparent;
   box-shadow: none;
