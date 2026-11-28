@@ -17,6 +17,7 @@ import {mountCustomSites} from './custom-sites.js';
 import {mountCustomSiteCore} from './custom-site-core.js';
 import {mountHudMenu} from './hud-menu.js';
 import {mountProjectChat} from './project-chat.js';
+import {mountUiToast} from './ui-toast.js';
 import {flightTelemetry} from './planning/telemetry.js';
 import {terrainSampler} from './sensors/terrain-query.js';
 import {CATALOG_TYPES} from './sensors/equipment-models.js';
@@ -116,6 +117,7 @@ app.innerHTML=`<header id="platform-topbar">
     <button id="ac8-history-clear" type="button">清空历史</button>
   </footer>
 </section>`;
+const toast=mountUiToast(app);
 mountIntro();
 const workspace=createWorkspace(app);
 const launchers=app.querySelector('.workspace-launchers');
@@ -607,7 +609,7 @@ try {
     window.__ac8Hud?.render?.();
   });
   disableControls(false);el('imagery').checked=!!imageryMaterial;applyModeUI(mode);updateStatus();
-  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,onPickView:()=>{cancelAnimationFrame(equipmentShiftFrame);equipmentShift=0;applyEquipmentShift(0);return frameObject(activeGroup(),true,1,{animate:false});}});
+  sensors=mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,toast,onPickView:()=>{cancelAnimationFrame(equipmentShiftFrame);equipmentShift=0;applyEquipmentShift(0);return frameObject(activeGroup(),true,1,{animate:false});}});
   function coreCoordinateText(){
     const transform=city?.metadata?.ecefTransform;
     let position=null;
@@ -923,7 +925,7 @@ try {
   });
   let corePickingMenus=[];
   coreEditor=mountCustomSiteCore({
-    app,canvas:renderer.domElement,camera,announce:status,
+    app,canvas:renderer.domElement,camera,announce:status,toast,
     getActiveSite:()=>SITES[mode]?.custom&&siteParts[mode]?{slug:mode,meta:siteMeta[mode],parts:siteParts[mode]}:null,
     setPicking(active){
       if(active&&mapPicking)return false;

@@ -1,6 +1,11 @@
 // Shared helpers for the AC8 scene-settings HUD menu used by browser smokes.
 export async function openSceneMenu(page, pageId = 'scene', {timeout = 5000} = {}) {
   if (!(await page.evaluate(() => window.__ac8SceneMenu?.isOpen()))) {
+    await page.waitForFunction(() => {
+      const launcher = document.getElementById('open-city-model');
+      const rect = launcher.getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && getComputedStyle(launcher).pointerEvents !== 'none';
+    }, null, {timeout});
     await page.locator('#open-city-model').click();
     await page.waitForFunction(() => window.__ac8SceneMenu?.isOpen(), null, {timeout});
     await page.waitForTimeout(800);

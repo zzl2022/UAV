@@ -81,6 +81,7 @@ try{
   const ready=()=>page.waitForFunction(()=>document.documentElement.dataset.ready==='true',null,{timeout:180000});
   const select=page.locator('#model-select'),edit=page.locator('#select-core-buildings'),panel=page.locator('#custom-core-panel');
   const name=page.locator('#custom-core-name'),count=page.locator('#custom-core-count'),focus=page.locator('#core-focus');
+  const coreStatus=page.locator('#custom-core-status'),toasts=page.locator('.ui-toast-stack');
   const targets=options=>page.evaluate(options=>window.coreTest.targets(options),options??{});
   const details=async()=> (await page.request.get(new URL(`/data/custom-sites/${slug}/${slug}-gba-meta.json`,base).href)).json();
   const assertSaved=async count=>{
@@ -96,16 +97,21 @@ try{
   };
   const enter=async()=>{
     await edit.click();await panel.waitFor({state:'visible'});
+    assert.match(await coreStatus.textContent(),/^点击建筑加入核心区/);
     await page.waitForFunction(()=>window.__ac8SceneMenu.isMinimized());
     await page.waitForTimeout(650);
   };
-  const save=async label=>{
+  const save=async (label,buildingCount)=>{
     await name.fill(label);
     await panel.getByRole('button',{name:'保存',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('#custom-core-panel').hidden||
       document.querySelector('#custom-core-status').dataset.error==='true',null,{timeout:90000,polling:200});
     assert.equal(await panel.isHidden(),true,await page.locator('#custom-core-status').textContent());
-    assert.match(await page.locator('#status').textContent(),new RegExp(label));
+    const message=toasts.getByText(`核心建筑已保存（${buildingCount} 栋）：${label}`,{exact:true});
+    await message.waitFor({state:'visible'});
+    assert.equal(await coreStatus.textContent(),'');
+    assert.doesNotMatch(await page.locator('#status').textContent(),/核心建筑已保存/);
+    return message;
   };
   const reloadSite=async()=>{
     await page.reload({timeout:120000});await ready();await openSceneMenu(page);
@@ -152,7 +158,23 @@ try{
   assert.equal(draft.saved,0);
   assert.equal(draft.neighborMeshes,0);
   assert.equal((await details()).coreBuildings.length,0);
-  await save('单栋核心');
+  const patchUrl=api(`/${slug}/core`);
+  await page.route(patchUrl,route=>route.fulfill({status:503,json:{error:'暂时无法保存核心建筑，请重试。'}}),{times:1});
+  await name.fill('单栋核心');
+  await panel.getByRole('button',{name:'保存',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#custom-core-status').dataset.error==='true');
+  assert.equal(await coreStatus.textContent(),'暂时无法保存核心建筑，请重试。');
+  assert.equal(await panel.isVisible(),true);
+  assert.equal(await toasts.locator('.ui-toast').count(),0);
+  await page.waitForTimeout(3100);
+  assert.equal(await coreStatus.textContent(),'暂时无法保存核心建筑，请重试。');
+  const savedToast=await save('单栋核心',1);
+  assert.equal(await toasts.getAttribute('role'),'status');
+  assert.equal(await toasts.getAttribute('aria-live'),'polite');
+  const shownAt=Date.now();
+  await page.screenshot({path:'artifacts/custom-sites/core-toast-desktop.png'});
+  await savedToast.waitFor({state:'detached',timeout:5000});
+  assert.ok(Date.now()-shownAt>=2200,'核心保存提示应保留约 3 秒');
   await focus.waitFor({state:'visible'});
   assert.equal(await page.evaluate(()=>window.coreTest.highlight().savedColor),0xffd166);
   assert.equal((await details()).coreBuilding.id,one.id);
@@ -170,7 +192,7 @@ try{
   assert.equal(threeDraft.draft,3);
   assert.equal(threeDraft.neighborMeshes,0);
   await page.screenshot({path:'artifacts/custom-sites/core-draft-desktop.png'});
-  await save('三栋联合核心');
+  await save('三栋联合核心',3);
   await assertSaved(3);
   assert.equal(await page.locator('#core-label').textContent(),'⌖ 三栋联合核心');
   assert.equal((await details()).coreBuilding,null);
@@ -193,6 +215,7 @@ try{
   await page.mouse.click(toggle.x,toggle.y);
   assert.match(await count.textContent(),/已选 2 栋/);
   await panel.getByRole('button',{name:'取消',exact:true}).click();
+  assert.equal(await coreStatus.textContent(),'');
   assert.equal((await details()).coreBuildings.length,3);
   assert.equal(await page.evaluate(()=>window.coreTest.highlight().saved),3);
 
@@ -205,6 +228,10 @@ try{
   page.once('dialog',dialog=>dialog.accept());
   await panel.getByRole('button',{name:'清除核心建筑'}).click();
   await panel.waitFor({state:'hidden',timeout:90000});
+  await toasts.getByText('已清除核心建筑',{exact:true}).waitFor({state:'visible'});
+  await page.screenshot({path:'artifacts/custom-sites/core-toast-390x844.png',animations:'disabled'});
+  assert.equal(await coreStatus.textContent(),'');
+  assert.doesNotMatch(await page.locator('#status').textContent(),/已清除核心建筑/);
   assert.equal(await focus.isHidden(),true);
   assert.equal(await page.locator('#core-label').isHidden(),true);
   const cleared=await details();
@@ -215,7 +242,7 @@ try{
   assert.equal(await edit.textContent(),'选择核心建筑');
   assert.equal(await focus.isHidden(),true);
   assert.deepEqual(errors,[]);
-  console.log('核心建筑浏览器冒烟通过，已覆盖单栋和三栋保存、定位、取消、清除、刷新、小屏和拖动结束。');
+  console.log('核心建筑浏览器冒烟通过，已覆盖单栋和三栋保存、定位、取消、清除、无邻域高亮、成功提示消失和失败保留。');
 }catch(error){
   const progress=await page.locator('#custom-site-feedback').textContent({timeout:2000}).catch(()=>null);
   const core=await page.locator('#custom-core-status').textContent({timeout:2000}).catch(()=>null);

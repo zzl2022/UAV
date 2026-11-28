@@ -21,6 +21,8 @@ try{
   const entries=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('uav.equipment-library.v1')??'[]'));
   const selectedRadar=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('uav.equipment-selection.v1')).radar);
   const task3Equipment=page.locator('#task3-equipment');
+  const toasts=page.locator('.ui-toast-stack');
+  const notice=(text,tone)=>toasts.locator(`.ui-toast[data-tone="${tone}"]`).getByText(text,{exact:true});
   const modeledIds=()=>task3Equipment.locator('.task3-equip').evaluateAll(items=>items.map(item=>item.dataset.presetId));
   const rowFor=id=>page.locator(`#equipment-inventory-list li[data-preset-id="${id}"]`);
   const radarRow=rowFor('radar-03d');
@@ -125,11 +127,23 @@ try{
   await currentRange.fill('0');
   await save.click();
   assert.match(await page.locator('#equipment-profile-message').textContent(),/距离|量程/);
+  assert.equal(await toasts.locator('.ui-toast').count(),0);
   assert.deepEqual(await entries(),initialEntries);
   await currentRange.fill(String(adjusted));
   assert.equal(await save.textContent(),'加入装备库');
   await save.click();
-  assert.equal(await page.locator('#equipment-profile-message').textContent(),`已加入装备库：雷达 · ${radarName}`);
+  const addedText=`已加入装备库：雷达 · ${radarName}`,addedNotice=notice(addedText,'success');
+  await addedNotice.waitFor({state:'visible'});
+  const shownAt=Date.now();
+  assert.equal(await page.locator('#equipment-profile-message').textContent(),addedText);
+  assert.ok(await toasts.evaluate(stack=>{
+    const card=stack.firstElementChild,rect=card.getBoundingClientRect();
+    return getComputedStyle(stack).position==='fixed'&&getComputedStyle(stack).pointerEvents==='none'&&
+      !document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)?.closest('.ui-toast-stack');
+  }));
+  await page.screenshot({path:'artifacts/equipment-library/toast-desktop.png'});
+  await addedNotice.waitFor({state:'detached',timeout:5000});
+  assert.ok(Date.now()-shownAt>=2200,'加入提示应保留约 3 秒');
   assert.equal(await page.locator('#equipment-save-state').textContent(),'已保存');
   const saved=await entries();
   assert.equal(saved.length,initialEntries.length+1);
@@ -137,6 +151,15 @@ try{
   assert.deepEqual(Object.keys(added).sort(),['addedAt','name','presetId','type']);
   assert.equal(added.name,radarName);
   assert.equal(await selectedRadar(),'radar-03d');
+  const duplicateText=`该装备已在装备库中：雷达 · ${radarName}`,duplicateNotice=notice(duplicateText,'info');
+  assert.equal(await save.isEnabled(),true);
+  const beforeDuplicate=await page.evaluate(()=>window.libraryInfoEvents.length);
+  await save.click();await duplicateNotice.waitFor({state:'visible'});
+  await save.click();await duplicateNotice.waitFor({state:'visible'});
+  assert.equal(await duplicateNotice.count(),1);
+  assert.equal(await page.locator('#equipment-profile-message').textContent(),duplicateText);
+  assert.equal(await page.evaluate(()=>window.libraryInfoEvents.length),beforeDuplicate);
+  assert.deepEqual(await entries(),saved);
   const immediateInfo=await page.evaluate(()=>window.libraryInfoEvents.at(-1));
   assert.ok(immediateInfo.startsWith('已选 ')&&immediateInfo.includes(radarName));
   assert.doesNotMatch(await info.textContent(),/装备库/);
@@ -160,6 +183,7 @@ try{
   assert.equal(await currentRange.inputValue(),String(adjusted));
   await currentRange.fill(String(adjusted-4));
   await save.click();
+  await notice(`已更新装备库：雷达 · ${radarName}`,'success').waitFor({state:'visible'});
   const updated=await entries();
   assert.equal(updated.length,saved.length);
   assert.ok(updated.find(item=>item.presetId==='radar-03d').addedAt>added.addedAt);
@@ -179,9 +203,27 @@ try{
   const rect=await remove.boundingBox();
   assert.ok(rect.x>=0&&rect.y>=0&&rect.x+rect.width<=390&&rect.y+rect.height<=844);
   await page.screenshot({path:'artifacts/equipment-library/mobile-390x844.png'});
+  await page.evaluate(()=>{
+    const write=Storage.prototype.setItem;
+    window.restoreInventoryStorage=()=>{Storage.prototype.setItem=write;};
+    Storage.prototype.setItem=function(key,value){
+      if(key==='uav.equipment-library.v1')throw Error('QA storage unavailable');
+      return write.call(this,key,value);
+    };
+  });
+  try{
+    await remove.click();
+    await notice('装备库保存失败，请检查浏览器存储空间。','error').waitFor({state:'visible'});
+    assert.equal(await radarRow.count(),1);
+    assert.deepEqual(await entries(),updated);
+  }finally{await page.evaluate(()=>window.restoreInventoryStorage());}
   await remove.click();
   assert.equal(await summary.textContent(),'已选 4 项装备（推演使用）');
-  assert.match(await page.locator('#equipment-inventory-status').textContent(),/已从装备清单移除/);
+  const removalNotice=notice(`已从装备清单移除 ${radarName}`,'success');
+  await removalNotice.waitFor({state:'visible'});
+  const toastRect=await toasts.boundingBox(),chatRect=await page.locator('.project-chat__toggle').boundingBox();
+  assert.ok(toastRect.x>=0&&toastRect.x+toastRect.width<=390&&toastRect.y+toastRect.height<chatRect.y);
+  await page.screenshot({path:'artifacts/equipment-library/toast-mobile-390x844.png'});
   assert.ok(!(await page.evaluate(()=>window.libraryInfoEvents.at(-1))).includes(radarName));
   assert.deepEqual(await entries(),initialEntries);
   assert.deepEqual(await modeledIds(),initialModeled);
@@ -205,6 +247,7 @@ try{
   assert.ok(!(await info.textContent()).includes('雷达'));
   assert.deepEqual(await modeledIds(),initialModeled.filter(id=>id!==defaultId));
   while(await rows.count())await rows.first().getByRole('button',{name:/移除/}).click();
+  assert.ok(await toasts.locator('.ui-toast').count()<=3);
   assert.deepEqual(await entries(),[]);
   assert.equal(await summary.textContent(),'已选 0 项装备（推演使用）');
   assert.match(await page.locator('#equipment-inventory-empty').textContent(),/装备库为空.*加入装备库/);
@@ -239,7 +282,7 @@ try{
   await lastRemove.click();
   assert.equal(await rows.count(),expectedCount-1);
   assert.deepEqual(errors,[]);
-  console.log('装备清单浏览器冒烟通过，已覆盖迁移、任务三实际请求与过期提示、空状态、去重、小屏布局、移除及参数保留。');
+  console.log('装备清单浏览器冒烟通过，已覆盖迁移、任务三实际请求、空状态、小屏布局、重复加入提示、移除失败与提示消失。');
 }finally{
   await browser.close();
 }

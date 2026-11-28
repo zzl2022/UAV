@@ -7,7 +7,7 @@ const DEFAULT_NAME='核心建筑';
 const SELECTION_LIMIT=50;
 const PICK_DISTANCE=5;
 
-export function mountCustomSiteCore({app,canvas,camera,getActiveSite,setPicking,renderDraft,onSaved,announce}){
+export function mountCustomSiteCore({app,canvas,camera,getActiveSite,setPicking,renderDraft,onSaved,announce,toast}){
   const button=app.querySelector('#select-core-buildings');
   const select=app.querySelector('#model-select');
   const panel=document.createElement('section');
@@ -77,6 +77,7 @@ export function mountCustomSiteCore({app,canvas,camera,getActiveSite,setPicking,
     gesture=null;draft=null;
     app.classList.remove('custom-core-picking');
     panel.hidden=true;
+    message('');
     renderDraft([]);
     setPicking(false);
     refresh();button.focus({preventScroll:true});
@@ -144,7 +145,7 @@ export function mountCustomSiteCore({app,canvas,camera,getActiveSite,setPicking,
     if(result){
       onSaved(slug,result.metadata);
       close();
-      announce(buildingIds.length?`核心建筑已保存（${buildingIds.length} 栋）：${result.metadata.coreName}`:'已清除核心建筑。');
+      toast(buildingIds.length?`核心建筑已保存（${buildingIds.length} 栋）：${result.metadata.coreName}`:'已清除核心建筑');
     }
   }
   form.onsubmit=event=>{

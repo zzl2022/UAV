@@ -13,7 +13,7 @@ const icons={
  fivega:svg('<path d="m8 20 4-15 4 15M9.5 15h5M10.5 11h3M5 5a10 10 0 0 0 0 8M19 5a10 10 0 0 1 0 8"/><circle cx="12" cy="4" r="1"/>'),
  electrostatic:svg('<path d="m13 2-7 11h5l-1 9 8-13h-5zM3 5h3M4.5 3.5v3M18 19h3"/>'),
 };
-export function mountEquipmentManager(panel,{app,demo,onSelectionChange}={}){
+export function mountEquipmentManager(panel,{app,demo,toast,onSelectionChange}={}){
  let storage;try{storage=localStorage;}catch{}
  const store=createCatalogStore(storage),drafts=new Map(store.getSnapshot().profiles.map(p=>[p.presetId,p]));
  const library=createEquipmentLibrary(storage);
@@ -27,6 +27,7 @@ export function mountEquipmentManager(panel,{app,demo,onSelectionChange}={}){
  const selectionListeners=new Set(),getSnapshot=()=>equipmentLibrarySnapshot(library.entries(),store.get);
  const publishSelection=()=>{const snapshot=getSnapshot();for(const listener of [...selectionListeners])listener(structuredClone(snapshot));};
  let type='radar',presetId=remembered.radar,groupName=null,menuType=null,menuTrigger=null;
+ let submitting=false;
  const root=document.createElement('div');root.id='equipment-manager';
  root.innerHTML=`<div class="equipment-type-tabs" role="tablist" aria-label="装备类别"></div>
  <div class="equipment-profile-heading"><div class="equipment-type-icon" aria-hidden="true"></div><div><span class="equipment-type-label"></span><h2 id="equipment-model-name"></h2></div><span id="equipment-save-state" role="status"></span></div>
@@ -35,7 +36,7 @@ export function mountEquipmentManager(panel,{app,demo,onSelectionChange}={}){
  <section id="equipment-inventory" aria-labelledby="equipment-inventory-title" hidden>
   <h2 id="equipment-inventory-title" tabindex="-1">装备清单</h2>
   <p id="equipment-inventory-count"></p>
-  <p id="equipment-inventory-empty">装备库为空。请在任意装备页面调整参数后点击“加入装备库”。</p>
+  <p id="equipment-inventory-empty">装备库为空。请在任意装备页面点击“加入装备库”。</p>
   <ul id="equipment-inventory-list" aria-label="已加入的装备"></ul>
   <p id="equipment-inventory-status" role="status"></p>
  </section>`;
@@ -48,7 +49,13 @@ export function mountEquipmentManager(panel,{app,demo,onSelectionChange}={}){
  const menu=document.createElement('div');menu.id='equipment-model-menu';menu.className='equipment-model-menu';menu.setAttribute('popover','manual');menu.setAttribute('role','menu');menu.hidden=true;document.body.append(menu);
  const profile=()=>drafts.get(presetId),dirty=()=>JSON.stringify(profile())!==JSON.stringify(store.get(presetId));
  const tell=text=>{$('equipment-profile-message').textContent=text;};
- function status(){const changed=dirty();$('equipment-save-state').textContent=changed?'未保存':JSON.stringify(profile())===JSON.stringify(defaultProfile(presetId))?'默认参数':'已保存';$('equipment-save-state').dataset.dirty=String(changed);$('equipment-profile-save').disabled=!changed&&library.has(presetId);window.equipmentManagerDiagnostics={type,presetId,dirty:changed,group:groupName};}
+ function status(){
+  const changed=dirty(),state=$('equipment-save-state');
+  state.textContent=changed?'未保存':JSON.stringify(profile())===JSON.stringify(defaultProfile(presetId))?'默认参数':'已保存';
+  state.dataset.dirty=String(changed);
+  $('equipment-profile-save').disabled=submitting;
+  window.equipmentManagerDiagnostics={type,presetId,dirty:changed,group:groupName};
+ }
  function closeMenu(restore=false){
   if(!menuType)return;try{if(menu.matches(':popover-open'))menu.hidePopover();}catch{}
   menu.hidden=true;menuType=null;menuTrigger?.setAttribute('aria-expanded','false');if(restore)menuTrigger?.focus();menuTrigger=null;
@@ -104,9 +111,13 @@ function choose(nextType,id=remembered[nextType]){
    }
    status();
    libraryChanged();
-   message.textContent=`已从装备清单移除 ${name}`;
+   message.textContent='';
+   toast?.(`已从装备清单移除 ${name}`);
    ($('equipment-inventory-list').querySelector('button')??$('equipment-inventory-title')).focus({preventScroll:true});
-  }catch(error){message.textContent=error.message;}
+  }catch(error){
+   message.textContent=error.message;
+   toast?.(error.message,{tone:'error'});
+  }
  }
  function showInventory(){
   closeMenu();demo?.stop();groupName=null;
@@ -198,6 +209,14 @@ demo?.profileChanged();updateQualifier();tell('');status();
 $('equipment-profile-form').onsubmit=event=>{event.preventDefault();if(groupName==='设备仿真')demo?.start();};
  if(demo)$('demo-start').onclick=()=>{if(groupName!=='设备仿真'){groupName='设备仿真';renderFields();status();}demo.start();};
 $('equipment-profile-save').onclick=()=>{
+ if(submitting)return;
+ const alreadyIncluded=library.has(presetId);
+ if(alreadyIncluded&&!dirty()){
+  const feedback=`该装备已在装备库中：${CATALOG_TYPES[type]} · ${profile().name}`;
+  tell(feedback);toast?.(feedback,{tone:'info'});
+  return;
+ }
+ submitting=true;status();
  let profileSaved=false;
  try{
   library.checkCapacity(presetId);
@@ -205,8 +224,8 @@ $('equipment-profile-save').onclick=()=>{
   const saved=store.get(presetId);
   library.add(saved);
   remembered[type]=presetId;persistSelection();
-  tell(`已加入装备库：${CATALOG_TYPES[type]} · ${saved.name}`);
-  libraryChanged();status();
+  const feedback=`${alreadyIncluded?'已更新装备库':'已加入装备库'}：${CATALOG_TYPES[type]} · ${saved.name}`;
+  tell(feedback);libraryChanged();toast?.(feedback);
  }catch(error){
   if(error.field){
    const groups=profileGroups(presetId);
@@ -215,9 +234,8 @@ $('equipment-profile-save').onclick=()=>{
   }
   tell(profileSaved?`参数已保存。${error.message}`:error.message);
   if(profileSaved&&library.has(presetId))libraryChanged();
-  status();
   const bad=$('equipment-profile-form').querySelector(':invalid');bad?.reportValidity();
- }
+ }finally{submitting=false;status();}
 };
 $('equipment-profile-reset').onclick=()=>{demo?.stop();const next=defaultProfile(presetId);if(catalogModel(presetId).basePresetId)next.name=profile().name;drafts.set(presetId,next);tell('');render();};
  $('equipment-profile-import').onclick=()=>$('equipment-profile-file').click();

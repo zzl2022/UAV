@@ -18,7 +18,7 @@ const format=x=>typeof x==='number'?(Math.abs(x)>=10000?x.toFixed(0):x.toFixed(2
 const TYPE_METRICS={rangeMeters:'距离误差 / m',azimuthDegrees:'方位误差 / °',elevationDegrees:'俯仰误差 / °',multipathBiasDegrees:'多径角偏差指标 / °',networkLocalizationMeters:'三维站网定位误差估计 / m',angularPixelDegrees:'单像素角度 / °'};
 const LOSS_NAMES={facadeReflection:'Facade reflection',rain:'雨衰',cloudFog:'云雾衰减',multipath:'地面双径（负值为增强）',clutter:'城市杂波',noise:'底噪抬升',cochannel:'同频干扰',crosstalk:'设备串扰',visibility:'能见度消光',penetration:'建筑穿透',diffraction:'遮挡绕射',spreading:'几何扩散',air:'空气吸收',refraction:'折射附加损耗'};
 
-export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,onPickView=()=>{}}){
+export function mountSensorUI({app,scene,camera,controls,renderer,model,city,workspace,tweenCamera,toast,onPickView=()=>{}}){
  const panel=document.createElement('div');panel.id='equipment-panel';panel.hidden=true;
  panel.innerHTML=`
  <section><h2>当前装备</h2><select id="equipment-device" aria-label="当前装备"></select><div class="sensor-add"><select id="equipment-preset" aria-label="添加型号"></select><button id="equipment-add">＋ 添加</button></div><div class="buttons"><button id="equipment-remove">删除当前</button><button id="equipment-focus">聚焦点位</button></div><button id="equipment-reset" class="clear-devices">清空设备</button></section>
@@ -358,7 +358,7 @@ export function mountSensorUI({app,scene,camera,controls,renderer,model,city,wor
   getSignalProbe:position=>signalProbeRows(position),
   onStart:()=>{heat.hide();layer.visible=false;hideProbe();},
  });
- const manager=mountEquipmentManager(panel,{app,demo,onSelectionChange:({type})=>followDevice(type)});
+ const manager=mountEquipmentManager(panel,{app,demo,toast,onSelectionChange:({type})=>followDevice(type)});
  const scenarioListeners=new Set(),getScenarioSnapshot=()=>structuredClone(state);
  const publishConfiguration=()=>{window.sceneConfigurationDiagnostics={environment:structuredClone(state.environment),target:structuredClone(state.target)};};
  const publishScenario=()=>{publishConfiguration();const snapshot=getScenarioSnapshot();for(const listener of [...scenarioListeners])listener(structuredClone(snapshot));};
