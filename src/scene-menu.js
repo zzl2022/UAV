@@ -98,6 +98,7 @@ export function mountSceneMenu({app, launchers, panel, workspace, camera, render
   refreshInfo();
   window.setInterval(refreshInfo, 900);
   app.addEventListener('view-change', refreshInfo);
+  app.addEventListener('equipment-library-change', refreshInfo);
   document.addEventListener('change', refreshInfo, true);
   window.addEventListener('ac8-main-menu-toggle', () => { positionInfo(); });
 

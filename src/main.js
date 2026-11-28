@@ -19,6 +19,7 @@ import {mountHudMenu} from './hud-menu.js';
 import {mountProjectChat} from './project-chat.js';
 import {flightTelemetry} from './planning/telemetry.js';
 import {terrainSampler} from './sensors/terrain-query.js';
+import {CATALOG_TYPES} from './sensors/equipment-models.js';
 import logoFullUrl from './assets/logo-full.png';
 const app=document.querySelector('#app');
 app.innerHTML=`<header id="platform-topbar">
@@ -624,7 +625,6 @@ try {
       return `东经 ${longitude.toFixed(6)}° · 北纬 ${latitude.toFixed(6)}°`;
     }catch{return '—';}
   }
-  const TYPE_NAMES={radar:'雷达',radio:'无线电',optical:'光电',acoustic:'声学'};
   const shortPlanName=name=>String(name??'').split(' · ')[0]||'—';
   const pct=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
   function currentPlan(){
@@ -642,13 +642,15 @@ try {
   function equipmentConfigText(){
     const snapshot=sensors?.getEquipmentSnapshot?.()??window.task3Diagnostics?.lastEquipmentSnapshot??window.__task3Report?.equipmentSnapshot??null;
     const ids=snapshot?.selectedPresetIds??[];
-    if(!ids.length)return '未配置';
-    const profiles=snapshot.profiles??[],byType=new Map(),order=['雷达','无线电','光电','声学'],rank=name=>{const index=order.indexOf(name);return index<0?order.length:index;};
+    const profiles=snapshot?.profiles??[],byType=new Map(),order=['雷达','无线电','光电','声学','5G-A','静电'],rank=name=>{const index=order.indexOf(name);return index<0?order.length:index;};
     for(const id of ids){
-      const profile=profiles.find(item=>item.presetId===id),type=TYPE_NAMES[profile?.type]??profile?.type??'未知',names=byType.get(type)??[];
+      const profile=profiles.find(item=>item.presetId===id),type=CATALOG_TYPES[profile?.type]??'未知',names=byType.get(type)??[];
       names.push(profile?.name??id);byType.set(type,names);
     }
-    return [...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('、')}`).join('｜');
+    const selection=[...byType.entries()].sort(([a],[b])=>rank(a)-rank(b)).map(([type,names])=>`${type} ${[...new Set(names)].join('、')}`).join('｜');
+    const library=sensors?.getEquipmentLibrary()??[];
+    const inventory=library.length?`装备库 ${library.length} 项（${library.map(({type,name})=>`${CATALOG_TYPES[type]} ${name}`).join('、')}）`:'装备库为空';
+    return `${selection?`已选 ${selection}`:'未配置装备'} · ${inventory}`;
   }
   function deploymentInputText(){
     if(!el('task3-scope-width'))return '等待推演输入';
@@ -760,6 +762,7 @@ try {
       {id:'acoustic',label:'声学'},
       {id:'fivega',label:'5G-A'},
       {id:'electrostatic',label:'静电'},
+      {id:'inventory',label:'装备清单'},
     ],
     onOpen:()=>{
       // Hide the task3 layer before showing the equipment markers.
@@ -767,6 +770,7 @@ try {
       sensors.activate();
     },
     onSelect:type=>{
+      if(type==='inventory'){sensors.showEquipmentInventory();animateEquipmentShift(0,850);return;}
       document.querySelector(`#equipment-tab-${type}`)?.click();
       animateEquipmentShift(equipmentFocusShift(),1100);
     },

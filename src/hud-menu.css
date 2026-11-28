@@ -330,6 +330,7 @@ body.hud-menu-open #ac8-main-menu-toggle {
 .ac8-hud-menu.is-open:not(.is-detail) .ac8-hud-tabs button:nth-child(4) { transition-delay: 1.02s; }
 .ac8-hud-menu.is-open:not(.is-detail) .ac8-hud-tabs button:nth-child(5) { transition-delay: 1.12s; }
 .ac8-hud-menu.is-open:not(.is-detail) .ac8-hud-tabs button:nth-child(6) { transition-delay: 1.22s; }
+.ac8-hud-menu.is-open:not(.is-detail) .ac8-hud-tabs button:nth-child(7) { transition-delay: 1.32s; }
 .ac8-hud-menu.is-detail .ac8-hud-tabs button {
   opacity: 0;
   transform: translateX(150px);
