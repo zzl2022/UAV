@@ -101,9 +101,10 @@ app.innerHTML=`<header id="platform-topbar">
     <option value="1">x1</option><option value="2">x2</option><option value="3">x3</option><option value="5">x5</option>
     <option value="10" selected>x10</option><option value="30">x30</option><option value="60">x60</option><option value="100">x100</option>
   </select></label>
-  <button id="ac8-sim-start" type="button" disabled>仿真模拟</button>
+  <button id="ac8-sim-start" type="button" aria-describedby="ac8-sim-status" disabled>仿真模拟</button>
   <input id="ac8-sim-progress" type="range" min="0" max="1000" value="0" aria-label="模拟进度" disabled>
   <button id="ac8-sim-history" type="button" aria-controls="ac8-sim-history-panel" aria-expanded="false">模拟历史</button>
+  <span id="ac8-sim-status" role="status" hidden></span>
 </div>
 <section id="ac8-sim-history-panel" hidden aria-label="模拟历史">
   <header class="ac8-history-head">
@@ -805,14 +806,19 @@ try {
     event.preventDefault();event.stopImmediatePropagation();
     app.dispatchEvent(new CustomEvent('equipment-demo-back'));
   },true);
-  const simStart=app.querySelector('#ac8-sim-start'),simSpeed=app.querySelector('#ac8-sim-speed'),simProgress=app.querySelector('#ac8-sim-progress'),simScenario=app.querySelector('#ac8-sim-scenario');
+  const simStart=app.querySelector('#ac8-sim-start'),simSpeed=app.querySelector('#ac8-sim-speed'),simProgress=app.querySelector('#ac8-sim-progress'),simScenario=app.querySelector('#ac8-sim-scenario'),simStatus=app.querySelector('#ac8-sim-status');
   let simSeeking=false;
   const simMode=()=>['single','multi','swarm'].includes(simScenario?.value)?simScenario.value:'single';
   const currentPlayback=()=>task3?.getThreatPlayback?.()??{};
   function updateSimulationBar(){
     if(!task3)return;
     const state=currentPlayback();
-    simStart.disabled=!!state.busy||!!state.blocked;
+    simStart.disabled=!!state.blocked&&!state.playing;
+    simStart.title=state.message??'';
+    simScenario.disabled=state.status==='scene-unavailable';
+    const visibleMessage=['scene-unavailable','device-demo','no-recording'].includes(state.status)?state.message:'';
+    if(simStatus.textContent!==visibleMessage)simStatus.textContent=visibleMessage;
+    simStatus.hidden=!visibleMessage;
     simStart.textContent=state.playing?'暂停仿真':state.enabled&&state.duration&&state.time>=state.duration?'再次仿真':state.enabled&&state.time>0?'继续仿真':'仿真模拟';
     simStart.dataset.playing=String(!!state.playing);
     if(simScenario&&state.key&&simScenario.value!==state.key)simScenario.value=state.key;

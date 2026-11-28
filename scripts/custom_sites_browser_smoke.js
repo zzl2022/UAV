@@ -121,17 +121,53 @@ try{
   for(const type of ['balanced','enhanced'])await page.locator(`[data-plan-type="${type}"]`).uncheck();
   await page.locator('#task3-run-side').evaluate(button=>button.click());
   await page.waitForFunction(()=>window.task3Diagnostics?.requestId>0&&!window.task3Diagnostics.busy,null,{timeout:180000});
-  const task3=await page.evaluate(()=>({ready:window.task3Diagnostics.ready,error:window.task3Diagnostics.lastError,
-    plans:window.task3Diagnostics.plans?.length,samples:window.__task3Report?.sampling.samples.length}));
+  const task3=await page.evaluate(()=>{
+    const diagnostics=window.task3Diagnostics,report=window.__task3Report;
+    return {ready:diagnostics.ready,error:diagnostics.lastError,plans:diagnostics.plans?.length,samples:report?.sampling.samples.length,
+      playback:diagnostics.playbackStatus,duration:diagnostics.threatDuration,routeCount:diagnostics.threatRouteCount,
+      activeFrames:Object.values(report?.threatsByPlan?.[diagnostics.planId]??{}).some(record=>record?.frames?.length)};
+  });
   assert.equal(task3.ready,true,JSON.stringify(task3));
   assert.equal(task3.plans,1);
   assert.ok(task3.samples>0);
   assert.ok(!geometryRequests.some(url=>url.endsWith('.glb')));
+  assert.equal(task3.playback,'scene-unavailable');
+  assert.equal(task3.duration,0);assert.equal(task3.routeCount,0);assert.equal(task3.activeFrames,false);
 
   for(let i=0;i<2&&await page.evaluate(()=>window.__ac8DeploymentMenu?.isOpen());i++){
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
   }
+  assert.equal(await page.locator('#ac8-sim-start').isDisabled(),true);
+  assert.equal(await page.locator('#ac8-sim-scenario').isDisabled(),true);
+  await page.locator('#ac8-sim-status').waitFor({state:'visible'});
+  assert.match(await page.locator('#ac8-sim-status').textContent(),/自定义区域提供感知覆盖和电磁兼容分析/);
+  await page.evaluate(()=>document.querySelector('#toggle-task3').click());
+  const devices=await page.evaluate(()=>{
+    const diagnostics=window.task3Diagnostics,plan=window.__task3Report.plans.find(item=>item.id===diagnostics.planId);
+    const canvas=document.querySelector('#viewport canvas'),rect=canvas.getBoundingClientRect();
+    return diagnostics.deviceMarkers.flatMap(marker=>{
+      const device=plan.devices.find(item=>item.id===marker.deviceId),x=rect.left+marker.x,y=rect.top+marker.y;
+      return device.type==='radar'&&marker.visible&&document.elementFromPoint(x,y)===canvas?[{id:device.id,position:device.position,x,y}]:[];
+    });
+  });
+  let selected=null;
+  for(const device of devices){
+    await page.mouse.move(device.x,device.y);
+    try{await page.waitForFunction(id=>document.querySelector('#task3-device-hover').dataset.deviceId===id,device.id,{timeout:2000});}
+    catch{continue;}
+    await page.mouse.click(device.x,device.y);selected=device;break;
+  }
+  assert.ok(selected,'自定义地图应有可点选的已部署雷达');
+  const pinned=page.locator('#task3-device-info'),demo=page.locator('#task3-device-demo');
+  await pinned.getByRole('button',{name:'设备仿真'}).click();
+  await page.waitForFunction(()=>['ready','empty'].includes(window.task3Diagnostics.deviceDemo.status),null,{timeout:120000});
+  const customDemo=await page.evaluate(()=>window.task3Diagnostics.deviceDemo);
+  assert.equal(customDemo.deviceId,selected.id);assert.deepEqual(customDemo.position,selected.position);assert.ok(customDemo.samples>0);
+  await page.screenshot({path:join(artifacts,'device-demo.png')});
+  await demo.getByRole('button',{name:'停止仿真'}).click();
+  assert.equal(await demo.isHidden(),true);
+  assert.equal(await page.evaluate(()=>window.task3Diagnostics.deviceDemo.listening),false);
   await openSceneMenu(page,'scene');
   const cancelled=page.waitForEvent('dialog').then(dialog=>{
     assert.equal(dialog.message(),`删除自定义模型“${plain}”？该操作会删除服务器上的模型文件，且无法恢复。`);
@@ -169,7 +205,7 @@ try{
   await openSceneMenu(page,'scene');
   for(const id of [slug,plainSlug])assert.equal(await select.locator(`option[value="${id}"]`).count(),0);
   assert.deepEqual(errors,[]);
-  console.log('自定义模型浏览器冒烟通过，已覆盖导入、刷新、任务三方案、删除确认、失败恢复与删除持久化。');
+  console.log(`自定义模型浏览器冒烟通过，已覆盖导入、刷新、任务三方案、回放说明、实际地图设备仿真（${customDemo.samples} 个采样，${customDemo.status}）和删除流程。`);
 }finally{
   await browser.close();
   if(fixtures.startsWith(join(artifacts,'fixtures-')))await rm(fixtures,{recursive:true,force:true});

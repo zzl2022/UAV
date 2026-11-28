@@ -177,6 +177,10 @@ body.hud-menu-open #ac8-simulation-bar {
   opacity: .35;
   cursor: default;
 }
+#ac8-sim-status{
+  flex:1 1 100%;font-size:11px;line-height:1.4;color:#d2e6ef;min-width:0;
+}
+#ac8-simulation-bar:has(#ac8-sim-status:not([hidden])){flex-wrap:wrap;}
 @media (max-width: 760px) {
   #ac8-simulation-bar {
     bottom: 10px;

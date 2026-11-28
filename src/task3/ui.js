@@ -9,6 +9,7 @@ import {resolvePlanChatDevice} from './device-chat-context.js';
 import {createDeviceDisplayMap} from './device-display.js';
 import {createDeviceHover} from './device-hover.js';
 import {createTask3DeviceDemo} from './device-demo.js';
+import {recordedScenariosForPlan,recordedDuration,resolvePlaybackAvailability} from './playback-availability.js';
 import {applyMobileRepairResult,restoreMobileRepairSnapshot} from './mobile-repair.js';
 import {exportDeploymentPdf,exportDeviceExplanationPdf} from './deployment-pdf.js';
 import {mountBuildingSelector} from './building-selector.js';
@@ -410,7 +411,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  }
  // 威胁场景播放：底部“单机单点入侵 / 多方向同步入侵 / 蜂群饱和攻击”共用。
  function threatKey(){return $('task3-threat').value;}
- const threatsForPlan=()=>report?(report.threatsByPlan?.[plan?.id]??report.threats):null;
+ const threatsForPlan=()=>recordedScenariosForPlan(report,plan?.id);
  const threatForPlan=()=>threatsForPlan()?.[threatKey()]??null;
  function threatLabel(){return THREAT_SCENARIOS[threatKey()]?.name??'威胁推演';}
  function showThreatHud(){
@@ -510,27 +511,32 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   updateDiagnostics();
  }
  function startThreatSimulation(key){
-  if(deviceDemo.active){toast?.('停止设备仿真后再播放',{tone:'info'});return false;}
-  if(mapSwitching||buildingSelector.diagnostics().active)return false;
-  if(constraintsInvalid){setStatus('建筑禁部署约束已变化，请先重新生成方案。','warning');return false;}
   if(!THREAT_SCENARIOS[key])key='single';
+  const availability=playbackAvailability(threatsForPlan()?.[key]??null);
+  if(availability.blocked){pendingThreatKey=null;setStatus(availability.message,'warning');return false;}
   if(key!=='single')resetCustomEditing();
   $('task3-threat').value=key;renderThreatConfig();
   mapActive=true;updateLayerVisibility();
-  if(!threatsForPlan()?.[key]?.frames?.length){
+  if(availability.status==='no-plan'){
    threatVoice.stop();threatDetected=false;lastThreatTelemetry=null;
    pendingThreatKey=key;threatFrameIndex=0;threatFrameTime=0;showThreatHud();
-   th$('threat-name').textContent=THREAT_SCENARIOS[key].name;th$('threat-live-state').textContent=busy?'等待方案生成':'缺少威胁帧';th$('threat-count').textContent='—';th$('threat-detected').textContent='—';th$('threat-agl').textContent='—';th$('threat-coordinates').textContent='—';threatHud.dataset.alarm='clear';
-   setStatus(busy?'威胁帧尚未就绪，请等待本次方案生成完成。':report?'当前方案缺少该场景威胁帧，请重新生成方案。':'尚未生成方案及威胁帧，请先在“推演输入 → 方案生成”中点击“生成方案”。','warning');
+   th$('threat-name').textContent=THREAT_SCENARIOS[key].name;th$('threat-live-state').textContent='等待方案生成';th$('threat-count').textContent='—';th$('threat-detected').textContent='—';th$('threat-agl').textContent='—';th$('threat-coordinates').textContent='—';threatHud.dataset.alarm='clear';
+   setStatus(availability.message,'warning');toast?.(availability.message,{tone:'info'});
    return false;
   }
   pendingThreatKey=null;
   return beginThreatPlayback();
  }
  function pauseThreatSimulation(){if(!threatPlaying){pendingThreatKey=null;hideThreatHud(0);}pauseThreatPlayback();}
+ function playbackAvailability(record=threatForPlan()){
+  return resolvePlaybackAvailability({
+   custom:!!getSite?.()?.custom,mapSwitching,selectingBuildings:buildingSelector.active,
+   invalidConstraints:constraintsInvalid,deviceDemo:deviceDemo.active,busy,hasPlan:!!plan,record,
+  });
+ }
  function getThreatPlayback(){
-  const threat=threatForPlan();
-  return {blocked:deviceDemo.active,enabled:!deviceDemo.active&&!mapSwitching&&!buildingSelector.diagnostics().active&&!constraintsInvalid&&!!threat?.frames?.length,playing:threatPlaying,time:threatFrameTime,duration:threat?.frames?.at(-1)?.time??0,speed:threatSpeed,key:threatKey()};
+  const record=threatForPlan(),availability=playbackAvailability(record);
+  return {...availability,enabled:availability.status==='ready',playing:threatPlaying,time:threatFrameTime,duration:recordedDuration(record),speed:threatSpeed,key:threatKey()};
  }
  function getThreatResult(){
   if(constraintsInvalid)return null;
@@ -608,6 +614,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
   $('task3-building-clear').disabled=mapSwitching||!selection.count;
   window.task3Diagnostics={
    buildingSelection:selection,constraintsInvalid,selectedDeviceIds:[...selectedDevices],cameraPosition:camera.position.toArray(),pinnedDeviceId:deviceHover.pinnedDeviceId,deviceDemo:deviceDemo.diagnostics(),
+   playbackStatus:playbackAvailability().status,
    ready:!!report,busy,mobilePending,version:TASK3_VERSION,plans:report?.plans.map(p=>({id:p.id,devices:p.devices.length,cost:p.cost})),recommendedId:report?.recommendedId,planId:plan?.id,blindStats:report&&plan?report.blindspots[plan.id]?.[conditionIndex()]?.stats:null,mobileRepair:report?.mobileRepair??null,emcVerdict:report&&plan?report.emc[plan.id].verdict:null,emcCounts:report&&plan?{...report.emc[plan.id].counts}:null,condition:$('task3-condition').value,threatScenario:threatKey(),threatPlaying,threatFrameIndex,threatFrameTime,threatSpeed,threatDuration:threatForPlan()?.frames?.at(-1)?.time??0,threatRouteCount:threatRouteLines.length,threatDetectionSegments:(threatDetectLines?.geometry.attributes.position.count??0)/2,detectedDeviceIds:[...detectedDeviceIds].sort(),sceneKey:task3SceneKey,threatGroundAvailable:typeof threatGroundAt==='function',threatTelemetry:lastThreatTelemetry?{...lastThreatTelemetry,position:[...lastThreatTelemetry.position]}:null,threatTargets:targetMeshes.map(mesh=>({id:mesh.userData.targetId,position:mesh.position.toArray(),quaternion:mesh.quaternion.toArray()})),activeTab,activeSub,
    requestId:requestState.requestId,reportRequestId:report?.requestId??null,layerVisible:layer.visible,mapActive,updateReason:requestState.updateReason,staleResult:requestState.staleResult,lastError:requestState.lastError,lastSuccessfulRequestId:requestState.lastSuccessfulRequestId,autoUpdatePending:requestState.pending,pendingUpdateReasons:requestState.pendingUpdateReasons,lastEquipmentSnapshot:lastRequestSnapshot?.equipmentSnapshot??report?.equipmentSnapshot??null,inputSummary:lastRequestSnapshot?{settings:lastRequestSnapshot.settings,weights:lastRequestSnapshot.weights,presetIds:lastRequestSnapshot.presetIds,planTypes:lastRequestSnapshot.planTypes,environment:lastRequestSnapshot.environment,target:lastRequestSnapshot.target}:null,
    customEditor:{active:customEdit.active,pending:!!customPending,requestId:customPending?.id??null,scene:customEdit.scene,planId:customEdit.planId,waypointCount:customEdit.waypoints.length,waypoints:customEdit.waypoints.map(point=>[...point]),lineCount:customEditLayer.children.filter(child=>child.userData.customConnection).length,appliedCustom:!!report?.threatsByPlan?.[plan?.id]?.single?.custom,defaultAvailable:customDefaultSingles.has(plan?.id),markers:customEditLayer.children.filter(child=>child.userData.customWaypoint).map(mesh=>{const p=mesh.position.clone().project(camera);return {index:mesh.userData.index,x:(p.x+1)/2*view.clientWidth,y:(1-p.y)/2*view.clientHeight,position:mesh.position.toArray(),visible:customEditLayer.visible&&p.z>=-1&&p.z<=1&&Math.abs(p.x)<=1&&Math.abs(p.y)<=1};})},
