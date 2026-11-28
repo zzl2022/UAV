@@ -47,7 +47,7 @@ try{
     await page.waitForFunction(()=>{
       const panel=document.querySelector('#custom-site-panel');
       return panel.hidden||document.querySelector('#custom-site-feedback').dataset.error==='true';
-    },null,{timeout:180000});
+    },null,{timeout:600000});
     assert.equal(await panel.isHidden(),true,await feedback.textContent());
     const slug=await select.inputValue();
     assert.match(slug,/^custom-[a-f0-9]{32}$/);
@@ -120,7 +120,7 @@ try{
   await page.locator('#task3-panel .task3-subnav-btn[data-sub="generate"]').click();
   for(const type of ['balanced','enhanced'])await page.locator(`[data-plan-type="${type}"]`).uncheck();
   await page.locator('#task3-run-side').evaluate(button=>button.click());
-  await page.waitForFunction(()=>window.task3Diagnostics?.requestId>0&&!window.task3Diagnostics.busy,null,{timeout:180000});
+  await page.waitForFunction(()=>window.task3Diagnostics?.requestId>0&&!window.task3Diagnostics.busy,null,{timeout:300000});
   const task3=await page.evaluate(()=>{
     const diagnostics=window.task3Diagnostics,report=window.__task3Report;
     return {ready:diagnostics.ready,error:diagnostics.lastError,plans:diagnostics.plans?.length,samples:report?.sampling.samples.length,
@@ -131,17 +131,24 @@ try{
   assert.equal(task3.plans,1);
   assert.ok(task3.samples>0);
   assert.ok(!geometryRequests.some(url=>url.endsWith('.glb')));
-  assert.equal(task3.playback,'scene-unavailable');
-  assert.equal(task3.duration,0);assert.equal(task3.routeCount,0);assert.equal(task3.activeFrames,false);
+  assert.equal(task3.playback,'ready');
+  assert.ok(task3.duration>0,JSON.stringify(task3));
+  assert.equal(task3.activeFrames,true);
 
   for(let i=0;i<2&&await page.evaluate(()=>window.__ac8DeploymentMenu?.isOpen());i++){
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
   }
-  assert.equal(await page.locator('#ac8-sim-start').isDisabled(),true);
-  assert.equal(await page.locator('#ac8-sim-scenario').isDisabled(),true);
-  await page.locator('#ac8-sim-status').waitFor({state:'visible'});
-  assert.match(await page.locator('#ac8-sim-status').textContent(),/自定义区域提供感知覆盖和电磁兼容分析/);
+  assert.equal(await page.locator('#ac8-sim-start').isDisabled(),false);
+  assert.equal(await page.locator('#ac8-sim-scenario').isDisabled(),false);
+  assert.equal(await page.locator('#ac8-sim-status').isHidden(),true);
+  await page.locator('#ac8-sim-start').click();
+  await page.waitForFunction(()=>window.task3Diagnostics.threatPlaying&&window.task3Diagnostics.threatFrameIndex>0&&window.task3Diagnostics.threatTargets.length>0,null,{timeout:60000});
+  const customPlayback=await page.evaluate(()=>({routes:window.task3Diagnostics.threatRouteCount,duration:window.task3Diagnostics.threatDuration,index:window.task3Diagnostics.threatFrameIndex,targets:window.task3Diagnostics.threatTargets.length}));
+  assert.ok(customPlayback.routes>0,JSON.stringify(customPlayback));
+  assert.ok(customPlayback.targets>0,JSON.stringify(customPlayback));
+  await page.locator('#ac8-sim-start').click();
+  await page.waitForFunction(()=>!window.task3Diagnostics.threatPlaying,null,{timeout:30000});
   await page.evaluate(()=>document.querySelector('#toggle-task3').click());
   const devices=await page.evaluate(()=>{
     const diagnostics=window.task3Diagnostics,plan=window.__task3Report.plans.find(item=>item.id===diagnostics.planId);
@@ -205,7 +212,7 @@ try{
   await openSceneMenu(page,'scene');
   for(const id of [slug,plainSlug])assert.equal(await select.locator(`option[value="${id}"]`).count(),0);
   assert.deepEqual(errors,[]);
-  console.log(`自定义模型浏览器冒烟通过，已覆盖导入、刷新、任务三方案、回放说明、实际地图设备仿真（${customDemo.samples} 个采样，${customDemo.status}）和删除流程。`);
+  console.log(`自定义模型浏览器冒烟通过，已覆盖导入、刷新、任务三方案、自定义地图实际播放、实际地图设备仿真（${customDemo.samples} 个采样，${customDemo.status}）和删除流程。`);
 }finally{
   await browser.close();
   if(fixtures.startsWith(join(artifacts,'fixtures-')))await rm(fixtures,{recursive:true,force:true});

@@ -6,15 +6,17 @@ body.hud-menu-enabled #equipment-window,
 body.hud-menu-enabled #deployment-window { display: none !important; }
 /* ---------- bottom simulation bar ---------- */
 #ac8-simulation-bar {
+  --ac8-sim-font: clamp(17px, 2vw, 25px);
   position: fixed;
   left: 50%;
   bottom: 22px;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: min(1000px, calc(100vw - 48px));
-  padding: 10px 16px;
+  gap: 14px;
+  width: min(1320px, calc(100vw - 48px));
+  padding: 12px 18px;
+  font-size: var(--ac8-sim-font);
   border: 1px solid rgba(127, 232, 255, .2);
   background: transparent;
   box-shadow: none;
@@ -55,15 +57,15 @@ body.hud-menu-open #ac8-simulation-bar {
 }
 #ac8-sim-start {
   flex: 0 0 auto;
-  padding: 9px 20px;
+  padding: 9px 18px;
   border: 1px solid rgba(80, 255, 170, .62);
   border-radius: 2px;
   background: rgba(10, 60, 40, .52);
   color: #b9ffe0;
   font: inherit;
-  font-size: 13px;
+  font-size: inherit;
   font-weight: 700;
-  letter-spacing: .14em;
+  letter-spacing: .08em;
   cursor: pointer;
   text-shadow: 0 0 10px rgba(80, 255, 170, .65);
   box-shadow: 0 0 18px rgba(60, 240, 160, .22), inset 0 0 16px rgba(60, 240, 160, .08);
@@ -92,19 +94,19 @@ body.hud-menu-open #ac8-simulation-bar {
   gap: 7px;
   flex: 0 0 auto;
   margin: 0;
-  color: #7fa3b3;
-  font-size: 10px;
-  letter-spacing: .12em;
+  color: #8fb4c4;
+  font-size: inherit;
+  letter-spacing: .06em;
 }
 #ac8-sim-scenario {
-  max-width: 180px;
-  padding: 5px 8px;
+  max-width: 240px;
+  padding: 6px 9px;
   border: 1px solid rgba(127, 232, 255, .3);
   border-radius: 2px;
   background: rgba(3, 20, 31, .8);
   color: #bdefff;
   font: inherit;
-  font-size: 12px;
+  font-size: inherit;
   letter-spacing: .02em;
   cursor: pointer;
 }
@@ -119,18 +121,18 @@ body.hud-menu-open #ac8-simulation-bar {
   gap: 7px;
   flex: 0 0 auto;
   margin: 0;
-  color: #7fa3b3;
-  font-size: 10px;
-  letter-spacing: .12em;
+  color: #8fb4c4;
+  font-size: inherit;
+  letter-spacing: .06em;
 }
 #ac8-sim-speed {
-  padding: 5px 8px;
+  padding: 6px 9px;
   border: 1px solid rgba(127, 232, 255, .3);
   border-radius: 2px;
   background: rgba(3, 20, 31, .8);
   color: #bdefff;
   font: inherit;
-  font-size: 12px;
+  font-size: inherit;
   letter-spacing: .06em;
   cursor: pointer;
 }
@@ -178,23 +180,24 @@ body.hud-menu-open #ac8-simulation-bar {
   cursor: default;
 }
 #ac8-sim-status{
-  flex:1 1 100%;font-size:11px;line-height:1.4;color:#d2e6ef;min-width:0;
+  flex:1 1 100%;font-size:inherit;line-height:1.35;color:#d2e6ef;min-width:0;
 }
 #ac8-simulation-bar:has(#ac8-sim-status:not([hidden])){flex-wrap:wrap;}
 @media (max-width: 760px) {
   #ac8-simulation-bar {
+    --ac8-sim-font: clamp(15px, 4.5vw, 17px);
     bottom: 10px;
     width: calc(100vw - 20px);
-    gap: 6px 8px;
-    padding: 8px 10px;
+    gap: 7px 9px;
+    padding: 9px 11px;
     flex-wrap: wrap;
   }
-  #ac8-sim-start { padding: 8px 12px; font-size: 11px; }
+  #ac8-sim-start { padding: 7px 12px; font-size: inherit; }
   .ac8-sim-speed span, .ac8-sim-scenario span { display: none; }
-  #ac8-sim-speed { font-size: 11px; padding: 4px 6px; }
-  #ac8-sim-scenario { font-size: 11px; padding: 4px 6px; max-width: 110px; }
+  #ac8-sim-speed { font-size: inherit; padding: 5px 7px; }
+  #ac8-sim-scenario { font-size: inherit; padding: 5px 7px; max-width: 160px; }
   #ac8-sim-progress { min-width: 80px; flex: 1 1 100%; }
-  #ac8-sim-history { font-size: 11px; padding: 6px 8px; }
+  #ac8-sim-history { font-size: inherit; padding: 6px 9px; }
 }
 
 body.hud-menu-open #ac8-main-menu-toggle {
@@ -975,14 +978,14 @@ body.hud-menu-open #ac8-main-menu-toggle {
 /* ---------- simulation history ---------- */
 #ac8-sim-history {
   flex: 0 0 auto;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border: 1px solid rgba(127, 232, 255, .38);
   border-radius: 2px;
   background: transparent;
   color: #bdefff;
   font: inherit;
-  font-size: 12px;
-  letter-spacing: .1em;
+  font-size: inherit;
+  letter-spacing: .06em;
   cursor: pointer;
   text-shadow: 0 0 8px rgba(127, 232, 255, .4);
   transition: border-color .18s, background .18s, box-shadow .18s;

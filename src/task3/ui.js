@@ -154,7 +154,7 @@ export function mountTask3UI({app,city,model,scene,camera,controls,renderer,sens
   deviceHover.closePin();
   if(activeTab!=='input'||activeSub!=='weights')stopBuildingSelection();
   const tab=TABS[activeTab];subnav.replaceChildren();
-  for(const [key,name] of tab.subs){if(key==='threat'&&getSite?.()?.custom)continue;const b=document.createElement('button');b.type='button';b.className='task3-subnav-btn';b.dataset.sub=key;b.setAttribute('aria-selected',String(key===activeSub));b.textContent=name;subnav.append(b);}
+  for(const [key,name] of tab.subs){const b=document.createElement('button');b.type='button';b.className='task3-subnav-btn';b.dataset.sub=key;b.setAttribute('aria-selected',String(key===activeSub));b.textContent=name;subnav.append(b);}
   subnav.hidden=!tab.subs.length;
   for(const btn of panel.querySelectorAll('.task3-tabs button'))btn.setAttribute('aria-selected',String(btn.dataset.tab===activeTab));
   for(const pane of contentBox.children)pane.hidden=true;
@@ -979,8 +979,7 @@ function resolveThreatConfigs(){saveThreatConfigForm();return Object.fromEntries
  function setScene(site,{coreChanged=false}={}){
   const key=site?.base??'recon';if(key===task3SceneKey&&!coreChanged)return;task3SceneKey=key;
   deviceDemo.clearScene();
-  if(site?.custom&&activeSub==='threat')activeSub='scope';
-  generatePane.querySelector('.hint').textContent=site?.custom?'自定义区域支持覆盖评估、方案对比和电磁兼容分析。':'选择一套或多套方案后生成；未勾选的方案不会进入方案对比、威胁验证和 PDF 导出。';
+  generatePane.querySelector('.hint').textContent='选择一套或多套方案后生成；未勾选的方案不会进入方案对比、威胁验证和 PDF 导出。';
   resetCustomEditing();customDefaultSingles=new Map();
   stopBuildingSelection();buildingError='';buildingSelector.refresh();constraintsInvalid=false;selectedDevices.clear();
   activePipelineRequest=null;lastRequestSnapshot=null;worker?.terminate();worker=null;

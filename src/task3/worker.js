@@ -41,7 +41,6 @@ if(typeof self!=='undefined')self.onmessage=async({data})=>{
    const result=await repairPlanWithMobileRadars({city,query,...data.input,equipmentSnapshot:data.equipmentSnapshot??data.input.equipmentSnapshot,progress:value=>self.postMessage({type:'mobile-progress',requestId:data.requestId,value}),yieldTask});
    self.postMessage({type:'mobile-repair-result',requestId:data.requestId,result});
   }else if(data.type==='custom-single-threat'){
-   if(city.metadata.custom)throw Error('请选择内置演示区域使用威胁轨迹');
    const result=await computeCustomSingleThreat({query,input:data.input,yieldTask});
    self.postMessage({type:'custom-single-threat-result',requestId:data.requestId,result});
   }

@@ -10,8 +10,7 @@ export function recordedDuration(record){
  return Number.isFinite(end)&&end>0?end:0;
 }
 
-export function resolvePlaybackAvailability({custom,mapSwitching,selectingBuildings,invalidConstraints,deviceDemo,busy,hasPlan,record}){
- if(custom)return {status:'scene-unavailable',blocked:true,message:'自定义区域提供感知覆盖和电磁兼容分析。飞行回放可在内置演示区域查看。'};
+export function resolvePlaybackAvailability({mapSwitching,selectingBuildings,invalidConstraints,deviceDemo,busy,hasPlan,record}){
  if(mapSwitching)return {status:'map-switching',blocked:true,message:'地图正在切换，请等待加载完成。'};
  if(selectingBuildings)return {status:'building-selection',blocked:true,message:'结束地图选点后可播放。'};
  if(invalidConstraints)return {status:'outdated-constraints',blocked:true,message:'建筑禁部署约束已变化，请先重新生成方案。'};
